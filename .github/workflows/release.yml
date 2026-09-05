@@ -1,0 +1,148 @@
+name: Release
+
+# Tag a version, get an app. `git tag v0.1.0 && git push --tags` builds,
+# packages and attaches a DMG to a GitHub Release, so nobody has to install a
+# Swift toolchain to try a menu bar utility.
+#
+# SIGNING, AND WHY IT MATTERS MORE HERE THAN USUALLY
+#
+# This app needs the microphone, and macOS keys that permission to the app's
+# code signature. An ad-hoc signature changes on every build, so an ad-hoc
+# release is a different app to TCC every time — the permission does not carry
+# over and the prompt returns. It also will not pass Gatekeeper on a download.
+#
+# So the workflow signs properly when the secrets are present and degrades
+# loudly when they are not. Set these to get a distributable build:
+#
+#   MACOS_CERT_P12        base64 of a Developer ID Application .p12
+#   MACOS_CERT_PASSWORD   the password for that .p12
+#   MACOS_SIGN_IDENTITY   e.g. "Developer ID Application: Artisan Build, Inc (83AD4SGJLW)"
+#
+# And these to notarize, so Gatekeeper opens it without a right-click:
+#
+#   NOTARY_KEY_P8         base64 of an App Store Connect .p8 private key
+#   NOTARY_KEY_ID         that key's ID
+#   NOTARY_ISSUER_ID      the issuer UUID
+#
+# Produce the first one with:
+#   security find-identity -v -p codesigning          # confirm the identity
+#   # export it from Keychain Access as Certificates.p12, then:
+#   base64 -i Certificates.p12 | pbcopy
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version to build, e.g. v0.1.0'
+        required: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Version
+        id: v
+        run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Test
+        run: swift test --package-path app
+
+      # Import the Developer ID into a throwaway keychain. Skipped without
+      # secrets, in which case bundle.sh falls back to an ad-hoc signature.
+      - name: Import signing certificate
+        id: signing
+        if: env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          PASSPHRASE="$(uuidgen)"
+          security create-keychain -p "$PASSPHRASE" "$KEYCHAIN"
+          security set-keychain-settings -lut 900 "$KEYCHAIN"
+          security unlock-keychain -p "$PASSPHRASE" "$KEYCHAIN"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$PASSPHRASE" "$KEYCHAIN" >/dev/null
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+          rm -f "$RUNNER_TEMP/cert.p12"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build and bundle
+        env:
+          SIGN_ID: ${{ secrets.MACOS_SIGN_IDENTITY || '-' }}
+        run: ./app/Scripts/bundle.sh
+
+      - name: Warn if unsigned
+        if: steps.signing.outputs.signed != 'true'
+        run: |
+          echo "::warning title=Ad-hoc signature::No MACOS_CERT_P12 secret, so this build is ad-hoc signed. It will not pass Gatekeeper, and macOS will treat every rebuild as a different app for microphone permission."
+
+      - name: Notarize
+        if: steps.signing.outputs.signed == 'true' && env.NOTARY_KEY_P8 != ''
+        env:
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          echo "$NOTARY_KEY_P8" | base64 --decode > "$RUNNER_TEMP/key.p8"
+          ditto -c -k --keepParent dist/Sonocles.app "$RUNNER_TEMP/notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
+            --key "$RUNNER_TEMP/key.p8" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --wait
+          # Staple, so the app opens offline without a Gatekeeper round trip.
+          xcrun stapler staple dist/Sonocles.app
+          rm -f "$RUNNER_TEMP/key.p8"
+
+      - name: Package
+        run: |
+          VER="${{ steps.v.outputs.tag }}"
+          mkdir -p dist/dmg
+          cp -R dist/Sonocles.app dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname "Sonocles" -srcfolder dist/dmg \
+            -ov -format UDZO "dist/Sonocles-$VER.dmg"
+          ditto -c -k --keepParent dist/Sonocles.app "dist/Sonocles-$VER.zip"
+          shasum -a 256 dist/Sonocles-$VER.dmg dist/Sonocles-$VER.zip > dist/checksums.txt
+          cat dist/checksums.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sonocles-${{ steps.v.outputs.tag }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/checksums.txt
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="${{ steps.v.outputs.tag }}"
+          NOTE="Apple Silicon, macOS 14 or later. Models download on first run (~219 MB)."
+          if [ "${{ steps.signing.outputs.signed }}" != "true" ]; then
+            NOTE="$NOTE
+
+**This build is ad-hoc signed.** macOS will refuse to open it normally — right-click the app and choose Open, and expect the microphone prompt again after every update."
+          fi
+          gh release create "$VER" \
+            --title "Sonocles $VER" \
+            --notes "$NOTE" \
+            dist/*.dmg dist/*.zip dist/checksums.txt
