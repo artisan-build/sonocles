@@ -1,0 +1,54 @@
+<!doctype html>
+<!--
+  Source for site/img/og.png — the social card, composed rather than cropped.
+
+  The hero illustration is 3:2 and social cards are 1.91:1, so scaling it to fit
+  would either letterbox or cut the scribe out of frame, and the scribe is the
+  half that makes the joke. This lays out the same elements at the right shape
+  instead. Regenerate by screenshotting this at exactly 1200x630.
+-->
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root { --stone:#FAF2E4; --ink:#2A211A; --ink-soft:#4E4034; --script:#9C8C77; --terracotta:#C4552E; }
+  * { box-sizing:border-box; margin:0; }
+  body { width:1200px; height:630px; background:var(--stone); overflow:hidden;
+    font-family:'Instrument Sans',system-ui,sans-serif; position:relative; }
+  .colonnade { position:absolute; top:0; left:0; right:0; height:16px;
+    background:repeating-linear-gradient(90deg,#EFE5D2 0 5px,#E0D4BE 5px 6px,#EFE5D2 6px 11px,transparent 11px 30px); }
+  .colonnade::after { content:''; position:absolute; left:0; right:0; bottom:0; height:5px; background:var(--terracotta); }
+  .pad { padding:52px 58px; height:100%; display:flex; flex-direction:column; justify-content:space-between; position:relative; z-index:2; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand .name { font-family:'Fraunces',serif; font-weight:700; font-size:30px; color:var(--ink);
+    font-variation-settings:'SOFT' 40,'WONK' 1; }
+  .brand .say { font-family:'IBM Plex Mono',monospace; font-size:15px; color:var(--script); }
+  h1 { font-family:'Fraunces',serif; font-weight:600; font-size:64px; line-height:1.06;
+    color:var(--ink); letter-spacing:-.022em; font-variation-settings:'SOFT' 30,'WONK' 1; max-width:14ch; }
+  h1 em { font-style:normal; color:var(--terracotta); }
+  .foot { display:flex; align-items:center; gap:14px; }
+  .pill { background:var(--terracotta); color:#fff; font-size:14px; font-weight:600;
+    letter-spacing:.08em; text-transform:uppercase; padding:7px 16px; border-radius:999px; }
+  .meta { color:var(--ink-soft); font-size:19px; }
+  .art { position:absolute; right:-14px; bottom:-18px; width:590px; z-index:1; }
+</style></head>
+<body>
+  <div class="colonnade"></div>
+  <img class="art" src="img/flat-hero.png" alt="">
+  <div class="pad">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 32 32">
+        <circle cx="7" cy="16" r="3" fill="#C4552E"/>
+        <path d="M12 9.5a10 10 0 0 1 0 13" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <path d="M17.5 6.5a16 16 0 0 1 0 19" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".72"/>
+        <path d="M23 3.5a22 22 0 0 1 0 25" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".45"/>
+      </svg>
+      <span class="name">Sonocles</span>
+      <span class="say">so-NOK-leez</span>
+    </div>
+    <h1>Words, while you're <em>still saying them.</em></h1>
+    <div class="foot">
+      <span class="pill">Free · Open source</span>
+      <span class="meta">On-device speech, ~180&nbsp;ms behind you.</span>
+    </div>
+  </div>
+</body></html>

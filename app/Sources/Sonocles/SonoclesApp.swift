@@ -22,11 +22,9 @@ struct SonoclesApp: App {
         MenuBarExtra {
             MenuBarView(model: model)
         } label: {
-            // The mark itself, so the icon in the menu bar and the one in the
-            // popover are the same drawing. Lit while listening, dimmed while
-            // idle, so state reads without opening anything.
-            SonoclesMark(progress: model.running ? 1 : 0.34, lineWidth: 1.35)
-                .frame(width: 17, height: 17)
+            // The mark, as a template image. See MenuBarIcon for why a bare
+            // SwiftUI view here renders nothing at all.
+            Image(nsImage: MenuBarIcon.image(listening: model.running))
         }
         .menuBarExtraStyle(.window)
     }

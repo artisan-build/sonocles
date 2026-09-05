@@ -35,8 +35,28 @@ enum Preview {
             write(view, to: directory.appendingPathComponent("\(name).png"))
         }
 
-        write(
-            marks(), to: directory.appendingPathComponent("mark.png"))
+        write(marks(), to: directory.appendingPathComponent("mark.png"))
+
+        // The menu bar icon, on both grounds it has to survive. An icon that
+        // renders empty is invisible rather than wrong, which is the hardest
+        // kind of broken to notice.
+        for (name, listening) in [("menubar-listening", true), ("menubar-idle", false)] {
+            let icon = MenuBarIcon.image(listening: listening)
+            write(
+                HStack(spacing: 20) {
+                    ForEach([Color.black, Color.white], id: \.self) { ground in
+                        Image(nsImage: icon)
+                            .renderingMode(.template)
+                            .foregroundStyle(ground == .black ? Color.white : Color.black)
+                            .frame(width: 34, height: 34)
+                            .padding(10)
+                            .background(ground)
+                    }
+                }
+                .padding(16)
+                .background(Color.gray),
+                to: directory.appendingPathComponent("\(name).png"))
+        }
 
         return true
     }
