@@ -101,12 +101,36 @@
   .btn-ghost { background:transparent; color:var(--ink); border:2px solid var(--stone-line); }
   .btn-ghost:hover { border-color:var(--terracotta); }
   .cta .meta { color:var(--script); font-size:13.5px; }
-  .hero h1 { font-size:clamp(44px,7.6vw,80px); font-weight:600; letter-spacing:-.022em; margin-bottom:24px; }
+  .hero h1 { font-size:clamp(40px,7.6vw,80px); font-weight:600; letter-spacing:-.022em; margin-bottom:24px; }
   .hero h1 em { font-style:normal; color:var(--terracotta); }
   .lede { font-size:clamp(18px,2.2vw,22px); color:var(--ink-soft); max-width:56ch; margin:0 0 12px; }
   .lede2 { font-size:clamp(17px,2vw,20px); color:var(--ink-soft); max-width:58ch; margin:0 0 14px; }
   .lede2 b { color:var(--ink); font-weight:600; }
   .sub { color:var(--ink-faint); max-width:58ch; margin:0; font-size:16.5px; }
+
+  /* Narrow screens.
+     The authored line breaks in the headline are a desktop nicety and a bug on
+     a phone: a forced break makes "Words, while you're" one unbreakable line,
+     which at this size is wider than the viewport, and the whole page scrolls
+     sideways. Let it wrap naturally instead.
+
+     The hero is also re-ordered so the illustration lands directly after the
+     one-sentence explanation. On a phone the hook, the what, and the picture
+     are what fit; the detail can follow underneath. Pure `order`, so the
+     desktop markup does not move. */
+  @media (max-width:620px) {
+    .hero h1 br { display:none; }
+    .hero h1 { font-size:40px; line-height:1.06; }
+    .hero { display:flex; flex-direction:column; }
+    .hero .free   { order:1; }
+    .hero h1      { order:2; margin-bottom:18px; }
+    .hero .lede   { order:3; }
+    .hero figure  { order:4; margin:22px 0 4px; }
+    .hero .lede2  { order:5; }
+    .hero .sub    { order:6; }
+    .hero .cta    { order:7; margin-top:22px; }
+    .hero .stream { order:8; }
+  }
 
   section { padding:62px 0; }
   section h2 { font-size:clamp(30px,4.6vw,46px); font-weight:600; letter-spacing:-.018em; margin-bottom:14px; }
@@ -199,7 +223,7 @@
 
 <div class="hero">
   <span class="free">Free · Open source · MIT</span>
-  <h1>Words, while you're<br><em>still saying them.</em></h1>
+  <h1>Words, while you're <br><em>still saying them.</em></h1>
   <p class="lede">Sonocles turns your Mac's microphone into a live stream of text — over <b>WebSocket</b> or <b>SSE</b>, word by word, about 180&nbsp;milliseconds behind you.</p>
   <p class="lede2"><b>What listens is up to you.</b> A teleprompter that keeps your pace, a cue that fires on the word, live captions, a bot that answers to its own name. It streams; you decide.</p>
   <p class="sub">Runs on the Neural Engine. Nothing leaves the machine. Free and open source.</p>
