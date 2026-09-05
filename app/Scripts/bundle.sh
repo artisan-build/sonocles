@@ -54,9 +54,26 @@ PLIST
 # on com.apple.security.device.audio-input before TCC is consulted, so signing
 # with --options runtime and no entitlements produces an app that cannot record
 # and cannot ask to.
+#
+# Sign inside out, and not with --deep. sonocles-cli is an executable living in
+# Contents/Resources, which --deep treats as a resource rather than as nested
+# code — so it kept the ad-hoc signature SwiftPM's linker gave it, and the
+# notary service rejected the whole archive for it: no Developer ID, no secure
+# timestamp, no hardened runtime. `codesign --verify --deep --strict` reports
+# such a bundle as valid, so local verification will not catch this. Only
+# notarisation will.
 SIGN="${SIGN_ID:--}"
-codesign --force --deep --options runtime \
-  --entitlements "$ROOT/Scripts/Sonocles.entitlements" \
-  --sign "$SIGN" "$APP"
+
+# Ad-hoc signatures cannot carry a secure timestamp; real ones must.
+TS=(--timestamp)
+if [ "$SIGN" = "-" ]; then
+  TS=(--timestamp=none)
+fi
+
+for TARGET in "$APP/Contents/Resources/sonocles-cli" "$APP"; do
+  codesign --force --options runtime "${TS[@]}" \
+    --entitlements "$ROOT/Scripts/Sonocles.entitlements" \
+    --sign "$SIGN" "$TARGET"
+done
 
 echo "built $APP"
