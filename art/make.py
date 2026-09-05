@@ -316,6 +316,18 @@ PLATES = {
     ),
 }
 
+# Retired. The prompts stay for reproducibility; the names come out of the
+# default run, because OUT is site/img and none of these files are there —
+# the museum set lives in art/plates and flat-column was deleted as unused.
+# A bare `make.py` would therefore have treated all nine as missing and paid
+# to generate them, into the wrong directory. Still reachable deliberately:
+#   python3 art/make.py --only sherd
+RETIRED = frozenset({
+    "flat-column",
+    "hero", "chorus", "theatre", "listener", "anachronism", "contention",
+    "banner", "sherd",
+})
+
 
 def load_env(path: Path) -> None:
     if not path.is_file():
@@ -372,10 +384,11 @@ def main() -> int:
     if args.list:
         for name, (size, body, _style) in PLATES.items():
             first = " ".join(body.split())[:88]
-            print(f"{name:14} {size:10} {first}…")
+            mark = "retired " if name in RETIRED else "        "
+            print(f"{name:14} {mark}{size:10} {first}…")
         return 0
 
-    wanted = args.only or list(PLATES)
+    wanted = args.only or [n for n in PLATES if n not in RETIRED]
     OUT.mkdir(parents=True, exist_ok=True)
 
     if not args.dry_run:
