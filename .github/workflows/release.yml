@@ -150,17 +150,23 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
+        # Notes are built line by line into a file. A heredoc or a multi-line
+        # shell string here is a trap: a blank line at column zero closes the
+        # YAML block scalar, and the workflow becomes unparseable in a way that
+        # reports only as "run failed" with no logs.
         run: |
           VER="${{ steps.v.outputs.tag }}"
-          NOTE="Apple Silicon, macOS 14 or later. Models download on first run (~219 MB).
-
-Always-current download: https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg"
-          if [ "${{ steps.have.outputs.cert }}" != "true" ]; then
-            NOTE="$NOTE
-
-**This build is ad-hoc signed.** macOS will refuse to open it normally — right-click the app and choose Open, and expect the microphone prompt again after every update."
-          fi
+          {
+            echo "Apple Silicon, macOS 14 or later. Models download on first run (~219 MB)."
+            echo ""
+            echo "Always-current download:"
+            echo "https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg"
+            if [ "${{ steps.have.outputs.cert }}" != "true" ]; then
+              echo ""
+              echo "**This build is ad-hoc signed.** macOS will refuse to open it normally — right-click the app and choose Open, and expect the microphone prompt again after every update."
+            fi
+          } > "$RUNNER_TEMP/notes.md"
           gh release create "$VER" \
             --title "Sonocles $VER" \
-            --notes "$NOTE" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
             dist/*.dmg dist/*.zip dist/checksums.txt
