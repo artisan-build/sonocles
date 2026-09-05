@@ -36,6 +36,12 @@ It was built for [Pteroprompter](https://pteroprompter.com), which is still the
 case it is tuned for. Nothing about it is prompter-shaped, though: it streams
 words and timestamps to a socket, and what listens is your business.
 
+Made by **Artisan Build** under its **ProjektGopher Multimedia** brand —
+ProjektGopher covers the media vertical (prompters, encoders, the things that
+point at a camera) while Artisan Build proper handles tooling and infrastructure.
+Sonocles is squarely the former, which is some of why it is named after a Greek
+playwright rather than a build tool.
+
 ## Quick start
 
 ```bash
@@ -130,3 +136,10 @@ That failure looks exactly like a healthy pipeline. It is written up in
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  <sub>Built for <a href="https://pteroprompter.com">Pteroprompter</a> by
+  <b>Artisan Build</b> · <b>ProjektGopher Multimedia</b></sub>
+</p>
