@@ -37,6 +37,30 @@ next line the moment you need it.
 That is the whole product. Sonocles listens closely enough to know where you
 are. Pteroprompter feeds you the next line.
 
+## Why it exists
+
+The speech-follow built into the teleprompter was fighting the encoder for CPU.
+The prompter kept up; the audio did not. Dropped samples on a take you cannot
+re-shoot are not a performance problem, they are a lost afternoon.
+
+The Neural Engine was idle the whole time. Moving the listening there did not
+make it faster so much as make it **free** — it stopped taking anything the
+recording needed.
+
+That story is the strongest thing we have and it should lead. It is specific,
+it is checkable, and it explains the architecture without a single adjective.
+"Runs on the Neural Engine" is a spec. "Your encoder is not competing with it"
+is a reason.
+
+## Licence and posture
+
+Free, open source, MIT. Not a trial, not a freemium tier, not a loss leader for
+something else. It exists because we needed it, and keeping it to ourselves
+would not make the prompter any better.
+
+Copy should say so plainly and once. A page that keeps insisting it is free
+sounds like it is arguing with somebody.
+
 ## What it is
 
 An on-device speech sidecar. It hears you, and it streams what you said to
@@ -154,6 +178,31 @@ drawing, which is the sort of coincidence worth taking.
 At menu bar size the mark gives way to legibility — a filled waveform while
 listening, an outline while idle, so state reads from across the room without
 opening anything.
+
+## The plates
+
+The site is illustrated with generated Attic red-figure vase paintings, each
+captioned as a museum catalogue object — accession line, attribution, century.
+The register is academic and completely straight.
+
+That is the whole joke, and it only works if nobody winks. A caption reading
+"conventionally read as an allegory of resource contention" is funny precisely
+because it is written the way a real label is written. The moment the page
+nudges the reader, it becomes a costume rather than a conceit.
+
+`art/make.py` generates them. Prompts obey the real drawing conventions —
+reserved figures, black slip, relief line, profile faces — so the only
+anachronism is ever the *subject*. A fifth-century painter handed a microphone
+would have drawn it exactly like that.
+
+Two working notes. **No lettering, ever**: the model cannot spell Greek, and
+gibberish reads as carelessness rather than antiquity, so the wordmark is set in
+Cinzel in the page instead. And **specify clothing explicitly** — classical
+nudity is authentic to the source and will get a generation refused by content
+moderation, which costs a retry and teaches nothing.
+
+The last caption on the page admits they are not ancient. Holding that to the
+end is the setup; saying it at all is the manners.
 
 ## Copy
 

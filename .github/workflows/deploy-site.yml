@@ -1,0 +1,41 @@
+name: Deploy site
+
+# Push the marketing page to Cloudflare Pages on every push to main that touches
+# site/. Direct Upload via Wrangler — the same command as `make deploy`, so what
+# CI does and what a human does cannot drift apart.
+#
+# There is no build step. The site is one HTML file and its plates, which is the
+# whole reason this workflow is eight lines shorter than its ancestor.
+#
+# Requires repo secrets: CLOUDFLARE_API_TOKEN (Pages: Edit), CLOUDFLARE_ACCOUNT_ID.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/deploy-site.yml'
+  workflow_dispatch:
+
+# One in-flight deploy at a time; newer pushes supersede.
+concurrency:
+  group: deploy-site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Deploy to Cloudflare Pages
+        working-directory: site
+        run: npx --yes wrangler@4 pages deploy --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

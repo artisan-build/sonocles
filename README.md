@@ -1,28 +1,47 @@
+<p align="center"><img src="https://raw.githubusercontent.com/artisan-build/sonocles/main/art/header.png" alt="Sonocles" width="900"></p>
+
+<p align="center">
+  <a href="https://github.com/artisan-build/sonocles/actions"><img src="https://github.com/artisan-build/sonocles/workflows/tests/badge.svg" alt="Build Status"></a>
+  <a href="https://github.com/artisan-build/sonocles/blob/main/LICENSE"><img src="https://img.shields.io/github/license/artisan-build/sonocles" alt="License"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-1C1611" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Apple%20Silicon-required-C86F45" alt="Apple Silicon">
+</p>
+
 # Sonocles
 
-An on-device speech sidecar for the Mac. It listens to your microphone,
-transcribes on the Neural Engine, and streams recognised words — with the audio
-timestamps that say when each was actually spoken — over SSE or WebSocket.
+**so-NOK-leez.** An on-device speech sidecar for the Mac. It listens to your
+microphone and streams what you say — word by word, about 180&nbsp;milliseconds
+behind you, with the audio timestamps that say when each word was actually
+spoken.
 
-It knows nothing about your script. It just streams text.
+Everything runs on the Neural Engine. Nothing leaves the machine. Free and open
+source, MIT.
 
 ```
 data: {"type":"partial","text":"the menu bar","audioStart":40.28,"audioEnd":40.8,"lagMs":200,"seq":3}
 data: {"type":"partial","text":"the menu bar app","audioStart":40.28,"audioEnd":41.0,"lagMs":200,"seq":4}
 ```
 
-One word per frame, roughly every 200 ms, about 180 ms behind what you just
-said. Apple's own Speech framework delivers the same sentence in four bursts,
-3.7 seconds apart — which is why this exists. The numbers are in
-[docs/ENGINES.md](docs/ENGINES.md) and the baseline is still one flag away, so
-the comparison can be re-run rather than believed.
+## Why it exists
+
+The speech-follow built into the teleprompter was fighting the encoder for CPU.
+The prompter kept up; the audio did not, and dropped samples on a take you
+cannot re-shoot are not a performance problem, they are a lost afternoon.
+
+The Neural Engine was sitting idle the whole time. Moving the listening there
+did not make it faster so much as make it **free** — it stopped taking anything
+the recording needed.
+
+It was built for [Pteroprompter](https://pteroprompter.com), which is still the
+case it is tuned for. Nothing about it is prompter-shaped, though: it streams
+words and timestamps to a socket, and what listens is your business.
 
 ## Quick start
 
 ```bash
 make run          # the CLI monitor — speak, watch words arrive
 make launch       # build, sign and start the menu bar app
-make test         # the suite
+make test
 make help         # everything else
 ```
 
@@ -36,31 +55,6 @@ the words it added, and how far behind the live audio edge it was.
 The bottom line is a level meter driven straight from the audio thread. That is
 not decoration: if the meter moves and no text appears, capture is fine and the
 engine is late. If neither moves, check the microphone.
-
-## Layout
-
-A monorepo. Each directory builds independently.
-
-```
-app/     the macOS app, the CLI, and the core they share (Swift)
-docs/    findings, protocol, brand, decisions
-site/    the marketing page (a single static file, ready to become a Blade view)
-```
-
-`app/` is a plain SwiftPM package — `swift build` inside it needs nothing from
-the rest of the tree. Anything deploying `site/` points at that subdirectory and
-never sees the Swift.
-
-Inside `app/`:
-
-| | |
-|---|---|
-| `SonoclesCore` | engines, capture, clock, transports. No UI, no terminal. |
-| `sonocles-cli` | the measurement instrument |
-| `Sonocles` | the menu bar app |
-
-The CLI and the app drive the **same** `Service`. Every latency claim in the
-docs came out of the CLI, so the thing being measured is the thing that ships.
 
 ## Consuming the stream
 
@@ -76,49 +70,63 @@ Use `audioEnd`, not `ts`. Arrival time carries the jitter of the delivery
 schedule on top of the actual timing; `audioEnd` is when the words were said.
 A missing `lagMs` means *unmeasured*, never zero.
 
-Full details in [docs/PROTOCOL.md](docs/PROTOCOL.md).
+There is also an HTTP control API — `GET /status`, `POST /start`, `POST /stop` —
+behind optional Basic auth. Full details in
+[docs/PROTOCOL.md](docs/PROTOCOL.md).
 
-## Controlling it
+## Why not Apple's Speech framework
 
-```bash
-make status       # idle · starting · listening
-make start
-make stop
+Because it delivers in fixed ~3.8 second blocks and no exposed knob changes
+that.
+
+| engine | arrival gap | behind live | words per arrival |
+|---|---|---|---|
+| Apple SpeechAnalyzer | 3747 ms | 0 ms, four times | 8.8 |
+| Parakeet 320 ms | 302 ms | 540 ms | 2.3 |
+| **Parakeet 160 ms** | **206 ms** | **180 ms** | **1.5** |
+
+Measured, reproducible, and written up in [docs/ENGINES.md](docs/ENGINES.md).
+The baseline is still one flag away — `make baseline` — so the comparison can be
+re-run rather than taken on trust.
+
+If what you actually want is dictation, use [Sonari](https://www.sonari.audio/).
+It is very good, it runs locally too, and the use cases genuinely diverge:
+Sonari is built around the moment you stop speaking, and this is built around
+the moment you have not.
+
+## Layout
+
+A monorepo. Each directory builds independently.
+
+```
+app/     the macOS app, the CLI, and the core they share (Swift)
+art/     header and plate sources
+docs/    findings, protocol, brand, decisions
+site/    the marketing page (a single static file)
 ```
 
-Or directly, which is the point — anything can drive it:
-
-```bash
-curl -X POST http://127.0.0.1:7357/start
-curl http://127.0.0.1:7357/status
-```
-
-`/status`, `/start` and `/stop` take HTTP Basic auth, configured in the app's
-popover and stored in the Keychain. `/events` is deliberately left open:
-`EventSource` cannot send an `Authorization` header, so locking the stream would
-mean credentials in a URL. The routes that change state carry the lock.
-
-Once credentials are set: `make status USER=sono PASS=…`
+`app/` is a plain SwiftPM package — `swift build` inside it needs nothing from
+the rest of the tree.
 
 ## Requirements
 
-macOS 14+ on Apple Silicon. The Apple engine, kept only as a baseline, needs
-macOS 26.
-
-Models download on first run (~219 MB, cached in
-`~/Library/Application Support/FluidAudio`).
+Apple Silicon, macOS 14 or later. Models download on first run (~219 MB, cached
+in `~/Library/Application Support/FluidAudio`). The Apple engine, kept only as
+a baseline, needs macOS 26.
 
 ## A note on the microphone
 
 If it runs and hears nothing, check `make run` against the same audio before
 suspecting anything else. A CLI inherits its terminal's microphone grant; a
-signed `.app` has its own identity and needs both
-`NSMicrophoneUsageDescription` **and** the
-`com.apple.security.device.audio-input` entitlement. With the hardened runtime
-and no entitlement, the app cannot record and cannot ask to — it simply never
-appears in System Settings. `AVAudioEngine` never prompts on its own; it just
-returns silence forever.
+signed `.app` has its own identity and needs both `NSMicrophoneUsageDescription`
+**and** the `com.apple.security.device.audio-input` entitlement. With the
+hardened runtime and no entitlement, the app cannot record and cannot ask to —
+it simply never appears in System Settings. `AVAudioEngine` never prompts on its
+own; it just returns silence forever.
 
-That failure looks exactly like a healthy pipeline. It cost a session to find,
-and it is written up in [docs/ENGINES.md](docs/ENGINES.md) so it costs nothing
-next time.
+That failure looks exactly like a healthy pipeline. It is written up in
+[docs/ENGINES.md](docs/ENGINES.md) so it costs nothing next time.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).

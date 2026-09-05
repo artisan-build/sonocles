@@ -1,0 +1,13 @@
+{
+  // Cloudflare Pages (Direct Upload) for the Sonocles marketing page.
+  //
+  // There is no build step: the site is one HTML file and its plates, so the
+  // output directory is the source directory. Deploy with `make deploy` from
+  // the repo root, or let the workflow do it on a push that touches site/.
+  //
+  // The custom domain is attached once, by hand:
+  //     wrangler pages domain add sonocles.com
+  "name": "sonocles",
+  "compatibility_date": "2026-09-01",
+  "pages_build_output_dir": "."
+}

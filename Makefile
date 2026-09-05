@@ -19,7 +19,7 @@ AUTH     := $(if $(USER),-u $(USER):$(PASS),)
 
 .DEFAULT_GOAL := help
 .PHONY: help build test run baseline idle app launch install uninstall \
-        status start stop events clean fmt lint
+        status start stop events deploy clean fmt lint
 
 help: ## Show this help
 	@echo "Sonocles — on-device speech sidecar"
@@ -74,6 +74,9 @@ stop: ## Tell the running sidecar to stop listening
 
 events: ## Tail the event stream (-N matters: without it curl buffers)
 	@curl -sN http://127.0.0.1:$(PORT)/events
+
+deploy: ## Push the marketing page to Cloudflare Pages
+	cd site && npx --yes wrangler@4 pages deploy --branch=main
 
 fmt: ## Format the Swift sources in place
 	@xcrun swift-format --in-place --recursive $(APP)/Sources $(APP)/Tests

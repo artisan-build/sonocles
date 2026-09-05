@@ -45,6 +45,13 @@
   }
   .say { color:var(--script); font-size:12.5px; font-family:var(--mono); letter-spacing:.02em; }
   .brandbar svg { align-self:center; }
+  .brandbar .gh { margin-left:auto; font-size:13.5px; border-bottom-color:transparent; }
+  .brandbar .gh:hover { border-bottom-color:var(--terracotta); }
+  .free {
+    display:inline-block; margin:0 0 22px; font-family:var(--roman); font-size:11px;
+    letter-spacing:.2em; text-transform:uppercase; color:var(--terracotta);
+    border:1px solid rgba(169,78,44,.34); border-radius:999px; padding:5px 13px; font-weight:600;
+  }
 
   .hero { padding:78px 0 60px; }
   .hero h1 { font-size:clamp(42px,7.4vw,72px); margin:0 0 24px; }
@@ -100,6 +107,30 @@
   footer p { margin:0 0 7px; }
   footer .name { font-family:var(--roman); letter-spacing:.07em; color:var(--slip-soft); font-weight:600; }
   .note { color:var(--slip-faint); font-size:14px; }
+
+  /* Plates are presented as catalogue objects. The labels are written straight
+     — academic register describing an ancient scene that happens to describe a
+     modern engineering problem. The joke only works if nobody winks. */
+  figure { margin:44px 0 0; }
+  figure img {
+    width:100%; height:auto; display:block; border-radius:3px;
+    box-shadow:0 18px 46px -22px rgba(28,22,17,.55), 0 2px 6px rgba(28,22,17,.09);
+  }
+  figcaption {
+    margin:15px 0 0; font-family:var(--display); font-size:15px; font-style:italic;
+    color:var(--slip-faint); line-height:1.55; max-width:62ch;
+  }
+  figcaption b { font-style:normal; font-weight:500; color:var(--slip-soft); }
+  figcaption .acc { font-family:var(--mono); font-style:normal; font-size:11.5px;
+    letter-spacing:.06em; color:var(--script); display:block; margin-top:6px; }
+  figure.plate-sm { max-width:340px; }
+  .two { display:grid; gap:36px; grid-template-columns:1.15fr .85fr; align-items:center; }
+  @media (max-width:760px) { .two { grid-template-columns:1fr; } }
+  .pull { font-family:var(--display); font-size:clamp(21px,2.9vw,27px); line-height:1.42;
+    color:var(--slip); max-width:52ch; font-style:italic; margin:0 0 18px; }
+  ul.uses { list-style:none; padding:0; margin:26px 0 0; max-width:62ch; }
+  ul.uses li { padding:11px 0; border-bottom:1px solid var(--clay-line); font-size:15.5px; }
+  ul.uses li b { color:var(--slip); font-weight:600; }
   .etym { font-family:var(--display); font-size:19px; font-style:italic; color:var(--slip-soft); max-width:56ch; }
 </style>
 </head>
@@ -116,13 +147,21 @@
     </svg>
     <span class="name">Sonocles</span>
     <span class="say">so-NOK-leez</span>
+    <a class="gh" href="https://github.com/artisan-build/sonocles">GitHub</a>
   </div>
 </header>
 
 <div class="hero">
+  <span class="free">Free · Open source · MIT</span>
   <h1>Words, while you're<br>still saying them.</h1>
   <p class="lede">Sonocles listens to your Mac's microphone and streams what you say — word by word, about 180&nbsp;milliseconds behind you.</p>
   <p class="sub">Everything runs on the Neural Engine. Nothing leaves the machine.</p>
+
+  <figure>
+    <img src="img/hero.png" alt="Attic red-figure vase fragment: a seated speaker, concentric sound arcs leaving his mouth, and a seated scribe writing on a wax tablet as they arrive at his ear." width="1536" height="1024">
+    <figcaption><b>Speaker and scribe.</b> Fragment of a krater, c. 440&nbsp;BC. Speech is shown leaving the mouth as three concentric arcs struck from a single point; the scribe writes as they arrive rather than after they stop. The painter has given him no pause in which to catch up.
+      <span class="acc">Artisan Build Collection · not accessioned · probably not ancient</span></figcaption>
+  </figure>
 
   <div class="stream" aria-label="Example event stream">
     <div class="row r1"><span>partial</span><span class="n">lag 120ms</span><span class="t">the</span></div>
@@ -133,6 +172,20 @@
     <p class="cap">Real frames. One word each, roughly every 200&nbsp;ms.</p>
   </div>
 </div>
+
+<section>
+  <p class="kicker">Why it exists</p>
+  <h2>It started as crackly audio.</h2>
+  <p class="pull">The speech-follow built into the teleprompter was fighting the encoder for CPU. The prompter kept up. The audio did not.</p>
+  <p class="lead">OBS wants every core it can get. So does a software encoder. Adding speech recognition to that same contest meant dropped samples, and dropped samples on a take you cannot re-shoot are not a performance problem, they are a lost afternoon.</p>
+  <p class="lead" style="margin-top:14px">The Neural Engine, meanwhile, was sitting completely idle. It is a separate piece of silicon that no encoder is competing for. Moving the listening there did not make it faster so much as make it <em>free</em> — it stopped taking anything the recording needed.</p>
+
+  <figure>
+    <img src="img/contention.png" alt="Vase panel: two craftsmen crowded at one small bench, elbows colliding, the scribe's line skidding off course, while an identical bench stands empty beneath." width="1536" height="1024">
+    <figcaption><b>Two craftsmen at one bench.</b> The scribe's line skids as his elbow is struck; neither man is at fault and neither can move. A second bench, identical and entirely unused, stands beneath the first. Conventionally read as an allegory of resource contention.
+      <span class="acc">Attributed to the Scheduler Painter · c. 440 BC</span></figcaption>
+  </figure>
+</section>
 
 <section>
   <p class="kicker">The distinction</p>
@@ -147,6 +200,27 @@
     <tr><td>You are</td><td>writing</td><td>performing</td></tr>
   </table>
   </div>
+
+  <p class="lead" style="margin-top:30px">If dictation is what you actually want, use <a href="https://www.sonari.audio/">Sonari</a> — it is very good, it runs Parakeet and WhisperKit locally, and it is made by a friend. We compared notes and concluded the use cases genuinely diverge: Sonari is built around the moment you stop speaking, and this one is built around the moment you have not.</p>
+</section>
+
+<section>
+  <p class="kicker">What it is for</p>
+  <h2>Driving a prompter, mostly.</h2>
+  <p class="lead">That is the honest answer — it exists because <a href="https://pteroprompter.com">Pteroprompter</a> needed it, and that is still the case it is tuned for. But nothing about it is prompter-shaped. It streams words and timestamps to a socket; what listens is your business.</p>
+  <ul class="uses">
+    <li><b>Speech-follow scrolling</b> — the script keeps your pace instead of a fixed rate you have to chase.</li>
+    <li><b>Cue firing</b> — a control token in the script triggers the instant you reach it, not a second and a half later.</li>
+    <li><b>Editorial markers</b> — every frame carries the audio time it was spoken, so markers land where the words are.</li>
+    <li><b>Live captioning</b> — for a stream, a talk, or a room, without a cloud round trip.</li>
+    <li><b>Anything with a socket</b> — a lighting cue, a slide advance, a bot that answers when it hears its name.</li>
+  </ul>
+
+  <figure class="plate-sm" style="max-width:420px">
+    <img src="img/chorus.png" alt="Vase cup interior: five identical chorus members in a rank, all in profile, mouths open in unison, with sound arcs radiating toward the rim." width="1024" height="1024">
+    <figcaption><b>Chorus, speaking as one.</b> Five figures, one voice, one stream leaving the group. The painter has not distinguished them; there was no reason to.
+      <span class="acc">Tondo of a kylix · c. 450 BC</span></figcaption>
+  </figure>
 </section>
 
 <section>
@@ -182,6 +256,10 @@ make baseline</pre>
       <p>The models download once and run on the Neural Engine. The sockets bind to loopback only. There is no account, no key and no server — not as a policy, but because none was ever built.</p>
     </div>
     <div class="card">
+      <h3>It does not want your CPU</h3>
+      <p>The models run on the Neural Engine, which your encoder is not competing for. This is not a benchmark boast — it is the entire reason the thing was written. Recognition that costs you cores costs you takes.</p>
+    </div>
+    <div class="card">
       <h3>Anything can drive it</h3>
       <p>SSE and WebSocket, both live at once. An HTTP control API to start and stop it, behind Basic auth if you want it. And a CLI that reports its own latency, because the claims here should be yours to check.</p>
     </div>
@@ -206,13 +284,46 @@ make baseline</pre>
   <p class="etym">κλέος — <em>kleos</em> — the glory that exists because it is spoken aloud and heard.</p>
   <p class="lead" style="margin-top:18px">The <span class="mono">-cles</span> in Sophocles and Pericles is the Greek <span class="mono">-κλῆς</span>, from <em>kleos</em>: renown. It descends from a root meaning <strong style="color:var(--slip)">to hear</strong> — the same one that gives English the word <em>loud</em>. In Homer, <em>kleos</em> is specifically the fame that survives because bards sing it and people hear it.</p>
   <p class="lead" style="margin-top:14px">So the suffix does not merely mean famous. It means <em>heard of</em>. We would like to claim that was the plan.</p>
-  <p class="note" style="margin-top:14px">(<span class="mono">Sono-</span> is Latin, so the whole thing is a hybrid. So is <em>television</em>.)</p>
+  <div class="two" style="margin-top:40px">
+    <div>
+      <p class="lead"><b style="color:var(--slip)">Sono-</b> is Latin: <em>sonus</em>, sound. <b style="color:var(--slip)">-cles</b> is Greek: <em>kleos</em>, heard-of. The name is a seam between two languages, which is not scholarship so much as an accident we have decided to be pleased about.</p>
+      <p class="note" style="margin-top:14px">So is <em>television</em>. Nobody minds.</p>
+    </div>
+    <figure class="plate-sm" style="margin:0">
+      <img src="img/listener.png" alt="Vase panel: a single youth standing in profile, entirely still, one hand cupped behind the ear, with faint sound arcs arriving at his hand." width="1024" height="1024">
+      <figcaption><b>Youth listening.</b> The figure performs no action. The painter has given him nothing to do but hear.
+        <span class="acc">Lekythos panel · c. 450 BC</span></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <p class="kicker">The mark</p>
+  <h2>An amphitheatre and a sound wave<br>are the same drawing.</h2>
+  <p class="lead">Seen from above, the tiers of a Greek theatre are concentric arcs struck from a single point on the orchestra floor — which is also, exactly, how you draw a voice leaving a mouth. The building is a diagram of what it is for. We took the coincidence.</p>
+  <figure>
+    <img src="img/theatre.png" alt="Vase lid seen from above: a Greek amphitheatre drawn as concentric tiers radiating from a single standing figure at the centre, reading equally as a sound wave." width="1024" height="1024">
+    <figcaption><b>Theatre, from above.</b> Concentric tiers about a single figure in the orchestra. The arrangement is acoustic before it is architectural: every seat is placed where the voice already goes.
+      <span class="acc">Pyxis lid · c. 440 BC</span></figcaption>
+  </figure>
+</section>
+
+<section>
+  <p class="kicker">One more</p>
+  <h2>The painter drew what he saw.</h2>
+  <figure style="margin-top:26px">
+    <img src="img/anachronism.png" alt="Vase panel: a reclining bearded symposiast speaking into a large studio broadcast microphone on a stand, sound arcs travelling into the grille, while a small winged figure transcribes onto a wax tablet." width="1536" height="1024">
+    <figcaption><b>Symposiast with instrument.</b> The reclining figure addresses an object on a slender stand, into which his speech visibly travels. The winged attendant transcribes without pause. The instrument is unattested elsewhere in the corpus and its identification remains contested.
+      <span class="acc">Attributed to the Berlin Painter, disputed · c. 440 BC</span></figcaption>
+  </figure>
 </section>
 
 <footer>
   <p><span class="name">Sonocles</span> — an on-device speech sidecar for the Mac.</p>
   <p>Apple Silicon, macOS 14 or later. Models cache on first run.</p>
-  <p style="margin-top:18px">Made for Pteroprompter. Useful on its own.</p>
+  <p>Free and open source under the MIT licence. <a href="https://github.com/artisan-build/sonocles">Source on GitHub</a>.</p>
+  <p style="margin-top:18px">Made for <a href="https://pteroprompter.com">Pteroprompter</a>. Useful on its own.</p>
+  <p class="note" style="margin-top:22px">Plates generated for this page and presented as catalogue objects. They are not ancient. The joke required that nobody say so until the end.</p>
 </footer>
 
 </div>
