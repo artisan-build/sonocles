@@ -3,125 +3,149 @@ import SwiftUI
 
 /// The popover behind the menu bar icon.
 ///
-/// Laid out around the one question someone opens it to ask: is this actually
-/// hearing me, right now. So the meter and the live hypothesis get the space,
-/// the numbers that qualify them sit directly underneath, and everything else —
-/// engine, ports, transport — is settled once and then ignored.
+/// Laid out around the one question someone opens it to ask: *is this hearing
+/// me, right now.* So the meter and the live hypothesis get the space, the
+/// numbers that qualify them sit directly underneath, and everything else —
+/// engine, endpoints, credentials — is settled once and then ignored.
 ///
-/// The meter is deliberately not decorative. It is driven from the audio
-/// thread's own peak readings, independent of the model, which splits an
-/// ambiguous silence into two answers: meter alive and text dead means capture
-/// is fine and the engine is late; both dead means check the microphone.
+/// The centre panel has three states and shows exactly one. An idle meter
+/// pinned at silence looks broken, and a meter shown during a model download
+/// looks broken *and* is irrelevant, since nothing is listening yet. Each state
+/// gets its own panel rather than one panel that lies in two of them.
 struct MenuBarView: View {
     @Bindable var model: SidecarModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            Divider().overlay(Brand.field)
-            live
-            Divider().overlay(Brand.field)
+            Rectangle().fill(Brand.field).frame(height: 1)
+            centre
+            Rectangle().fill(Brand.field).frame(height: 1)
             controls
         }
-        .frame(width: 340)
+        .frame(width: 344)
         .background(Brand.panel)
     }
 
+    // MARK: - header
+
     private var header: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(model.running ? Brand.quote : Brand.ghost)
-                .frame(width: 7, height: 7)
+        HStack(spacing: 9) {
+            SonoclesMark(progress: model.running ? 1 : 0.34)
+                .foregroundStyle(model.running ? Brand.stress : Brand.ghost)
+                .frame(width: 19, height: 19)
+                .animation(.easeOut(duration: 0.25), value: model.running)
 
             Text("Sonocles")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13.5, weight: .semibold))
                 .foregroundStyle(Brand.bright)
+                .kerning(0.2)
 
             Spacer()
 
-            Text(model.status)
-                .font(.system(size: 11))
-                .foregroundStyle(Brand.faint)
-                .lineLimit(1)
-                .truncationMode(.tail)
+            StatePill(label: stateLabel, colour: stateColour)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
     }
 
-    @ViewBuilder private var live: some View {
-        if let preparation = model.preparation {
-            PreparationView(preparation: preparation)
-        } else {
-            listening
-        }
+    private var stateLabel: String {
+        if model.preparation != nil { return "Preparing" }
+        return model.running ? "Listening" : "Idle"
     }
 
-    /// The first launch fetches ~220 MB and then compiles it for the Neural
-    /// Engine — tens of seconds during which a meter reading silence and an
-    /// empty transcript would be actively misleading, since nothing is wrong
-    /// and nothing is listening yet. So this replaces the live view outright
-    /// rather than sitting above it.
-    private struct PreparationView: View {
-        let preparation: Preparation
+    private var stateColour: Color {
+        if model.preparation != nil { return Brand.stress }
+        return model.running ? Brand.quote : Brand.ghost
+    }
 
-        var body: some View {
-            VStack(alignment: .leading, spacing: 9) {
-                HStack(spacing: 7) {
-                    ProgressView().controlSize(.small)
-                    Text(preparation.summary)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Brand.body)
-                }
+    // MARK: - centre
 
-                // A determinate bar only when the fraction is real. Compiling
-                // has no measurable progress, and a bar invented to keep
-                // something moving would be the same lie as reporting an
-                // unmeasured latency as zero.
-                if let fraction = preparation.fraction {
-                    ProgressView(value: fraction)
-                        .progressViewStyle(.linear)
-                        .tint(Brand.stress)
-                } else {
-                    ProgressView().progressViewStyle(.linear).tint(Brand.stress)
-                }
-
-                Text("One time only — the models cache on disk.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Brand.script)
+    @ViewBuilder private var centre: some View {
+        Group {
+            if let preparation = model.preparation {
+                preparing(preparation)
+            } else if model.running {
+                listening
+            } else {
+                idle
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(minHeight: 92, alignment: .center)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .background(Brand.ink)
+    }
+
+    /// The first launch fetches ~220 MB and compiles it for the Neural Engine.
+    /// Tens of seconds in which a meter reading silence would imply a fault
+    /// where there is none.
+    private func preparing(_ preparation: Preparation) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(preparation.summary)
+                .font(.system(size: 12))
+                .foregroundStyle(Brand.body)
+
+            // A bar only where the fraction is real. Compiling has no
+            // measurable progress, so it gets a pulse instead — animating a bar
+            // to look busy would be the same lie as reporting an unmeasured
+            // latency as zero, and the brand notes say as much out loud.
+            if let fraction = preparation.fraction {
+                ProgressBar(fraction: fraction)
+            } else {
+                WorkingPulse()
+            }
+
+            Text("One time only — the models cache on disk.")
+                .font(.system(size: 10))
+                .foregroundStyle(Brand.script)
+        }
+        .frame(height: 92, alignment: .center)
     }
 
     private var listening: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 11) {
             LevelMeter(db: model.heldDb, reading: model.levelDb)
 
-            // Reserves its own height so an arriving word does not shove the
-            // rest of the popover downward on every hypothesis.
-            Text(model.text.isEmpty ? "…" : model.text)
+            // Height is reserved so an arriving word never shoves the rest of
+            // the popover down — at five frames a second that would be a twitch,
+            // not an interface.
+            Text(model.text.isEmpty ? "Listening…" : model.text)
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(model.text.isEmpty ? Brand.script : Brand.body)
                 .lineLimit(3, reservesSpace: true)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .animation(nil, value: model.text)
 
-            HStack(spacing: 14) {
+            HStack(spacing: 16) {
                 stat("lag", model.lagMs.map { "\($0) ms" })
                 stat("every", model.gapMs.map { "\($0) ms" })
                 Spacer()
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Brand.ink)
+        .frame(height: 92, alignment: .top)
+    }
+
+    private var idle: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Not listening")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Brand.faint)
+            Text(
+                "The stream stays open — anything can start it, including "
+                    + "a POST to /start."
+            )
+            .font(.system(size: 10.5))
+            .foregroundStyle(Brand.script)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(height: 92, alignment: .center)
     }
 
     /// A missing measurement reads as "··", never as zero. Rendering absence as
-    /// a number is how an earlier build of this spent a session insisting it
-    /// was real-time when it had simply measured nothing.
+    /// a number is how an earlier build spent a session insisting it was
+    /// real-time while measuring nothing at all.
     private func stat(_ label: String, _ value: String?) -> some View {
         HStack(spacing: 5) {
             Text(label)
@@ -133,8 +157,10 @@ struct MenuBarView: View {
         }
     }
 
+    // MARK: - controls
+
     private var controls: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 11) {
             HStack {
                 Text("Engine")
                     .font(.system(size: 11))
@@ -142,63 +168,27 @@ struct MenuBarView: View {
 
                 Spacer()
 
-                Picker(
-                    "",
-                    selection: Binding(
-                        get: { model.engine },
-                        set: { model.use($0) }
-                    )
-                ) {
+                Picker("", selection: Binding(get: { model.engine }, set: { model.use($0) })) {
                     ForEach(EngineChoice.allCases, id: \.self) { choice in
                         Text(choice.label).tag(choice)
                     }
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)
-                .frame(width: 178)
+                .frame(width: 182)
             }
 
             // Endpoints, not switches. The sockets bind at launch and stay up
             // for the life of the app, which is what lets POST /start work
-            // while this popover reads "Idle".
-            HStack(spacing: 14) {
+            // while this popover says "Idle".
+            HStack(spacing: 15) {
                 endpoint("HTTP", ":7357")
                 endpoint("WS", ":7358")
                 Spacer()
             }
 
             DisclosureGroup {
-                VStack(alignment: .leading, spacing: 7) {
-                    Text(
-                        "Protects /start, /stop and /status. The event stream stays open — EventSource cannot send an Authorization header, and credentials in a URL would be worse than a loopback-only read."
-                    )
-                    .font(.system(size: 10))
-                    .foregroundStyle(Brand.script)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    TextField("username", text: $model.username)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 11, design: .monospaced))
-
-                    SecureField("password — blank leaves the API open", text: $model.password)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 11, design: .monospaced))
-
-                    HStack {
-                        Circle()
-                            .fill(model.authEnabled ? Brand.quote : Brand.stress)
-                            .frame(width: 6, height: 6)
-                        Text(model.authEnabled ? "Locked" : "Open")
-                            .font(.system(size: 10))
-                            .foregroundStyle(Brand.faint)
-
-                        Spacer()
-
-                        Button("Save") { model.saveCredentials() }
-                            .font(.system(size: 11))
-                    }
-                }
-                .padding(.top, 6)
+                credentials
             } label: {
                 Text("Control API")
                     .font(.system(size: 11))
@@ -211,6 +201,7 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Brand.stress)
+                .disabled(model.preparation != nil)
 
                 Spacer()
 
@@ -222,6 +213,40 @@ struct MenuBarView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+    }
+
+    private var credentials: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(
+                "Protects /start, /stop and /status. The event stream stays "
+                    + "open — EventSource cannot send an Authorization header, and "
+                    + "credentials in a URL would be worse than a loopback-only read."
+            )
+            .font(.system(size: 10))
+            .foregroundStyle(Brand.script)
+            .fixedSize(horizontal: false, vertical: true)
+
+            TextField("username", text: $model.username)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 11, design: .monospaced))
+
+            SecureField("password — blank leaves the API open", text: $model.password)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 11, design: .monospaced))
+
+            HStack {
+                StatePill(
+                    label: model.authEnabled ? "Locked" : "Open",
+                    colour: model.authEnabled ? Brand.quote : Brand.stress
+                )
+
+                Spacer()
+
+                Button("Save") { model.saveCredentials() }
+                    .font(.system(size: 11))
+            }
+        }
+        .padding(.top, 7)
     }
 
     private func endpoint(_ label: String, _ port: String) -> some View {
@@ -238,11 +263,11 @@ struct MenuBarView: View {
 
 /// Twenty cells over the useful range.
 ///
-/// Below -60 dBFS is silence for our purposes and clipping pins at the top
-/// rather than overflowing, so the bar reads the way a console meter does. The
-/// numeric readout carries the detail the bar throws away — a quiet room floor
-/// sits at the bottom of the bar but still moves the number, which is what
-/// proves the microphone is live when nobody is speaking.
+/// Below -60 dBFS is silence for our purposes and clipping pins at the top, so
+/// the bar reads the way a console meter does. The numeric readout carries the
+/// detail the bar throws away — a quiet room floor sits at the bottom of the
+/// bar but still moves the number, which is what proves the microphone is live
+/// when nobody is speaking.
 struct LevelMeter: View {
     let db: Double
     let reading: Double
@@ -252,19 +277,19 @@ struct LevelMeter: View {
     }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 7) {
             HStack(spacing: 2) {
-                ForEach(0..<20, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(colour(for: i))
-                        .frame(height: 14)
+                ForEach(0..<20, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(colour(for: index))
+                        .frame(height: 13)
                 }
             }
 
-            Text(reading <= -119 ? "  --" : String(format: "%.0f", reading))
+            Text(reading <= -119 ? "––" : String(format: "%.0f", reading))
                 .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(Brand.faint)
-                .frame(width: 26, alignment: .trailing)
+                .foregroundStyle(reading <= -119 ? Brand.script : Brand.faint)
+                .frame(width: 24, alignment: .trailing)
 
             Text("dB")
                 .font(.system(size: 9))
@@ -272,11 +297,63 @@ struct LevelMeter: View {
         }
     }
 
+    /// Amber through the working range, red at the top, using the prompter's
+    /// own key so a hot signal reads here the way a REC light does there.
     private func colour(for index: Int) -> Color {
         guard index < filled else { return Brand.field }
 
-        // Amber through the working range, red at the top, using the prompter's
-        // own key so a hot signal reads the same here as a REC light does there.
         return index >= 18 ? Brand.rec : Brand.stress
+    }
+}
+
+/// A determinate bar, drawn rather than borrowed.
+///
+/// The system's linear `ProgressView` is AppKit-backed, which means it neither
+/// matches the meter sitting a few points above it nor survives offscreen
+/// rendering — so the design could not be reviewed without a human looking at a
+/// screen. Twenty points of rounded rectangle solves both.
+struct ProgressBar: View {
+    let fraction: Double
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Brand.field)
+                Capsule()
+                    .fill(Brand.stress)
+                    .frame(width: max(3, geometry.size.width * min(1, max(0, fraction))))
+            }
+        }
+        .frame(height: 5)
+        .animation(.easeOut(duration: 0.3), value: fraction)
+    }
+}
+
+/// Work with no measurable progress.
+///
+/// Deliberately not a bar. A bar implies a fraction, and compiling does not have
+/// one — so this pulses to say "still going" without implying how far along it
+/// is, which is the only honest thing available.
+struct WorkingPulse: View {
+    @State private var bright = false
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Brand.stress)
+                    .frame(width: 5, height: 5)
+                    .opacity(bright ? 0.95 : 0.25)
+                    .animation(
+                        .easeInOut(duration: 0.62)
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(index) * 0.16),
+                        value: bright
+                    )
+            }
+            Spacer()
+        }
+        .frame(height: 5)
+        .onAppear { bright = true }
     }
 }

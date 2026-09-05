@@ -22,9 +22,11 @@ struct SonoclesApp: App {
         MenuBarExtra {
             MenuBarView(model: model)
         } label: {
-            // Filled while listening, outline while idle, so the state reads
-            // from the menu bar without opening anything.
-            Image(systemName: model.running ? "waveform.circle.fill" : "waveform.circle")
+            // The mark itself, so the icon in the menu bar and the one in the
+            // popover are the same drawing. Lit while listening, dimmed while
+            // idle, so state reads without opening anything.
+            SonoclesMark(progress: model.running ? 1 : 0.34, lineWidth: 1.35)
+                .frame(width: 17, height: 17)
         }
         .menuBarExtraStyle(.window)
     }
@@ -38,7 +40,16 @@ struct SonoclesApp: App {
 /// meant to spare them opening.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Task { @MainActor in SidecarModel.shared.bind() }
+        Task { @MainActor in
+            // A design feedback loop that needs no human and no screen
+            // recording permission. Renders every popover state and exits.
+            if Preview.renderIfRequested() {
+                NSApplication.shared.terminate(nil)
+                return
+            }
+
+            SidecarModel.shared.bind()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
