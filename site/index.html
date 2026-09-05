@@ -111,6 +111,21 @@
   .btn-ghost { background:transparent; color:var(--ink); border:2px solid var(--stone-line); }
   .btn-ghost:hover { border-color:var(--terracotta); }
   .cta .meta { color:var(--script); font-size:13.5px; }
+  /* The second install route. user-select:all makes one click take the whole
+     command, which is the nearest thing to a copy button on a page that ships
+     no JavaScript at all. The chip is a flex item and therefore blockified, so
+     on a narrow screen it wraps at the space before the tap path rather than
+     breaking mid-token or scrolling behind an edge. */
+  .brew { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin:16px 0 0; font-size:14px; color:var(--ink-faint); }
+  .brew code { font-size:13.5px; color:var(--ink); background:var(--stone-deep);
+    border:1px solid var(--stone-line); border-radius:8px; padding:8px 12px;
+    user-select:all; line-height:1.55; }
+  /* The two halves are nowrap so the only place the command can break is the
+     space between them. Left to itself the browser breaks at the hyphen in
+     artisan-build, and a command that looks like it contains a line break is
+     worse than one that is simply too wide. */
+  .brew code span { white-space:nowrap; }
   .hero h1 { font-size:clamp(40px,7.6vw,80px); font-weight:600; letter-spacing:-.022em; margin-bottom:24px; }
   .hero h1 em { font-style:normal; color:var(--terracotta); }
   .lede { font-size:clamp(18px,2.2vw,22px); color:var(--ink-soft); max-width:56ch; margin:0 0 12px; }
@@ -139,7 +154,8 @@
     .hero .lede2  { order:5; }
     .hero .sub    { order:6; }
     .hero .cta    { order:7; margin-top:22px; }
-    .hero .stream { order:8; }
+    .hero .brew   { order:8; align-items:flex-start; }
+    .hero .stream { order:9; }
   }
 
   section { padding:62px 0; }
@@ -244,6 +260,8 @@
     <a class="btn btn-ghost" href="https://github.com/artisan-build/sonocles">Source on GitHub</a>
     <span class="meta">Apple Silicon · macOS 14 or later</span>
   </div>
+
+  <p class="brew"><span>or</span> <code><span>brew install --cask</span> <span>artisan-build/tap/sonocles</span></code></p>
 
   <figure>
     <img src="img/flat-hero.png" alt="Illustration: a cheerful bearded philosopher speaking, sound arcs sweeping from his mouth to a delighted scribe who is keeping up easily." width="1536" height="1024">
