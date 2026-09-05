@@ -117,6 +117,9 @@ jobs:
       - name: Build and bundle
         env:
           SIGN_ID: ${{ steps.signing.outputs.identity || '-' }}
+          # The tag is the version. bundle.sh strips the leading v and stamps
+          # it into Info.plist, so a Homebrew cask and the app agree.
+          VERSION: ${{ steps.v.outputs.tag }}
         run: ./app/Scripts/bundle.sh
 
       - name: Warn if unsigned

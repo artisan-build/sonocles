@@ -14,6 +14,23 @@ CONFIG="${CONFIG:-release}"
 DIST="$ROOT/../dist"
 APP="$DIST/Sonocles.app"
 
+# The version was hardcoded here until a Homebrew cask made that untenable: a
+# cask declaring 0.1.1 around an app whose Info.plist still says 0.1.0 breaks
+# `brew upgrade` detection, because Homebrew compares the two.
+#
+# VERSION wins if set — that is how CI passes the tag. Otherwise take the
+# nearest tag, so a local build is stamped with something true rather than
+# whatever was last typed into this file. --abbrev=0 keeps it to the tag
+# itself; CFBundleShortVersionString must be dot-separated digits, and
+# "v0.1.0-3-g56ff482" is not.
+VERSION="${VERSION:-$(git -C "$ROOT" describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)}"
+VERSION="${VERSION#v}"
+
+# CFBundleVersion is the build number and must never go backwards. Commit
+# count is monotonic on a branch that only moves forward, and needs nothing
+# stored anywhere.
+BUILD="$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)"
+
 # One invocation, not two. --show-bin-path is cheap but it still plans the
 # build, and there is no reason to do that twice for a path we can ask for once.
 BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" --show-bin-path)"
@@ -34,8 +51,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleDisplayName</key><string>Sonocles</string>
     <key>CFBundleExecutable</key><string>Sonocles</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+    <key>CFBundleVersion</key><string>${BUILD}</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <!-- Menu bar only: no Dock icon, no app switcher entry. -->
     <key>LSUIElement</key><true/>
@@ -76,4 +93,4 @@ for TARGET in "$APP/Contents/Resources/sonocles-cli" "$APP"; do
     --sign "$SIGN" "$TARGET"
 done
 
-echo "built $APP"
+echo "built $APP ($VERSION build $BUILD)"
