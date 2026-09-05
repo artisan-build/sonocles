@@ -124,7 +124,7 @@ jobs:
         run: |
           echo "::warning title=Ad-hoc signature::No APPLE_CERT_P12_BASE64 secret, so this build is ad-hoc signed. It will not pass Gatekeeper, and macOS will treat every rebuild as a different app for microphone permission."
 
-      - name: Notarize
+      - name: Notarize the app
         if: steps.have.outputs.cert == 'true' && steps.have.outputs.notary == 'true'
         env:
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
@@ -154,6 +154,42 @@ jobs:
           ln -s /Applications dist/dmg/Applications
           hdiutil create -volname "Sonocles" -srcfolder dist/dmg \
             -ov -format UDZO dist/Sonocles.dmg
+
+      # The disk image needs its own trip through the notary service. Gatekeeper
+      # checks it when the image is opened, which happens before the user has
+      # seen anything at all — no window, no icon — so a warning here is worse
+      # than one at first launch. A stapled app inside an unnotarized image does
+      # not help: the block lands at mount time.
+      #
+      # Sign first, then notarize, then staple, in that order. Signing rewrites
+      # the image and would invalidate a ticket stapled beforehand. The
+      # signature is not strictly required — Apple will notarize an unsigned
+      # image — but without one `spctl` cannot assess the image at all and
+      # reports "Insufficient Context" rather than a verdict, which makes the
+      # result impossible to verify.
+      - name: Notarize the disk image
+        if: steps.have.outputs.cert == 'true' && steps.have.outputs.notary == 'true'
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          SIGN_ID: ${{ steps.signing.outputs.identity }}
+        run: |
+          codesign --force --timestamp --sign "$SIGN_ID" dist/Sonocles.dmg
+          echo "$APPLE_API_KEY_P8" | base64 --decode > "$RUNNER_TEMP/key.p8"
+          xcrun notarytool submit dist/Sonocles.dmg \
+            --key "$RUNNER_TEMP/key.p8" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --wait
+          xcrun stapler staple dist/Sonocles.dmg
+          rm -f "$RUNNER_TEMP/key.p8"
+          spctl -a -vvv -t open --context context:primary-signature dist/Sonocles.dmg
+
+      # Checksums come last: stapling rewrites both artifacts, so hashing any
+      # earlier publishes digests that do not match what people download.
+      - name: Checksums
+        run: |
           ditto -c -k --keepParent dist/Sonocles.app dist/Sonocles.zip
           shasum -a 256 dist/Sonocles.dmg dist/Sonocles.zip > dist/checksums.txt
           cat dist/checksums.txt
