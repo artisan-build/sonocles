@@ -63,8 +63,12 @@ sounds like it is arguing with somebody.
 
 ## What it is
 
-An on-device speech sidecar. It hears you, and it streams what you said to
+On-device speech-to-text, streamed live. It hears you and sends the words to
 whatever is listening — 180 milliseconds behind you, and nowhere else.
+
+Say **speech-to-text**, never just "speech". On its own the word reads as
+synthesis to a great many people, and a page that has to be re-read to work out
+which direction the audio flows has already lost.
 
 ## What it is not
 

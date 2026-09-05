@@ -1,7 +1,7 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// Sonocles — an on-device speech sidecar that streams recognised words to
+// Sonocles — on-device speech-to-text that streams recognised words, live, to
 // whatever is listening.
 //
 // Three products from one core:

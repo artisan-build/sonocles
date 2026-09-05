@@ -9,10 +9,12 @@
 
 # Sonocles
 
-**so-NOK-leez.** An on-device speech sidecar for the Mac. It listens to your
-microphone and streams what you say — word by word, about 180&nbsp;milliseconds
-behind you, with the audio timestamps that say when each word was actually
-spoken.
+**so-NOK-leez.** On-device **speech-to-text** for the Mac, streamed live. It
+listens to your microphone and sends recognised words over WebSocket or SSE —
+word by word, about 180&nbsp;milliseconds behind you, each carrying the audio
+timestamp of when it was actually spoken.
+
+What listens is up to you.
 
 Everything runs on the Neural Engine. Nothing leaves the machine. Free and open
 source, MIT.
