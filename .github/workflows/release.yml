@@ -235,3 +235,48 @@ jobs:
             --title "Sonocles $VER" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             dist/*.dmg dist/*.zip dist/checksums.txt
+
+      # The cask pins a version and a sha256, so an un-bumped tap keeps
+      # advertising the previous release — and installs it, since the checksum
+      # still matches that older DMG. Nothing fails loudly; people just get old
+      # software from a command the website tells them to run.
+      - name: Check for the tap token
+        id: brew
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -n "$TAP_TOKEN" ]; then
+            echo "bump=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Cask not bumped::No HOMEBREW_TAP_TOKEN secret, so artisan-build/homebrew-tap still advertises the previous version. brew install --cask artisan-build/tap/sonocles will not get this release."
+          fi
+
+      # Gated on the build actually being signed AND notarized, not merely on
+      # having a token. Homebrew quarantines cask-installed apps, so pointing
+      # the cask at an ad-hoc build would publish something Gatekeeper refuses
+      # to open — worse than leaving the cask stale.
+      - name: Bump the Homebrew cask
+        if: startsWith(github.ref, 'refs/tags/') && steps.brew.outputs.bump == 'true' && steps.have.outputs.cert == 'true' && steps.have.outputs.notary == 'true'
+        env:
+          VER: ${{ steps.v.outputs.tag }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          SHA="$(shasum -a 256 dist/Sonocles.dmg | awk '{print $1}')"
+          # The tap is public, so clone over plain https; only the push is
+          # authenticated, via http.extraheader so the token never lands in a
+          # URL, a remote, or the reflog.
+          git clone --depth 1 https://github.com/artisan-build/homebrew-tap.git "$RUNNER_TEMP/tap"
+          ./.github/scripts/bump-cask.sh "$VER" "$SHA" "$RUNNER_TEMP/tap/Casks/sonocles.rb"
+          cd "$RUNNER_TEMP/tap"
+          git add Casks/sonocles.rb
+          if git diff --cached --quiet; then
+            echo "cask already at $VER"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "chore(sonocles): $VER" -m "Bumped by the sonocles release pipeline."
+          AUTH="$(printf 'x-access-token:%s' "$TAP_TOKEN" | base64 | tr -d '\n')"
+          git -c http.extraheader="AUTHORIZATION: basic $AUTH" push origin HEAD
