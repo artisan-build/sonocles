@@ -1,3 +1,15 @@
+// SpeechAnalyzer and AnalyzerInput are macOS 26 SDK symbols. `@available`
+// guards *runtime* availability; it does not conjure declarations that the SDK
+// being compiled against has never heard of. So the whole engine is gated on
+// the toolchain, using the Swift version as the proxy for the SDK — Xcode 26
+// ships Swift 6.2, and that is the first toolchain with these types.
+//
+// Without this the package will not build on Xcode 16 at all, which quietly
+// contradicts the macOS 14 floor in the README. Parakeet is the default engine
+// and needs none of this; the Apple engine is a baseline for comparison, and a
+// baseline is not worth making the project unbuildable for.
+#if compiler(>=6.2)
+
 @preconcurrency import AVFoundation
 import CoreMedia
 import Foundation
@@ -111,3 +123,5 @@ public final class AppleEngine: SpeechEngine, @unchecked Sendable {
         continuation?.yield(AnalyzerInput(buffer: buffer))
     }
 }
+
+#endif

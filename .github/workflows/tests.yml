@@ -13,8 +13,11 @@ concurrency:
 
 jobs:
   test:
-    # Apple Silicon: the package floors at macOS 14 and the models are Core ML.
-    runs-on: macos-15
+    # macos-26 for the SDK, not the OS floor. The package targets macOS 14,
+    # but the Apple baseline engine needs macOS 26 declarations to compile at
+    # all — on an older runner it is conditionally compiled out and never
+    # gets checked.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v6
 

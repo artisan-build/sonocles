@@ -57,8 +57,12 @@ public final class Sidecar: @unchecked Sendable {
         case .fluid1280:
             engine = FluidEngine(chunk: .ms1280, note: note)
         case .apple:
+            #if compiler(>=6.2)
             guard #available(macOS 26.0, *) else { throw SidecarError.appleEngineUnavailable }
             engine = AppleEngine(locale: Locale(identifier: config.locale), note: note)
+            #else
+            throw SidecarError.appleEngineUnavailable
+            #endif
         }
     }
 
@@ -74,9 +78,11 @@ public final class Sidecar: @unchecked Sendable {
             throw SidecarError.microphoneDenied
         }
 
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *), let apple = engine as? AppleEngine {
             try await apple.prepare()
         }
+        #endif
 
         try await engine.start { [weak self] hypothesis, nanos in
             self?.publish(hypothesis, at: nanos)
@@ -115,7 +121,8 @@ public enum SidecarError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .appleEngineUnavailable:
-            return "The Apple engine needs macOS 26 or later. Parakeet runs on macOS 14+."
+            return
+                "The Apple engine needs macOS 26 and an Xcode 26 toolchain. Parakeet runs on macOS 14+."
         case .microphoneDenied:
             return "Microphone access denied — System Settings › Privacy & Security › Microphone"
         }
