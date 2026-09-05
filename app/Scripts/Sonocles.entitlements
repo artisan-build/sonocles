@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Required. Under the hardened runtime the microphone is gated by this
+      entitlement *before* TCC is ever consulted: without it the process is
+      refused at the runtime level, so no prompt appears and the app never shows
+      up in System Settings > Privacy & Security > Microphone at all.
+
+      That failure is silent and looks nothing like a permissions problem —
+      AVAudioEngine starts, sockets bind, status reports listening, and not one
+      word is ever transcribed. NSMicrophoneUsageDescription in Info.plist is
+      necessary but not sufficient; both have to be present.
+    -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+</dict>
+</plist>
