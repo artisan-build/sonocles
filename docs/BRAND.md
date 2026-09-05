@@ -4,14 +4,28 @@
 
 ## The name is not decoration
 
-*Sono-* is sound. *-cles* is the Greek `-κλῆς`, meaning glory or renown — the
-suffix in Sophocles, Pericles, Themistocles, Heracles. It does not mean
-"maker of" or "master of". It means **known for**.
+*-cles* is Greek, not Roman. It is `-κλῆς` (*-klēs*), from `κλέος` (*kleos*):
+glory, renown. The suffix in Sophocles (Σοφοκλῆς), Pericles (Περικλῆς),
+Themistocles. It does not mean "maker of" or "master of". It means **known for**.
 
-So Sonocles is, roughly, *renowned for sound*. Which is a slightly grand thing
-to call a menu bar utility, and the joke is deliberate: a 220 MB model listening
-for the word "okay" does not need a heroic name, and having one is funnier than
-not having one.
+Heracles (Ἡρακλῆς) is the Greek one; **Hercules is what Rome called him**. The
+`-cles` spelling English uses is Greek `-κλῆς` transliterated *through* Latin,
+which is why it reads as belonging to both.
+
+And then the part that is genuinely lucky. *Kleos* descends from the
+Proto-Indo-European root `*ḱlew-`, **"to hear"** — the same root that gives
+Sanskrit *śrávas*, Latin *clueō*, and, through Germanic, the English word
+**loud**. *Kleos* is not abstract fame. It is *that which is heard about
+someone*. In Homer it is specifically the glory that exists because bards sing
+it and people hear it: renown as an acoustic event.
+
+So the suffix does not merely mean famous. It means **heard of**. For a tool
+whose entire job is hearing, that is an inheritance rather than a pun, and it is
+the single best thing about the name.
+
+One honest note: *sono-* is **Latin** (Greek for sound would be *phōno-*), so
+Sonocles is a hybrid coinage. So is *television*. We are not going to pretend
+otherwise, and we are not going to rename it Phonocles.
 
 But the classical read is real, and it points somewhere useful. Sophocles wrote
 words to be **spoken aloud**, in amphitheatres engineered so that a voice
@@ -74,36 +88,63 @@ open the CLI and check.
 
 ## Palette
 
-Shared with Pteroprompter, deliberately. They are sibling tools by the same
-author and one consumes the other; a family resemblance is accurate rather than
-lazy. The values live in `SonoclesCore/Brand.swift`, lifted verbatim from
-`pteroprompter.com/resources/css/app.css` rather than eyeballed — "close enough"
-across two codebases is how a brand quietly drifts.
+**Attic red-figure pottery.** Not Pteroprompter's.
 
-Warm dark throughout, in both appearances. This is a tool that sits over
-whatever you are actually looking at, often while a camera is running. It should
-never flash white at you mid-take.
+An earlier version of this document argued that sharing the prompter's palette
+was accurate family resemblance. It was not; it was borrowing, and it made two
+products look like one. They are siblings and one consumes the other, but a tool
+with its own name deserves its own colours.
+
+The source is specific rather than vaguely classical. Fifth-century Attic vases
+are three materials and nothing else — the terracotta of the clay, the black
+slip fired over it, and the pale bone of the unpainted ground — and they are very
+often *pictures of performance*: the chorus, the aulos player, the actor holding
+a mask. It is the right well to draw from, and it lands nowhere near amber.
+
+The tradition has two techniques, and we use both:
+
+- **Red-figure** — light figures on black slip. The app. It stays dark because
+  it sits over whatever you are actually doing, frequently while a camera is
+  running, and should never flash white at you mid-take.
+- **Black-figure** — dark figures on bare clay. The site. Light, warm, and
+  unmistakably not the same page as the prompter's.
+
+Values live in `SonoclesCore/Brand.swift`.
 
 | role | token | value |
 |---|---|---|
-| deepest ground | `screen` | `#0E0C09` |
-| popover ground | `panel` | `#171410` |
-| live area | `ink` | `#14110D` |
-| inset / meter cell | `field` | `#1E1A15` |
-| primary text | `bright` | `#ECE6DA` |
-| body text | `body` | `#C9C1B2` |
-| secondary | `faint` | `#8F8674` |
-| tertiary / absent values | `script` | `#6F6656` |
-| accent, signal, action | `stress` | `#F2B45C` |
-| listening | `quote` | `#A6CF9E` |
-| hot / recording | `rec` | `#E06666` |
+| black slip, deepest | `slip` | `#100C0A` |
+| ground | `ground` | `#16110E` |
+| popover | `panel` | `#1C1611` |
+| raised | `raised` | `#241C16` |
+| inset / meter cell | `field` | `#2B211A` |
+| unpainted ground, brightest text | `bone` | `#EFE3D0` |
+| body text | `body` | `#CDBBA3` |
+| secondary | `faint` | `#9A8874` |
+| **absent values** | `script` | `#6B5C4B` |
+| **the signature — fired clay** | `terracotta` | `#C86F45` |
+| aged bronze — listening, healthy | `verdigris` | `#7FA88C` |
+| ochre — attention without alarm | `ochre` | `#D9A441` |
+| iron oxide — hot, recording, stop | `oxide` | `#B4453A` |
 
-Amber against warm near-black reads as lamplight and bronze rather than as
-generic dark mode, which suits the name without anyone having to draw a column.
+Views name the *role*, not the pigment, so a palette change stays in one file
+instead of spreading through the interface.
 
 `script` is load-bearing beyond its name: it is the colour of a value we do not
 have. A missing latency, an unmeasured level, an empty transcript. Absence gets
 its own colour so it is never mistaken for a number.
+
+## Type
+
+| use | face | why |
+|---|---|---|
+| wordmark, kickers | **Cinzel**, letterspaced | Drawn from first-century Roman inscriptional capitals — the origin of our capital letterforms. Used sparingly; it is seasoning. |
+| headings | **Cormorant Garamond** | High-contrast old-style. Classical without costume. |
+| body | **Instrument Sans** | A workhorse. The page is about a technical tool and has to be read. |
+| data, code, frames | **IBM Plex Mono** | Neutral. Numbers should look like numbers. |
+
+No marble textures, no laurel wreaths, no columns. The classical reference lives
+in the letterforms and the palette, which is where it can be taken seriously.
 
 ## Mark
 

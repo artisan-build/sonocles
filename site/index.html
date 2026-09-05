@@ -5,110 +5,116 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sonocles — words, while you're still saying them</title>
 <meta name="description" content="An on-device speech sidecar for the Mac. It hears you and streams what you said — about 180 milliseconds behind you, and nowhere else.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230E0C09'/%3E%3Ccircle cx='8' cy='16' r='2.6' fill='%23F2B45C'/%3E%3Cpath d='M13 10a9 9 0 0 1 0 12' stroke='%23F2B45C' stroke-width='2.1' fill='none' stroke-linecap='round'/%3E%3Cpath d='M18.5 7a14.5 14.5 0 0 1 0 18' stroke='%23F2B45C' stroke-width='2.1' fill='none' stroke-linecap='round' opacity='.7'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231C1611'/%3E%3Ccircle cx='8' cy='16' r='2.6' fill='%23C86F45'/%3E%3Cpath d='M13 10a9 9 0 0 1 0 12' stroke='%23C86F45' stroke-width='2.1' fill='none' stroke-linecap='round'/%3E%3Cpath d='M18.5 7a14.5 14.5 0 0 1 0 18' stroke='%23C86F45' stroke-width='2.1' fill='none' stroke-linecap='round' opacity='.7'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  /* Black-figure: dark slip on bare clay. The app is the same palette
+     inverted — red-figure — which is the other half of the same tradition. */
   :root {
-    --screen:#0E0C09; --ink:#14110D; --panel:#171410; --card:#1C1813; --field:#1E1A15;
-    --bright:#ECE6DA; --body:#C9C1B2; --muted:#B3AA9A; --faint:#8F8674;
-    --ghost:#7D7565; --script:#6F6656;
-    --stress:#F2B45C; --code:#8BC4F0; --quote:#A6CF9E; --rec:#E06666;
+    --clay:#EAE0D0; --clay-deep:#E1D4BF; --clay-line:#D3C3AB;
+    --slip:#1C1611; --slip-soft:#47382C; --slip-faint:#6B5C4B;
+    --script:#8D7C66;
+    --terracotta:#A94E2C; --terracotta-soft:#C86F45;
+    --verdigris:#4F7A63; --oxide:#9C3B31;
+    --display:'Cormorant Garamond',Georgia,serif;
+    --roman:'Cinzel',Georgia,serif;
     --sans:'Instrument Sans',ui-sans-serif,system-ui,sans-serif;
-    --display:'Newsreader',Georgia,serif;
     --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   * { box-sizing:border-box; }
   html { scroll-behavior:smooth; }
   body {
-    margin:0; background:var(--screen); color:var(--body);
-    font-family:var(--sans); font-size:16px; line-height:1.62;
+    margin:0; background:var(--clay); color:var(--slip-soft);
+    font-family:var(--sans); font-size:16.5px; line-height:1.66;
     -webkit-font-smoothing:antialiased;
   }
-  .wrap { width:min(92vw,860px); margin:0 auto; }
-  a { color:var(--stress); text-decoration:none; border-bottom:1px solid rgba(242,180,92,.28); }
-  a:hover { border-bottom-color:var(--stress); }
-  h1,h2,h3 { font-family:var(--display); font-weight:500; color:var(--bright); letter-spacing:-.01em; line-height:1.2; }
-  code, .mono { font-family:var(--mono); }
+  .wrap { width:min(92vw,880px); margin:0 auto; }
+  a { color:var(--terracotta); text-decoration:none; border-bottom:1px solid rgba(169,78,44,.3); }
+  a:hover { border-bottom-color:var(--terracotta); }
+  h1,h2 { font-family:var(--display); font-weight:500; color:var(--slip); line-height:1.12; letter-spacing:-.005em; }
+  code,.mono { font-family:var(--mono); }
+  em { font-style:italic; }
 
-  /* ---------- header ---------- */
-  header { padding:34px 0 0; }
-  .brandbar { display:flex; align-items:center; gap:11px; }
-  .brandbar strong { font-family:var(--sans); font-weight:600; font-size:17px; color:var(--bright); letter-spacing:.2px; }
-  .say { color:var(--script); font-size:13px; font-family:var(--mono); }
-
-  /* ---------- hero ---------- */
-  .hero { padding:74px 0 56px; }
-  .hero h1 { font-size:clamp(38px,6.4vw,62px); margin:0 0 22px; }
-  .lede { font-size:clamp(17px,2.2vw,20px); color:var(--muted); max-width:60ch; margin:0 0 14px; }
-  .sub { color:var(--faint); max-width:62ch; margin:0; }
-
-  /* ---------- stream demo ---------- */
-  .stream {
-    margin:44px 0 0; background:var(--ink); border:1px solid var(--field);
-    border-radius:11px; padding:18px 20px; font-family:var(--mono); font-size:13.5px;
-    overflow-x:auto;
+  header { padding:36px 0 0; }
+  .brandbar { display:flex; align-items:baseline; gap:12px; }
+  .brandbar .name {
+    font-family:var(--roman); font-weight:600; font-size:19px;
+    color:var(--slip); letter-spacing:.09em;
   }
-  .stream .row { display:flex; gap:14px; white-space:nowrap; padding:2.5px 0; color:var(--script); }
-  .stream .row .t { color:var(--body); }
-  .stream .row .n { color:var(--stress); }
-  .stream .cap { color:var(--script); font-size:12px; margin-top:12px; white-space:normal; }
-  .w { opacity:0; animation:in .01s forwards; }
-  @keyframes in { to { opacity:1 } }
+  .say { color:var(--script); font-size:12.5px; font-family:var(--mono); letter-spacing:.02em; }
+  .brandbar svg { align-self:center; }
+
+  .hero { padding:78px 0 60px; }
+  .hero h1 { font-size:clamp(42px,7.4vw,72px); margin:0 0 24px; }
+  .lede { font-size:clamp(17.5px,2.2vw,21px); color:var(--slip-soft); max-width:58ch; margin:0 0 14px; }
+  .sub { color:var(--slip-faint); max-width:60ch; margin:0; font-size:16px; }
+
+  /* Frames sit on the slip — a shard of the app dropped into the page. */
+  .stream {
+    margin:46px 0 0; background:var(--slip); border-radius:12px;
+    padding:20px 22px; font-family:var(--mono); font-size:13.5px; overflow-x:auto;
+  }
+  .stream .row { display:flex; gap:15px; white-space:nowrap; padding:3px 0; color:var(--script); }
+  .stream .row .t { color:#CDBBA3; }
+  .stream .row .n { color:var(--terracotta-soft); }
+  .stream .cap { color:var(--slip-faint); font-size:12px; margin:14px 0 0; white-space:normal; }
   @media (prefers-reduced-motion:no-preference) {
-    .r1{animation:fade .45s both .1s}.r2{animation:fade .45s both .5s}
-    .r3{animation:fade .45s both .9s}.r4{animation:fade .45s both 1.3s}
-    .r5{animation:fade .45s both 1.7s}
+    .r1{animation:fade .5s both .1s}.r2{animation:fade .5s both .5s}
+    .r3{animation:fade .5s both .9s}.r4{animation:fade .5s both 1.3s}
+    .r5{animation:fade .5s both 1.7s}
     @keyframes fade { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:none} }
   }
 
-  /* ---------- sections ---------- */
-  section { padding:62px 0; border-top:1px solid var(--field); }
-  section h2 { font-size:clamp(26px,3.6vw,34px); margin:0 0 10px; }
-  .kicker { font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--stress); margin:0 0 14px; }
-  .lead { color:var(--muted); max-width:64ch; }
+  section { padding:66px 0; border-top:1px solid var(--clay-line); }
+  section h2 { font-size:clamp(29px,4.2vw,40px); margin:0 0 12px; }
+  .kicker {
+    font-family:var(--roman); font-size:11px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--terracotta); margin:0 0 16px; font-weight:600;
+  }
+  .lead { color:var(--slip-soft); max-width:64ch; }
 
-  table { width:100%; border-collapse:collapse; margin:26px 0 0; font-size:15px; }
-  th, td { text-align:left; padding:11px 12px; border-bottom:1px solid var(--field); }
-  th { color:var(--faint); font-weight:500; font-size:13px; }
-  td.num { font-family:var(--mono); color:var(--body); }
-  tr.win td { color:var(--bright); }
-  tr.win td.num { color:var(--stress); }
   .tablewrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; margin:28px 0 0; font-size:15px; }
+  th,td { text-align:left; padding:12px; border-bottom:1px solid var(--clay-line); }
+  th { color:var(--script); font-weight:500; font-size:12px; font-family:var(--roman); letter-spacing:.1em; text-transform:uppercase; }
+  td.num { font-family:var(--mono); }
+  tr.win td { color:var(--slip); font-weight:500; }
+  tr.win td.num { color:var(--terracotta); }
 
-  .grid { display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); margin-top:30px; }
-  .card { background:var(--panel); border:1px solid var(--field); border-radius:11px; padding:20px 21px; }
-  .card h3 { font-family:var(--sans); font-weight:600; font-size:15.5px; margin:0 0 8px; color:var(--bright); }
-  .card p { margin:0; font-size:14.5px; color:var(--faint); }
-  .card .fig { font-family:var(--mono); color:var(--stress); }
+  .grid { display:grid; gap:22px; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); margin-top:32px; }
+  .card { background:var(--clay-deep); border-radius:12px; padding:22px 23px; }
+  .card h3 { font-family:var(--sans); font-weight:600; font-size:15.5px; margin:0 0 9px; color:var(--slip); }
+  .card p { margin:0; font-size:14.5px; color:var(--slip-faint); }
+  .fig { font-family:var(--mono); color:var(--terracotta); }
 
   pre {
-    background:var(--ink); border:1px solid var(--field); border-radius:10px;
-    padding:16px 18px; overflow-x:auto; font-family:var(--mono); font-size:13.5px;
-    color:var(--body); line-height:1.7; margin:22px 0 0;
+    background:var(--slip); border-radius:11px; padding:18px 20px; overflow-x:auto;
+    font-family:var(--mono); font-size:13.5px; color:#CDBBA3; line-height:1.75; margin:24px 0 0;
   }
   pre .c { color:var(--script); }
-  pre .k { color:var(--stress); }
+  pre .k { color:var(--terracotta-soft); }
 
-  footer { padding:52px 0 70px; border-top:1px solid var(--field); color:var(--script); font-size:14px; }
-  footer p { margin:0 0 6px; }
-  .note { color:var(--script); font-size:13.5px; }
+  footer { padding:54px 0 76px; border-top:1px solid var(--clay-line); color:var(--slip-faint); font-size:14.5px; }
+  footer p { margin:0 0 7px; }
+  footer .name { font-family:var(--roman); letter-spacing:.07em; color:var(--slip-soft); font-weight:600; }
+  .note { color:var(--slip-faint); font-size:14px; }
+  .etym { font-family:var(--display); font-size:19px; font-style:italic; color:var(--slip-soft); max-width:56ch; }
 </style>
 </head>
 <body>
-
 <div class="wrap">
 
 <header>
   <div class="brandbar">
-    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="6" cy="16" r="2.7" fill="#F2B45C"/>
-      <path d="M11 9.5a10 10 0 0 1 0 13" stroke="#F2B45C" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <path d="M16.5 6.5a16 16 0 0 1 0 19" stroke="#F2B45C" stroke-width="2" fill="none" stroke-linecap="round" opacity=".82"/>
-      <path d="M22 3.5a22 22 0 0 1 0 25" stroke="#F2B45C" stroke-width="2" fill="none" stroke-linecap="round" opacity=".64"/>
+    <svg width="25" height="25" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="6.5" cy="16" r="2.7" fill="#A94E2C"/>
+      <path d="M11.5 9.5a10 10 0 0 1 0 13" stroke="#A94E2C" stroke-width="2.1" fill="none" stroke-linecap="round"/>
+      <path d="M17 6.5a16 16 0 0 1 0 19" stroke="#A94E2C" stroke-width="2.1" fill="none" stroke-linecap="round" opacity=".78"/>
+      <path d="M22.5 3.5a22 22 0 0 1 0 25" stroke="#A94E2C" stroke-width="2.1" fill="none" stroke-linecap="round" opacity=".56"/>
     </svg>
-    <strong>Sonocles</strong>
+    <span class="name">Sonocles</span>
     <span class="say">so-NOK-leez</span>
   </div>
 </header>
@@ -132,7 +138,6 @@
   <p class="kicker">The distinction</p>
   <h2>This is not a dictation app.</h2>
   <p class="lead">Dictation gives you a sentence once you have finished saying it. That is fine when you are writing and nothing downstream is waiting. It is useless when something is: a teleprompter that has to keep your pace, a cue that has to fire on a word, an editor that needs to know when you said it rather than when the transcript turned up.</p>
-
   <div class="tablewrap">
   <table>
     <tr><th></th><th>Dictation</th><th>Sonocles</th></tr>
@@ -148,7 +153,6 @@
   <p class="kicker">The measurement</p>
   <h2>Word by word, not sentence by sentence.</h2>
   <p class="lead">One instrument, one sentence, one microphone. Apple's own Speech framework delivers that sentence in four bursts, 3.7&nbsp;seconds apart. We ship the comparison so you can re-run it rather than take our word for it.</p>
-
   <div class="tablewrap">
   <table>
     <tr><th>Engine</th><th>Arrival gap</th><th>Behind live</th><th>Words per arrival</th></tr>
@@ -157,7 +161,6 @@
     <tr class="win"><td>Parakeet 160 ms</td><td class="num">206 ms</td><td class="num">180 ms</td><td class="num">1.5</td></tr>
   </table>
   </div>
-
   <pre><span class="c"># the baseline is one flag away</span>
 make baseline</pre>
 </section>
@@ -165,7 +168,6 @@ make baseline</pre>
 <section>
   <p class="kicker">What it does</p>
   <h2>Four things worth knowing.</h2>
-
   <div class="grid">
     <div class="card">
       <h3>It knows <em>when</em> you said it</h3>
@@ -189,22 +191,28 @@ make baseline</pre>
 <section>
   <p class="kicker">Using it</p>
   <h2>Point something at a socket.</h2>
-
   <pre><span class="c">// both transports carry identical JSON, both live at once</span>
-<span class="k">const</span> es = <span class="k">new</span> EventSource(<span class="t">'http://127.0.0.1:7357/events'</span>)
-<span class="k">const</span> ws = <span class="k">new</span> WebSocket(<span class="t">'ws://127.0.0.1:7358'</span>)</pre>
-
+<span class="k">const</span> es = <span class="k">new</span> EventSource('http://127.0.0.1:7357/events')
+<span class="k">const</span> ws = <span class="k">new</span> WebSocket('ws://127.0.0.1:7358')</pre>
   <pre>{ <span class="k">"type"</span>: "partial", <span class="k">"text"</span>: "the menu bar",
   <span class="k">"audioStart"</span>: 40.28, <span class="k">"audioEnd"</span>: 40.8,
   <span class="k">"lagMs"</span>: 200, <span class="k">"seq"</span>: 3 }</pre>
+  <p class="note" style="margin-top:20px">Use <code>audioEnd</code>, not <code>ts</code>. A missing <code>lagMs</code> means unmeasured — never zero.</p>
+</section>
 
-  <p class="note" style="margin-top:18px">Use <code>audioEnd</code>, not <code>ts</code>. A missing <code>lagMs</code> means unmeasured — never zero.</p>
+<section>
+  <p class="kicker">The name</p>
+  <h2>Renowned for sound.</h2>
+  <p class="etym">κλέος — <em>kleos</em> — the glory that exists because it is spoken aloud and heard.</p>
+  <p class="lead" style="margin-top:18px">The <span class="mono">-cles</span> in Sophocles and Pericles is the Greek <span class="mono">-κλῆς</span>, from <em>kleos</em>: renown. It descends from a root meaning <strong style="color:var(--slip)">to hear</strong> — the same one that gives English the word <em>loud</em>. In Homer, <em>kleos</em> is specifically the fame that survives because bards sing it and people hear it.</p>
+  <p class="lead" style="margin-top:14px">So the suffix does not merely mean famous. It means <em>heard of</em>. We would like to claim that was the plan.</p>
+  <p class="note" style="margin-top:14px">(<span class="mono">Sono-</span> is Latin, so the whole thing is a hybrid. So is <em>television</em>.)</p>
 </section>
 
 <footer>
-  <p><strong style="color:var(--faint)">Sonocles</strong> — an on-device speech sidecar for the Mac.</p>
+  <p><span class="name">Sonocles</span> — an on-device speech sidecar for the Mac.</p>
   <p>Apple Silicon, macOS 14 or later. Models cache on first run.</p>
-  <p style="margin-top:16px">Made for Pteroprompter. Useful on its own.</p>
+  <p style="margin-top:18px">Made for Pteroprompter. Useful on its own.</p>
 </footer>
 
 </div>
