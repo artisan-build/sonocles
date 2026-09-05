@@ -155,10 +155,17 @@ its own colour so it is never mistaken for a number.
 
 | use | face | why |
 |---|---|---|
-| wordmark, kickers | **Cinzel**, letterspaced | Drawn from first-century Roman inscriptional capitals — the origin of our capital letterforms. Used sparingly; it is seasoning. |
-| headings | **Cormorant Garamond** | High-contrast old-style. Classical without costume. |
-| body | **Instrument Sans** | A workhorse. The page is about a technical tool and has to be read. |
+| wordmark, headings, pull quotes | **Fraunces**, variable, `SOFT 30` `WONK 1` | Old-style warmth, with the soft and wonk axes turned up far enough that it reads as drawn rather than defaulted. Classical without costume. It carries the whole display voice on its own. |
+| kickers | **IBM Plex Mono**, uppercase, letterspaced | Small, spaced and mechanical, so a section label reads as furniture and never competes with the heading beneath it. |
+| body, card headings | **Instrument Sans** | A workhorse. The page is about a technical tool and has to be read. |
 | data, code, frames | **IBM Plex Mono** | Neutral. Numbers should look like numbers. |
+
+Fraunces is canonical. This table used to specify Cinzel for the wordmark and
+Cormorant Garamond for headings, and the site has never shipped either; three
+faces were being maintained on paper against three different ones in the file.
+One display face doing wordmark, headings and pull quotes is the decision —
+it is fewer webfonts, and the variable axes give it the range that two static
+faces were there to provide.
 
 No marble textures, no laurel wreaths, no columns. The classical reference lives
 in the letterforms and the palette, which is where it can be taken seriously.
@@ -228,10 +235,10 @@ Arrival time drifts with the delivery schedule; audio time does not. That is the
 difference between a marker you can cut on and a marker you have to nudge.
 
 **It does not make things up.**
-Thirty seconds of piano at -9 dBFS produced zero words. A transducer emits
-tokens as acoustic evidence arrives, so with no speech there is nothing to emit.
-Models that hallucinate over music are a genuine hazard when the output drives a
-scroll.
+Thirty seconds of loud piano, peaking at -9 dBFS, produced zero words. That is a
+measurement, not a promise: a streaming model can emit a spurious token, and
+some will confidently transcribe music into sentences, which is a genuine
+hazard when the output drives a scroll. This one stayed quiet.
 
 **Nothing leaves your Mac.**
 The models download once and run on the Neural Engine. The sockets bind to
@@ -242,6 +249,13 @@ because none was ever built.
 SSE and WebSocket, both live at once. An HTTP control API to start and stop it,
 behind Basic auth if you want it. A CLI that reports its own latency, because
 the claims above should be yours to check rather than ours to assert.
+
+A note on that third one, because it is the kind of thing that creeps back.
+An earlier version argued the architecture guaranteed the silence — "a
+transducer emits tokens as acoustic evidence arrives, so with no speech there
+is nothing to emit". That is not true, and it is exactly the kind of claim that
+turns one good observation into something a reader can catch us on. Say what we
+measured.
 
 ### Footer line
 

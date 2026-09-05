@@ -37,11 +37,21 @@
 <style>
   /* Limestone and terracotta. Lighter and cooler than the prompter's ground,
      and considerably less solemn than the version of this page that looked
-     like a museum catalogue. */
+     like a museum catalogue.
+
+     Two terracottas and a darkened script, for contrast rather than taste.
+     --terracotta stays the signature and is used for fills, rules and display
+     type, where it is either large or not carrying any text at all. Anything
+     small and load-bearing — links, kickers, the numbers in the table, white
+     on a button — uses --terracotta-ink or --terracotta-deep, which are the
+     same hue far enough down to clear 4.5:1. Measured, not guessed:
+     script was 2.94, links 4.03, card body 4.17, button 4.48. */
   :root {
     --stone:#FAF2E4; --stone-deep:#EFE5D2; --stone-sink:#E0D4BE; --stone-line:#DED0B8;
-    --ink:#2A211A; --ink-soft:#4E4034; --ink-faint:#7A6A59; --script:#9C8C77;
+    --ink:#2A211A; --ink-soft:#4E4034; --ink-faint:#6B5C4C; --script:#7A6A59;
     --terracotta:#C4552E; --terracotta-soft:#DD7A4E; --brick:#94331E;
+    --terracotta-ink:#A8431F; --terracotta-deep:#B2461F;
+    --stream-dim:#9E8F7C;
     --olive:#6E7A52;
     --display:'Fraunces',Georgia,serif;
     --sans:'Instrument Sans',ui-sans-serif,system-ui,sans-serif;
@@ -55,8 +65,8 @@
     -webkit-font-smoothing:antialiased;
   }
   .wrap { width:min(92vw,920px); margin:0 auto; }
-  a { color:var(--terracotta); text-decoration:none; border-bottom:2px solid rgba(196,85,46,.26); }
-  a:hover { border-bottom-color:var(--terracotta); }
+  a { color:var(--terracotta-ink); text-decoration:none; border-bottom:2px solid rgba(168,67,31,.28); }
+  a:hover { border-bottom-color:var(--terracotta-ink); }
   h1,h2,h3 { font-family:var(--display); color:var(--ink); line-height:1.1;
     font-variation-settings:'SOFT' 30,'WONK' 1; margin:0; }
   code,.mono { font-family:var(--mono); }
@@ -85,18 +95,18 @@
     font-variation-settings:'SOFT' 40,'WONK' 1; letter-spacing:-.01em; }
   .say { color:var(--script); font-size:12.5px; font-family:var(--mono); }
   .brandbar .gh { margin-left:auto; font-size:14px; border-bottom-color:transparent; font-weight:500; }
-  .brandbar .gh:hover { border-bottom-color:var(--terracotta); }
+  .brandbar .gh:hover { border-bottom-color:var(--terracotta-ink); }
 
   .hero { padding:56px 0 20px; }
   .free {
     display:inline-block; margin:0 0 20px; font-size:12px; font-weight:600;
-    letter-spacing:.09em; text-transform:uppercase; color:#fff; background:var(--terracotta);
+    letter-spacing:.09em; text-transform:uppercase; color:#fff; background:var(--terracotta-deep);
     border-radius:999px; padding:6px 15px;
   }
   .cta { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin:30px 0 0; }
   .btn { display:inline-flex; align-items:center; gap:9px; font-weight:600; font-size:16px;
     padding:13px 22px; border-radius:999px; border:0; text-decoration:none; }
-  .btn-primary { background:var(--terracotta); color:#fff; }
+  .btn-primary { background:var(--terracotta-deep); color:#fff; }
   .btn-primary:hover { background:var(--brick); }
   .btn-ghost { background:transparent; color:var(--ink); border:2px solid var(--stone-line); }
   .btn-ghost:hover { border-color:var(--terracotta); }
@@ -135,7 +145,7 @@
   section { padding:62px 0; }
   section h2 { font-size:clamp(30px,4.6vw,46px); font-weight:600; letter-spacing:-.018em; margin-bottom:14px; }
   .kicker { font-family:var(--mono); font-size:11.5px; letter-spacing:.2em; text-transform:uppercase;
-    color:var(--terracotta); margin:0 0 14px; font-weight:500; }
+    color:var(--terracotta-ink); margin:0 0 14px; font-weight:500; }
   .lead { color:var(--ink-soft); max-width:64ch; }
   .pull { font-family:var(--display); font-size:clamp(22px,3.1vw,30px); line-height:1.34;
     color:var(--ink); max-width:52ch; margin:0 0 20px; font-weight:500;
@@ -157,10 +167,11 @@
      product rather than as decoration. */
   .stream { margin:36px 0 0; background:var(--ink); border-radius:14px; padding:20px 22px;
     font-family:var(--mono); font-size:13.5px; overflow-x:auto; }
-  .stream .row { display:flex; gap:15px; white-space:nowrap; padding:3px 0; color:#8B7C6B; }
+  .stream .row { display:flex; gap:15px; white-space:nowrap; padding:3px 0; color:var(--stream-dim); }
   .stream .row .t { color:#EDE4D6; }
   .stream .row .n { color:var(--terracotta-soft); }
-  .stream .cap { color:#8B7C6B; font-size:12px; margin:14px 0 0; white-space:normal; }
+  .stream .cap { color:var(--stream-dim); font-size:12px; margin:14px 0 0; white-space:normal; }
+  .stream .cap .n { color:var(--terracotta-soft); }
   @media (prefers-reduced-motion:no-preference){
     .r1{animation:fade .5s both .1s}.r2{animation:fade .5s both .5s}.r3{animation:fade .5s both .9s}
     .r4{animation:fade .5s both 1.3s}.r5{animation:fade .5s both 1.7s}
@@ -173,7 +184,7 @@
   th { color:var(--script); font-weight:600; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; }
   td.num { font-family:var(--mono); }
   tr.win td { color:var(--ink); font-weight:600; background:rgba(196,85,46,.07); }
-  tr.win td.num { color:var(--terracotta); }
+  tr.win td.num { color:var(--terracotta-ink); }
 
   .grid { display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); margin-top:34px; }
   .card { background:var(--stone-deep); border-radius:14px; padding:22px 23px; border-bottom:4px solid var(--stone-sink); }
@@ -181,7 +192,7 @@
   .card:nth-child(3n+2) { border-bottom-color:var(--olive); }
   .card h3 { font-family:var(--sans); font-weight:600; font-size:16px; margin:0 0 9px; color:var(--ink); }
   .card p { margin:0; font-size:14.5px; color:var(--ink-faint); }
-  .fig-num { font-family:var(--mono); color:var(--terracotta); }
+  .fig-num { font-family:var(--mono); color:var(--terracotta-ink); }
 
   ul.uses { list-style:none; padding:0; margin:26px 0 0; max-width:64ch; }
   ul.uses li { padding:13px 0 13px 30px; border-bottom:1px solid var(--stone-line); font-size:16px; position:relative; }
@@ -191,7 +202,7 @@
 
   pre { background:var(--ink); border-radius:14px; padding:19px 21px; overflow-x:auto;
     font-family:var(--mono); font-size:13.5px; color:#EDE4D6; line-height:1.75; margin:24px 0 0; }
-  pre .c { color:#8B7C6B; } pre .k { color:var(--terracotta-soft); }
+  pre .c { color:var(--stream-dim); } pre .k { color:var(--terracotta-soft); }
 
   footer { padding:50px 0 80px; color:var(--ink-faint); font-size:15px; }
   footer p { margin:0 0 8px; }
@@ -224,14 +235,14 @@
 <div class="hero">
   <span class="free">Free · Open source · MIT</span>
   <h1>Words, while you're <br><em>still saying them.</em></h1>
-  <p class="lede">Sonocles turns your Mac's microphone into a live stream of text — over <b>WebSocket</b> or <b>SSE</b>, word by word, about 180&nbsp;milliseconds behind you.</p>
+  <p class="lede">Sonocles turns your Mac's microphone into a live stream of text — over <b>WebSocket</b> or <b>server-sent events</b>, word by word, about 180&nbsp;milliseconds behind you.</p>
   <p class="lede2"><b>What listens is up to you.</b> A teleprompter that keeps your pace, a cue that fires on the word, live captions, a bot that answers to its own name. It streams; you decide.</p>
-  <p class="sub">Runs on the Neural Engine. Nothing leaves the machine. Free and open source.</p>
+  <p class="sub">Runs on the Neural Engine. Nothing leaves the machine.</p>
 
   <div class="cta">
     <a class="btn btn-primary" href="https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg">Download for Mac</a>
     <a class="btn btn-ghost" href="https://github.com/artisan-build/sonocles">Source on GitHub</a>
-    <span class="meta">Apple Silicon · macOS 14+ · free</span>
+    <span class="meta">Apple Silicon · macOS 14 or later</span>
   </div>
 
   <figure>
@@ -245,7 +256,7 @@
     <div class="row r3"><span>partial</span><span class="n">lag 200ms</span><span class="t">the menu bar</span></div>
     <div class="row r4"><span>partial</span><span class="n">lag 200ms</span><span class="t">the menu bar app</span></div>
     <div class="row r5"><span>partial</span><span class="n">lag 140ms</span><span class="t">the menu bar app is</span></div>
-    <p class="cap">Real frames. One word each, roughly every 200&nbsp;ms.</p>
+    <p class="cap">Real frames, about one word each. <span class="n">lag</span> is how far behind the speaker that word arrived.</p>
   </div>
 </div>
 
@@ -258,7 +269,7 @@
   <p class="lead" style="margin-top:14px">The Neural Engine, meanwhile, was sitting there doing absolutely nothing. It is a separate piece of silicon that no encoder is competing for. Moving the listening onto it did not make it faster so much as make it <em>free</em>: it stopped taking anything the recording needed.</p>
 
   <figure>
-    <img src="img/flat-contention.png" alt="Illustration: two figures crammed at one small desk, elbows colliding, the scribe's stylus skidding off his tablet, while an identical empty desk sits beside them." width="1536" height="1024">
+    <img src="img/flat-contention.png" loading="lazy" decoding="async" alt="Illustration: two figures crammed at one small desk, elbows colliding, the scribe's stylus skidding off his tablet, while an identical empty desk sits beside them." width="1536" height="1024">
     <figcaption><b>Two craftsmen, one desk, and a perfectly good second desk.</b> Nobody is doing anything wrong. That is what makes it so annoying.</figcaption>
   </figure>
 </section>
@@ -293,7 +304,7 @@
     <tr class="win"><td>Parakeet 160 ms</td><td class="num">206 ms</td><td class="num">180 ms</td><td class="num">1.5</td></tr>
   </table>
   </div>
-  <pre><span class="c"># the baseline is one flag away</span>
+  <pre><span class="c"># the whole comparison, on your machine, one target</span>
 make baseline</pre>
 </section>
 
@@ -311,8 +322,8 @@ make baseline</pre>
   </ul>
 
   <figure class="fig-mid">
-    <img src="img/flat-theatre.png" alt="Illustration: a Greek amphitheatre seen from above as concentric rings radiating from one tiny figure on the central stage, reading equally as a sound wave." width="1024" height="1024">
-    <figcaption><b>An amphitheatre, from above.</b> Concentric rings around one small figure — which is also, exactly, how you draw a voice leaving a mouth. The building is a diagram of what it is for. We took the coincidence and made it the logo.</figcaption>
+    <img src="img/flat-theatre.png" loading="lazy" decoding="async" alt="Illustration: a Greek amphitheatre seen from above as concentric rings radiating from one tiny figure on the central stage, reading equally as a sound wave." width="1024" height="1024">
+    <figcaption><b>An amphitheatre, from above.</b> Concentric rings around one small figure — which is also, exactly, how you draw a voice leaving a mouth. The building is a diagram of what it is for. The mark is the same drawing with the back half left off, because a voice only goes one way.</figcaption>
   </figure>
 </section>
 
@@ -331,7 +342,7 @@ make baseline</pre>
     </div>
     <div class="card">
       <h3>It does not make things up</h3>
-      <p>Thirty seconds of piano at <span class="fig-num">-9&nbsp;dBFS</span> produced zero words. A transducer emits tokens as acoustic evidence arrives, so with no speech there is nothing to emit. Models that hallucinate over music are a genuine hazard when the output drives a scroll.</p>
+      <p>Thirty seconds of loud piano, peaking at <span class="fig-num">-9&nbsp;dBFS</span>, produced zero words. That is a measurement, not a promise: a streaming model can emit a spurious token, and some will confidently transcribe music into sentences, which is a genuine hazard when the output drives a scroll. This one stayed quiet.</p>
     </div>
     <div class="card">
       <h3>Nothing leaves your Mac</h3>
@@ -369,7 +380,7 @@ make baseline</pre>
       <p class="note" style="margin-top:14px"><b style="color:var(--ink-soft)">Sono-</b> is Latin, mind you. So the name is a seam between two languages, which is not scholarship so much as an accident we have decided to be pleased about. So is <em>television</em>. Nobody minds.</p>
     </div>
     <figure class="fig-sm" style="margin:0">
-      <img src="img/flat-listener.png" alt="Illustration: a round friendly bearded figure cupping an enormous ear, eyes squeezed shut in theatrical concentration, sound arcs arriving at his hand." width="1024" height="1024">
+      <img src="img/flat-listener.png" loading="lazy" decoding="async" alt="Illustration: a round friendly bearded figure cupping an enormous ear, eyes squeezed shut in theatrical concentration, sound arcs arriving at his hand." width="1024" height="1024">
       <figcaption><b>Heard of.</b></figcaption>
     </figure>
   </div>
@@ -381,7 +392,7 @@ make baseline</pre>
   <h2>Here is a Greek man<br>with a podcast.</h2>
   <p class="lead">He has been talking for some time. The small winged one has kept up with every word, roughly 180&nbsp;milliseconds behind, and has not once had to ask him to repeat himself.</p>
   <figure>
-    <img src="img/flat-mic.png" alt="Illustration: a relaxed bearded figure reclining with a wine cup, talking into a retro broadcast microphone, while a small winged figure behind him takes notes with intense concentration." width="1536" height="1024">
+    <img src="img/flat-mic.png" loading="lazy" decoding="async" alt="Illustration: a relaxed bearded figure reclining with a wine cup, talking into a retro broadcast microphone, while a small winged figure behind him takes notes with intense concentration." width="1536" height="1024">
     <figcaption><b>Nobody in this picture finds any of it unusual.</b> Which is, in fairness, the goal.</figcaption>
   </figure>
 </section>
