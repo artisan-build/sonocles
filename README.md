@@ -42,6 +42,13 @@ point at a camera) while Artisan Build proper handles tooling and infrastructure
 Sonocles is squarely the former, which is some of why it is named after a Greek
 playwright rather than a build tool.
 
+## Download
+
+[**Download the latest release**](https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg)
+— Apple Silicon, macOS 14+. That link always points at the current version.
+
+Or build it yourself:
+
 ## Quick start
 
 ```bash

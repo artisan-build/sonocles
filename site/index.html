@@ -68,6 +68,14 @@
     letter-spacing:.09em; text-transform:uppercase; color:#fff; background:var(--terracotta);
     border-radius:999px; padding:6px 15px;
   }
+  .cta { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin:30px 0 0; }
+  .btn { display:inline-flex; align-items:center; gap:9px; font-weight:600; font-size:16px;
+    padding:13px 22px; border-radius:999px; border:0; text-decoration:none; }
+  .btn-primary { background:var(--terracotta); color:#fff; }
+  .btn-primary:hover { background:var(--brick); }
+  .btn-ghost { background:transparent; color:var(--ink); border:2px solid var(--stone-line); }
+  .btn-ghost:hover { border-color:var(--terracotta); }
+  .cta .meta { color:var(--script); font-size:13.5px; }
   .hero h1 { font-size:clamp(44px,7.6vw,80px); font-weight:600; letter-spacing:-.022em; margin-bottom:24px; }
   .hero h1 em { font-style:normal; color:var(--terracotta); }
   .lede { font-size:clamp(18px,2.2vw,22px); color:var(--ink-soft); max-width:56ch; margin:0 0 12px; }
@@ -167,6 +175,12 @@
   <h1>Words, while you're<br><em>still saying them.</em></h1>
   <p class="lede">Sonocles listens to your Mac's microphone and streams what you say — word by word, about 180&nbsp;milliseconds behind you.</p>
   <p class="sub">Everything runs on the Neural Engine. Nothing leaves the machine.</p>
+
+  <div class="cta">
+    <a class="btn btn-primary" href="https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg">Download for Mac</a>
+    <a class="btn btn-ghost" href="https://github.com/artisan-build/sonocles">Source on GitHub</a>
+    <span class="meta">Apple Silicon · macOS 14+ · free</span>
+  </div>
 
   <figure>
     <img src="img/flat-hero.png" alt="Illustration: a cheerful bearded philosopher speaking, sound arcs sweeping from his mouth to a delighted scribe who is keeping up easily." width="1536" height="1024">

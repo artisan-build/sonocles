@@ -110,16 +110,20 @@ jobs:
           xcrun stapler staple dist/Sonocles.app
           rm -f "$RUNNER_TEMP/key.p8"
 
+      # Asset names carry no version, on purpose. GitHub's
+      # /releases/latest/download/<name> redirect only resolves when the name is
+      # stable, and a download link on the site that has to be edited for every
+      # release is a link that will eventually point at something old. The
+      # release itself carries the version.
       - name: Package
         run: |
-          VER="${{ steps.v.outputs.tag }}"
           mkdir -p dist/dmg
           cp -R dist/Sonocles.app dist/dmg/
           ln -s /Applications dist/dmg/Applications
           hdiutil create -volname "Sonocles" -srcfolder dist/dmg \
-            -ov -format UDZO "dist/Sonocles-$VER.dmg"
-          ditto -c -k --keepParent dist/Sonocles.app "dist/Sonocles-$VER.zip"
-          shasum -a 256 dist/Sonocles-$VER.dmg dist/Sonocles-$VER.zip > dist/checksums.txt
+            -ov -format UDZO dist/Sonocles.dmg
+          ditto -c -k --keepParent dist/Sonocles.app dist/Sonocles.zip
+          shasum -a 256 dist/Sonocles.dmg dist/Sonocles.zip > dist/checksums.txt
           cat dist/checksums.txt
 
       - uses: actions/upload-artifact@v4
@@ -136,7 +140,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VER="${{ steps.v.outputs.tag }}"
-          NOTE="Apple Silicon, macOS 14 or later. Models download on first run (~219 MB)."
+          NOTE="Apple Silicon, macOS 14 or later. Models download on first run (~219 MB).
+
+Always-current download: https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg"
           if [ "${{ steps.signing.outputs.signed }}" != "true" ]; then
             NOTE="$NOTE
 
