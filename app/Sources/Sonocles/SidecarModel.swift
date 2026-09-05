@@ -46,7 +46,8 @@ final class SidecarModel {
     func bind() {
         guard service == nil else { return }
 
-        let service = Service(config: Service.Config(sidecar: .init(engine: engine))) { [weak self] message in
+        let service = Service(config: Service.Config(sidecar: .init(engine: engine))) {
+            [weak self] message in
             Task { @MainActor in self?.status = message }
         }
 
@@ -112,7 +113,8 @@ final class SidecarModel {
     func saveCredentials() {
         CredentialStore.save(username: username, password: password)
         authEnabled = CredentialStore.isEnabled
-        status = authEnabled
+        status =
+            authEnabled
             ? "Control API locked — restart to apply"
             : "Control API open — restart to apply"
     }
@@ -132,7 +134,8 @@ final class SidecarModel {
     /// the difference between "something is happening" and a legible level.
     private func startDecay() {
         decayTimer?.invalidate()
-        decayTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
+        decayTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) {
+            [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
                 self.heldDb = max(self.levelDb, self.heldDb - 40.0 / 30)

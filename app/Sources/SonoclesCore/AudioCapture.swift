@@ -92,7 +92,8 @@ public final class AudioCapture: @unchecked Sendable {
 
             let ratio = target.sampleRate / hw.sampleRate
             let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio + 1024)
-            guard let converted = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return }
+            guard let converted = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity)
+            else { return }
 
             // `convert` calls this back synchronously, but that is not
             // something the compiler can see, so the one-shot flag lives behind

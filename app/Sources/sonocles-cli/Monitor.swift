@@ -116,8 +116,10 @@ final class Monitor: @unchecked Sendable {
             self.lastPartialWords = words
 
             if self.tracePartials {
-                self.commit(self.trace(kind: "part", delta: delta, lagMs: lagMs,
-                                       audio: audio, text: self.growingEdge(text), at: nanos))
+                self.commit(
+                    self.trace(
+                        kind: "part", delta: delta, lagMs: lagMs,
+                        audio: audio, text: self.growingEdge(text), at: nanos))
             }
 
             self.partialText = text
@@ -134,8 +136,10 @@ final class Monitor: @unchecked Sendable {
             self.partialText = ""
             self.partialLagMs = nil
             self.lastPartialWords = 0
-            self.commit(self.trace(kind: "final", delta: words, lagMs: lagMs,
-                                   audio: audio, text: text, at: nanos))
+            self.commit(
+                self.trace(
+                    kind: "final", delta: words, lagMs: lagMs,
+                    audio: audio, text: text, at: nanos))
         }
     }
 
@@ -165,7 +169,8 @@ final class Monitor: @unchecked Sendable {
         // "+0ms" is how the first version of this tool told a flat lie about
         // being live, and it cost a session's worth of trust in the numbers.
         let lagField = lagMs.map { String(format: "%+6dms", $0) } ?? "    ····"
-        let window = audio.map { String(format: " audio %7.2f–%7.2f", $0.lowerBound, $0.upperBound) }
+        let window =
+            audio.map { String(format: " audio %7.2f–%7.2f", $0.lowerBound, $0.upperBound) }
             ?? String(repeating: " ", count: 22)
 
         return String(

@@ -96,10 +96,13 @@ struct MenuBarView: View {
 
                 Spacer()
 
-                Picker("", selection: Binding(
-                    get: { model.engine },
-                    set: { model.use($0) }
-                )) {
+                Picker(
+                    "",
+                    selection: Binding(
+                        get: { model.engine },
+                        set: { model.use($0) }
+                    )
+                ) {
                     ForEach(EngineChoice.allCases, id: \.self) { choice in
                         Text(choice.label).tag(choice)
                     }
@@ -120,10 +123,12 @@ struct MenuBarView: View {
 
             DisclosureGroup {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("Protects /start, /stop and /status. The event stream stays open — EventSource cannot send an Authorization header, and credentials in a URL would be worse than a loopback-only read.")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Brand.script)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text(
+                        "Protects /start, /stop and /status. The event stream stays open — EventSource cannot send an Authorization header, and credentials in a URL would be worse than a loopback-only read."
+                    )
+                    .font(.system(size: 10))
+                    .foregroundStyle(Brand.script)
+                    .fixedSize(horizontal: false, vertical: true)
 
                     TextField("username", text: $model.username)
                         .textFieldStyle(.roundedBorder)

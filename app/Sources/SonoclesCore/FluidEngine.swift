@@ -1,6 +1,6 @@
 @preconcurrency import AVFoundation
-import Foundation
 import FluidAudio
+import Foundation
 
 /// Parakeet EOU 120M on the Neural Engine, via FluidAudio's Core ML port.
 ///
@@ -86,7 +86,7 @@ public final class FluidEngine: SpeechEngine, @unchecked Sendable {
                     // so lag is directly comparable across engines.
                     let stamps = await manager.getTokenTimestampsMs()
                     let audio = stamps.last.map {
-                        Double(stamps.first ?? 0) / 1000 ... Double($0) / 1000
+                        Double(stamps.first ?? 0) / 1000...Double($0) / 1000
                     }
 
                     if !text.isEmpty {

@@ -1,6 +1,6 @@
 @preconcurrency import AVFoundation
-import Foundation
 import FluidAudio
+import Foundation
 import os
 
 /// One capture session: microphone in, hypotheses out.
@@ -14,9 +14,11 @@ public final class Sidecar: @unchecked Sendable {
         public var locale: String
         public var tapFrames: AVAudioFrameCount
 
-        public init(engine: EngineChoice = .fluid160,
-                    locale: String = Locale.current.identifier(.bcp47),
-                    tapFrames: AVAudioFrameCount = 4096) {
+        public init(
+            engine: EngineChoice = .fluid160,
+            locale: String = Locale.current.identifier(.bcp47),
+            tapFrames: AVAudioFrameCount = 4096
+        ) {
             self.engine = engine
             self.locale = locale
             self.tapFrames = tapFrames
@@ -92,7 +94,9 @@ public final class Sidecar: @unchecked Sendable {
         let lagMs = hypothesis.audio.map {
             Int(((capture.clock.seconds - $0.upperBound) * 1000).rounded())
         }
-        let seq = sequence.withLock { $0 += 1; return $0 }
+        let seq = sequence.withLock {
+            $0 += 1; return $0
+        }
 
         onFrame?(tidied, Frame(hypothesis: tidied, seq: seq, lagMs: lagMs), nanos)
     }

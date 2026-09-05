@@ -22,10 +22,11 @@ public struct Credentials: Sendable, Equatable {
     /// free to get right and awkward to explain later.
     public func matches(_ header: String?) -> Bool {
         guard let header,
-              header.lowercased().hasPrefix("basic "),
-              let encoded = header.split(separator: " ").last,
-              let data = Data(base64Encoded: String(encoded)),
-              let supplied = String(data: data, encoding: .utf8) else { return false }
+            header.lowercased().hasPrefix("basic "),
+            let encoded = header.split(separator: " ").last,
+            let data = Data(base64Encoded: String(encoded)),
+            let supplied = String(data: data, encoding: .utf8)
+        else { return false }
 
         let expected = "\(username):\(password)"
         let a = Array(supplied.utf8)
@@ -80,7 +81,8 @@ public enum CredentialStore {
 
         var item: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data else { return nil }
+            let data = item as? Data
+        else { return nil }
 
         return String(data: data, encoding: .utf8)
     }

@@ -21,11 +21,13 @@ public final class Service: @unchecked Sendable {
         public var httpPort: UInt16
         public var wsPort: UInt16
 
-        public init(sidecar: Sidecar.Config = .init(),
-                    http: Bool = true,
-                    websocket: Bool = true,
-                    httpPort: UInt16 = 7357,
-                    wsPort: UInt16 = 7358) {
+        public init(
+            sidecar: Sidecar.Config = .init(),
+            http: Bool = true,
+            websocket: Bool = true,
+            httpPort: UInt16 = 7357,
+            wsPort: UInt16 = 7358
+        ) {
             self.sidecar = sidecar
             self.http = http
             self.websocket = websocket
@@ -65,11 +67,16 @@ public final class Service: @unchecked Sendable {
         var built: [Transport] = []
 
         if config.http {
-            let server = try HTTPServer(port: config.httpPort, credentials: CredentialStore.current())
+            let server = try HTTPServer(
+                port: config.httpPort, credentials: CredentialStore.current())
             server.handlers = HTTPServer.Handlers(
                 start: { [weak self] in self?.startListening() },
                 stop: { [weak self] in self?.stopListening() },
-                status: { [weak self] in self?.status() ?? .init(state: "idle", listening: false, engine: "-", clients: 0, uptime: 0) }
+                status: { [weak self] in
+                    self?.status()
+                        ?? .init(
+                            state: "idle", listening: false, engine: "-", clients: 0, uptime: 0)
+                }
             )
             http = server
             built.append(server)
@@ -153,11 +160,15 @@ public final class Service: @unchecked Sendable {
                 guard let self else { return }
                 do {
                     try await sidecar.start()
-                    self.state.withLock { $0.listening = true; $0.starting = false }
+                    self.state.withLock {
+                        $0.listening = true; $0.starting = false
+                    }
                     self.onListeningChanged?(true)
                     self.note("listening · \(sidecar.engineName)")
                 } catch {
-                    self.state.withLock { $0.sidecar = nil; $0.starting = false }
+                    self.state.withLock {
+                        $0.sidecar = nil; $0.starting = false
+                    }
                     self.note("could not start: \(error.localizedDescription)")
                 }
             }

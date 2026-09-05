@@ -106,10 +106,11 @@ public final class WebSocketServer: Transport, @unchecked Sendable {
             }
 
             if let data, !data.isEmpty,
-               let metadata = context?.protocolMetadata(definition: NWProtocolWebSocket.definition)
-                   as? NWProtocolWebSocket.Metadata,
-               metadata.opcode == .text,
-               let text = String(data: data, encoding: .utf8) {
+                let metadata = context?.protocolMetadata(definition: NWProtocolWebSocket.definition)
+                    as? NWProtocolWebSocket.Metadata,
+                metadata.opcode == .text,
+                let text = String(data: data, encoding: .utf8)
+            {
                 self.onMessage?(text)
             }
 
@@ -125,8 +126,9 @@ public final class WebSocketServer: Transport, @unchecked Sendable {
 
         queue.async {
             for (_, conn) in self.clients {
-                conn.send(content: data, contentContext: context,
-                          completion: .contentProcessed { _ in })
+                conn.send(
+                    content: data, contentContext: context,
+                    completion: .contentProcessed { _ in })
             }
         }
     }

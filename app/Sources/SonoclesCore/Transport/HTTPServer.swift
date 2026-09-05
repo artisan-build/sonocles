@@ -26,9 +26,11 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         public var stop: @Sendable () -> Void
         public var status: @Sendable () -> Status
 
-        public init(start: @escaping @Sendable () -> Void,
-                    stop: @escaping @Sendable () -> Void,
-                    status: @escaping @Sendable () -> Status) {
+        public init(
+            start: @escaping @Sendable () -> Void,
+            stop: @escaping @Sendable () -> Void,
+            status: @escaping @Sendable () -> Status
+        ) {
             self.start = start
             self.stop = stop
             self.status = status
@@ -118,7 +120,8 @@ public final class HTTPServer: Transport, @unchecked Sendable {
     private func accept(_ conn: NWConnection) {
         conn.start(queue: queue)
 
-        conn.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, _, _ in
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) {
+            [weak self] data, _, _, _ in
             guard let self, let data, let request = Request(data) else {
                 conn.cancel()
                 return
@@ -168,16 +171,17 @@ public final class HTTPServer: Transport, @unchecked Sendable {
     /// carry the lock.
     private func openStream(on conn: NWConnection) {
         let headers = """
-        HTTP/1.1 200 OK\r
-        Content-Type: text/event-stream\r
-        Cache-Control: no-cache\r
-        Connection: keep-alive\r
-        Access-Control-Allow-Origin: *\r
-        \r
+            HTTP/1.1 200 OK\r
+            Content-Type: text/event-stream\r
+            Cache-Control: no-cache\r
+            Connection: keep-alive\r
+            Access-Control-Allow-Origin: *\r
+            \r
 
-        """
+            """
         conn.send(content: headers.data(using: .utf8), completion: .contentProcessed { _ in })
-        conn.send(content: ": connected\n\n".data(using: .utf8), completion: .contentProcessed { _ in })
+        conn.send(
+            content: ": connected\n\n".data(using: .utf8), completion: .contentProcessed { _ in })
 
         queue.async {
             self.streams[ObjectIdentifier(conn)] = conn
@@ -204,15 +208,17 @@ public final class HTTPServer: Transport, @unchecked Sendable {
 
         if credentials.matches(request.headers["authorization"]) { return true }
 
-        respond(conn, status: "401 Unauthorized",
-                body: "{\"error\":\"authentication required\"}",
-                extra: "WWW-Authenticate: Basic realm=\"Sonocles\"\r\n")
+        respond(
+            conn, status: "401 Unauthorized",
+            body: "{\"error\":\"authentication required\"}",
+            extra: "WWW-Authenticate: Basic realm=\"Sonocles\"\r\n")
 
         return false
     }
 
     private func respondJSON(_ conn: NWConnection, encodable: (some Encodable)?) {
-        let body = encodable
+        let body =
+            encodable
             .flatMap { try? JSONEncoder().encode($0) }
             .flatMap { String(data: $0, encoding: .utf8) }
             ?? "{\"error\":\"service not ready\"}"
@@ -223,20 +229,22 @@ public final class HTTPServer: Transport, @unchecked Sendable {
     private func respond(_ conn: NWConnection, status: String, body: String?, extra: String = "") {
         let payload = body ?? ""
         let response = """
-        HTTP/1.1 \(status)\r
-        Content-Type: application/json\r
-        Content-Length: \(payload.utf8.count)\r
-        Access-Control-Allow-Origin: *\r
-        Access-Control-Allow-Methods: GET, POST, OPTIONS\r
-        Access-Control-Allow-Headers: Authorization, Content-Type\r
-        \(extra)Connection: close\r
-        \r
-        \(payload)
-        """
+            HTTP/1.1 \(status)\r
+            Content-Type: application/json\r
+            Content-Length: \(payload.utf8.count)\r
+            Access-Control-Allow-Origin: *\r
+            Access-Control-Allow-Methods: GET, POST, OPTIONS\r
+            Access-Control-Allow-Headers: Authorization, Content-Type\r
+            \(extra)Connection: close\r
+            \r
+            \(payload)
+            """
 
-        conn.send(content: response.data(using: .utf8), completion: .contentProcessed { _ in
-            conn.cancel()
-        })
+        conn.send(
+            content: response.data(using: .utf8),
+            completion: .contentProcessed { _ in
+                conn.cancel()
+            })
     }
 
     public func broadcast(_ json: String) {
@@ -261,7 +269,8 @@ public final class HTTPServer: Transport, @unchecked Sendable {
 
         init?(_ data: Data) {
             guard let text = String(data: data, encoding: .utf8),
-                  let head = text.components(separatedBy: "\r\n\r\n").first else { return nil }
+                let head = text.components(separatedBy: "\r\n\r\n").first
+            else { return nil }
 
             var lines = head.components(separatedBy: "\r\n")
             guard !lines.isEmpty else { return nil }

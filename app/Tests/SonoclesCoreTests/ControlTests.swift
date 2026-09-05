@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import SonoclesCore
 
 /// The control API can switch on a microphone, so its lock is load-bearing.
@@ -42,9 +43,11 @@ struct CredentialsTests {
 
     /// Malformed input must be refused, never crash: this parses bytes that
     /// arrived off a socket.
-    @Test("Malformed headers are refused without crashing", arguments: [
-        "Basic", "Basic !!!not-base64!!!", "Bearer abc123", "", "Basic ",
-    ])
+    @Test(
+        "Malformed headers are refused without crashing",
+        arguments: [
+            "Basic", "Basic !!!not-base64!!!", "Bearer abc123", "", "Basic ",
+        ])
     func malformed(_ value: String) {
         #expect(!credentials.matches(value))
     }
@@ -68,8 +71,9 @@ struct RequestTests {
 
     @Test("A normal request yields method, path and headers")
     func basic() throws {
-        let request = try #require(parse(
-            "GET /status HTTP/1.1\r\nHost: 127.0.0.1:7357\r\nAuthorization: Basic abc\r\n\r\n"))
+        let request = try #require(
+            parse(
+                "GET /status HTTP/1.1\r\nHost: 127.0.0.1:7357\r\nAuthorization: Basic abc\r\n\r\n"))
 
         #expect(request.method == "GET")
         #expect(request.path == "/status")
@@ -99,9 +103,11 @@ struct RequestTests {
         #expect(request.path == "/start")
     }
 
-    @Test("Garbage is rejected rather than half-parsed", arguments: [
-        "", "GET\r\n\r\n", "\r\n\r\n",
-    ])
+    @Test(
+        "Garbage is rejected rather than half-parsed",
+        arguments: [
+            "", "GET\r\n\r\n", "\r\n\r\n",
+        ])
     func garbage(_ raw: String) {
         #expect(parse(raw) == nil)
     }

@@ -58,7 +58,9 @@ public final class AppleEngine: SpeechEngine, @unchecked Sendable {
         let installed = Set(await SpeechTranscriber.installedLocales.map { $0.identifier(.bcp47) })
 
         if !installed.contains(locale.identifier(.bcp47)) {
-            if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+            if let request = try await AssetInventory.assetInstallationRequest(supporting: [
+                transcriber
+            ]) {
                 note("downloading speech model for \(locale.identifier(.bcp47))…")
                 try await request.downloadAndInstall()
             }
@@ -90,9 +92,10 @@ public final class AppleEngine: SpeechEngine, @unchecked Sendable {
                     let audio = (start.isFinite && end.isFinite) ? start...max(start, end) : nil
 
                     onHypothesis(
-                        Hypothesis(text: String(result.text.characters),
-                                   isFinal: result.isFinal,
-                                   audio: audio),
+                        Hypothesis(
+                            text: String(result.text.characters),
+                            isFinal: result.isFinal,
+                            audio: audio),
                         received
                     )
                 }
