@@ -59,11 +59,23 @@ jobs:
       - name: Test
         run: swift test --package-path app
 
+      # Which optional secrets exist, as step outputs. `if:` cannot read a
+      # step's own `env:`, so gating directly on a secret there produces a
+      # workflow GitHub refuses to parse — this is the pattern that works.
+      - name: Check for signing secrets
+        id: have
+        env:
+          CERT: ${{ secrets.MACOS_CERT_P12 }}
+          NOTARY: ${{ secrets.NOTARY_KEY_P8 }}
+        run: |
+          if [ -n "$CERT" ]; then echo "cert=true" >> "$GITHUB_OUTPUT"; else echo "cert=false" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "$NOTARY" ]; then echo "notary=true" >> "$GITHUB_OUTPUT"; else echo "notary=false" >> "$GITHUB_OUTPUT"; fi
+
       # Import the Developer ID into a throwaway keychain. Skipped without
       # secrets, in which case bundle.sh falls back to an ad-hoc signature.
       - name: Import signing certificate
         id: signing
-        if: env.MACOS_CERT_P12 != ''
+        if: steps.have.outputs.cert == 'true'
         env:
           MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
           MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
@@ -88,12 +100,12 @@ jobs:
         run: ./app/Scripts/bundle.sh
 
       - name: Warn if unsigned
-        if: steps.signing.outputs.signed != 'true'
+        if: steps.have.outputs.cert != 'true'
         run: |
           echo "::warning title=Ad-hoc signature::No MACOS_CERT_P12 secret, so this build is ad-hoc signed. It will not pass Gatekeeper, and macOS will treat every rebuild as a different app for microphone permission."
 
       - name: Notarize
-        if: steps.signing.outputs.signed == 'true' && env.NOTARY_KEY_P8 != ''
+        if: steps.have.outputs.cert == 'true' && steps.have.outputs.notary == 'true'
         env:
           NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
@@ -143,7 +155,7 @@ jobs:
           NOTE="Apple Silicon, macOS 14 or later. Models download on first run (~219 MB).
 
 Always-current download: https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg"
-          if [ "${{ steps.signing.outputs.signed }}" != "true" ]; then
+          if [ "${{ steps.have.outputs.cert }}" != "true" ]; then
             NOTE="$NOTE
 
 **This build is ad-hoc signed.** macOS will refuse to open it normally — right-click the app and choose Open, and expect the microphone prompt again after every update."
