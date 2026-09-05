@@ -49,13 +49,26 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         public let engine: String
         public let clients: Int
         public let uptime: Double
+        /// Peak input level in dBFS, or nil when not capturing.
+        ///
+        /// Here because "is it hearing anything" is otherwise unanswerable from
+        /// outside the process — establishing that thirty seconds of piano
+        /// produced no text required starting a second sidecar just to watch a
+        /// meter. Signal without text is a working microphone and a quiet room;
+        /// no signal at all is a different problem, and a consumer should not
+        /// have to guess which it has.
+        public let levelDb: Double?
 
-        public init(state: String, listening: Bool, engine: String, clients: Int, uptime: Double) {
+        public init(
+            state: String, listening: Bool, engine: String, clients: Int, uptime: Double,
+            levelDb: Double?
+        ) {
             self.state = state
             self.listening = listening
             self.engine = engine
             self.clients = clients
             self.uptime = uptime
+            self.levelDb = levelDb
         }
     }
 

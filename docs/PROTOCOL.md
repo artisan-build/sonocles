@@ -100,8 +100,19 @@ On the HTTP port. JSON in, JSON out.
 
 ```json
 { "state": "listening", "listening": true,
-  "engine": "Parakeet EOU 120M (160 ms)", "clients": 1, "uptime": 41.2 }
+  "engine": "Parakeet EOU 120M (160 ms)", "clients": 1, "uptime": 41.2,
+  "levelDb": -19.4 }
 ```
+
+`levelDb` is the peak input level in dBFS, and it is absent when not capturing —
+absent meaning unmeasured, never zero, as everywhere else here.
+
+It exists because "is it hearing anything" is otherwise unanswerable from
+outside the process. Signal with no text is a working microphone in a quiet
+room, or a room with something in it that is not speech; no signal at all is a
+different problem entirely. Establishing that thirty seconds of piano at -9 dBFS
+peak produced zero words required starting a second sidecar purely to watch a
+meter, which is a silly thing to need.
 
 `state` is `idle` · `starting` · `listening`. Three states rather than a
 boolean because `POST /start` returns before capture is up — models load,

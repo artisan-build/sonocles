@@ -137,3 +137,21 @@ That is fine for what finals are for — they are settled text, and settling tak
 evidence — but it means **nothing time-sensitive should wait for one**. Partials
 arrive every ~200 ms at ~180 ms behind live and are what should drive a scroll
 or fire a cue. Finals are for the transcript.
+
+## Non-speech does not produce text
+
+Thirty seconds of piano, peaking at -9 dBFS with a median of -32 dBFS, produced
+**zero** frames. In a separate forty-second window the only output was one
+genuinely spoken sentence, at a normal 140-220 ms lag.
+
+This is a property of the architecture rather than luck. A transducer emits
+tokens frame-synchronously as acoustic evidence arrives, so absent speech
+evidence there is nothing to emit. Attention-decoder models like Whisper are
+known for the opposite failure — confidently producing text over music or
+silence — and for a teleprompter that failure is expensive: a hallucinated
+phrase fuzzy-matches somewhere in the script and yanks the scroll.
+
+Worth noting how the claim was established, because "it produced no text" is
+meaningless on its own. The level meter is driven from the audio thread,
+independent of the model, so it separates "heard nothing" from "heard something
+and correctly said nothing about it". The second is the result worth having.

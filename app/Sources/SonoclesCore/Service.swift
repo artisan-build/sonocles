@@ -49,6 +49,7 @@ public final class Service: @unchecked Sendable {
         var sidecar: Sidecar?
         var listening = false
         var starting = false
+        var levelDb: Double?
     }
 
     /// Forwarded from the running session, for a UI or a terminal to draw.
@@ -75,7 +76,8 @@ public final class Service: @unchecked Sendable {
                 status: { [weak self] in
                     self?.status()
                         ?? .init(
-                            state: "idle", listening: false, engine: "-", clients: 0, uptime: 0)
+                            state: "idle", listening: false, engine: "-", clients: 0, uptime: 0,
+                            levelDb: nil)
                 }
             )
             http = server
@@ -110,14 +112,17 @@ public final class Service: @unchecked Sendable {
     public var engineFormat: AVAudioFormat? { state.withLock { $0.sidecar?.engineFormat } }
 
     public func status() -> HTTPServer.Status {
-        let (listening, starting) = state.withLock { ($0.listening, $0.starting) }
+        let (listening, starting, level) = state.withLock {
+            ($0.listening, $0.starting, $0.levelDb)
+        }
 
         return HTTPServer.Status(
             state: listening ? "listening" : (starting ? "starting" : "idle"),
             listening: listening,
             engine: engineName,
             clients: transports.reduce(0) { $0 + $1.clientCount },
-            uptime: Date().timeIntervalSince(started)
+            uptime: Date().timeIntervalSince(started),
+            levelDb: listening ? level : nil
         )
     }
 
@@ -144,7 +149,10 @@ public final class Service: @unchecked Sendable {
         do {
             let sidecar = try Sidecar(config: config, note: note)
 
-            sidecar.onLevel = { [weak self] db in self?.onLevel?(db) }
+            sidecar.onLevel = { [weak self] db in
+                self?.state.withLock { $0.levelDb = db }
+                self?.onLevel?(db)
+            }
             sidecar.onFrame = { [weak self] hypothesis, frame, nanos in
                 guard let self else { return }
                 // Wire first, so a consumer is never waiting on a terminal.
@@ -180,7 +188,12 @@ public final class Service: @unchecked Sendable {
 
     public func stopListening() {
         let sidecar = state.withLock { state -> Sidecar? in
-            defer { state.sidecar = nil; state.listening = false; state.starting = false }
+            defer {
+                state.sidecar = nil
+                state.listening = false
+                state.starting = false
+                state.levelDb = nil
+            }
             return state.sidecar
         }
 
