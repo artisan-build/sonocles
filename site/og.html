@@ -6,15 +6,38 @@
   would either letterbox or cut the scribe out of frame, and the scribe is the
   half that makes the joke. This lays out the same elements at the right shape
   instead. Regenerate by screenshotting this at exactly 1200x630.
+
+  Three things here are load-bearing and were each a defect once:
+
+  1. The text column is capped (--col) and the art is sized so that the two
+     never share horizontal space. Previously the subtitle ran full width and
+     the philosopher's sandal landed on the word "you", which is a poor place
+     to put a foot.
+  2. The art sits flush to the bottom edge, not past it. It used to hang
+     18px below, which sliced the legs off the scribe's stool.
+  3. The ground is --card-ground, not --stone. flat-hero.png is opaque and its
+     own ground is #FCF3E3, two levels off the site's #FAF2E4 — enough to draw
+     a visible vertical seam down the card at the image's left edge. Matching
+     the card to the art makes the rectangle disappear. Keep them equal; if the
+     illustration is ever regenerated, re-measure it.
+
+  The subtitle carries the category because the headline deliberately does not.
+  A card is read at about 500px wide in a chat timeline, so nothing here is set
+  below 21px — at that width it renders around 9px.
 -->
 <html lang="en"><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
-  :root { --stone:#FAF2E4; --ink:#2A211A; --ink-soft:#4E4034; --script:#9C8C77; --terracotta:#C4552E; }
+  :root {
+    --stone:#FAF2E4; --card-ground:#FCF3E3;
+    --ink:#2A211A; --ink-soft:#4E4034; --script:#7A6A59;
+    --terracotta:#C4552E; --terracotta-deep:#B2461F;
+    --col:580px;
+  }
   * { box-sizing:border-box; margin:0; }
-  body { width:1200px; height:630px; background:var(--stone); overflow:hidden;
+  body { width:1200px; height:630px; background:var(--card-ground); overflow:hidden;
     font-family:'Instrument Sans',system-ui,sans-serif; position:relative; }
-  .colonnade { position:absolute; top:0; left:0; right:0; height:16px;
+  .colonnade { position:absolute; top:0; left:0; right:0; height:16px; z-index:3;
     background:repeating-linear-gradient(90deg,#EFE5D2 0 5px,#E0D4BE 5px 6px,#EFE5D2 6px 11px,transparent 11px 30px); }
   .colonnade::after { content:''; position:absolute; left:0; right:0; bottom:0; height:5px; background:var(--terracotta); }
   .pad { padding:52px 58px; height:100%; display:flex; flex-direction:column; justify-content:space-between; position:relative; z-index:2; }
@@ -22,14 +45,23 @@
   .brand .name { font-family:'Fraunces',serif; font-weight:700; font-size:30px; color:var(--ink);
     font-variation-settings:'SOFT' 40,'WONK' 1; }
   .brand .say { font-family:'IBM Plex Mono',monospace; font-size:15px; color:var(--script); }
+  /* Pushed to the top right, where the art has not started yet. It used to sit
+     in the footer competing for width with the line that does the real work. */
+  .pill { margin-left:auto; background:var(--terracotta-deep); color:#fff; font-size:14px; font-weight:600;
+    letter-spacing:.08em; text-transform:uppercase; padding:7px 16px; border-radius:999px; }
   h1 { font-family:'Fraunces',serif; font-weight:600; font-size:64px; line-height:1.06;
     color:var(--ink); letter-spacing:-.022em; font-variation-settings:'SOFT' 30,'WONK' 1; max-width:14ch; }
   h1 em { font-style:normal; color:var(--terracotta); }
-  .foot { display:flex; align-items:center; gap:14px; }
-  .pill { background:var(--terracotta); color:#fff; font-size:14px; font-weight:600;
-    letter-spacing:.08em; text-transform:uppercase; padding:7px 16px; border-radius:999px; }
-  .meta { color:var(--ink-soft); font-size:19px; }
-  .art { position:absolute; right:-14px; bottom:-18px; width:590px; z-index:1; }
+  .foot { max-width:var(--col); }
+  .cat { font-size:32px; font-weight:600; color:var(--ink); letter-spacing:-.012em; line-height:1.15; }
+  .meta { color:var(--ink-soft); font-size:21px; margin-top:7px; }
+  .meta b { font-weight:600; color:var(--ink); }
+  /* 620 wide on a 3:2 source is 413 tall, so the top edge lands at y=217. The
+     illustration carries its own margin, so the leftmost drawn pixel is at
+     x=641 rather than at the box edge — that is the number that has to clear
+     the text, not the box. Verified by scanning the render, not by trusting
+     this comment. */
+  .art { position:absolute; right:-16px; bottom:0; width:620px; z-index:1; display:block; }
 </style></head>
 <body>
   <div class="colonnade"></div>
@@ -44,11 +76,12 @@
       </svg>
       <span class="name">Sonocles</span>
       <span class="say">so-NOK-leez</span>
+      <span class="pill">Free · Open source</span>
     </div>
     <h1>Words, while you're <em>still saying them.</em></h1>
     <div class="foot">
-      <span class="pill">Free · Open source</span>
-      <span class="meta">Live text over WebSocket or SSE, ~180&nbsp;ms behind you.</span>
+      <p class="cat">Live speech-to-text for the Mac.</p>
+      <p class="meta"><b>WebSocket</b> or <b>SSE</b>, word by word, ~180&nbsp;ms behind you.</p>
     </div>
   </div>
 </body></html>
