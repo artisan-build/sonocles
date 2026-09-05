@@ -43,8 +43,8 @@ A monorepo. Each directory builds independently.
 
 ```
 app/     the macOS app, the CLI, and the core they share (Swift)
-docs/    findings, protocol, decisions
-site/    marketing + documentation site (Laravel, deployed on Laravel Cloud)
+docs/    findings, protocol, brand, decisions
+site/    the marketing page (a single static file, ready to become a Blade view)
 ```
 
 `app/` is a plain SwiftPM package — `swift build` inside it needs nothing from
