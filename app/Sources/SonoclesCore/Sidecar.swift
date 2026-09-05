@@ -33,6 +33,12 @@ public final class Sidecar: @unchecked Sendable {
     /// Every hypothesis, with the frame that will go on the wire.
     public var onFrame: (@Sendable (Hypothesis, Frame, UInt64) -> Void)?
 
+    /// Model download and compilation progress, before capture can begin.
+    public var onPreparation: (@Sendable (Preparation) -> Void)? {
+        get { (engine as? FluidEngine)?.onPreparation }
+        set { (engine as? FluidEngine)?.onPreparation = newValue }
+    }
+
     /// Peak input level in dBFS, straight off the audio thread.
     public var onLevel: (@Sendable (Double) -> Void)? {
         get { capture.onLevel }

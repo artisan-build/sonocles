@@ -58,10 +58,16 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         /// no signal at all is a different problem, and a consumer should not
         /// have to guess which it has.
         public let levelDb: Double?
+        /// What the engine is doing before it can listen, when that is not
+        /// instant. Absent once models are resident.
+        public let preparing: String?
+        /// Fraction complete where one is knowable — absent while compiling,
+        /// which has no measurable progress and should not have one invented.
+        public let preparingFraction: Double?
 
         public init(
             state: String, listening: Bool, engine: String, clients: Int, uptime: Double,
-            levelDb: Double?
+            levelDb: Double?, preparing: String?, preparingFraction: Double?
         ) {
             self.state = state
             self.listening = listening
@@ -69,6 +75,8 @@ public final class HTTPServer: Transport, @unchecked Sendable {
             self.clients = clients
             self.uptime = uptime
             self.levelDb = levelDb
+            self.preparing = preparing
+            self.preparingFraction = preparingFraction
         }
     }
 

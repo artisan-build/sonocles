@@ -14,8 +14,10 @@ CONFIG="${CONFIG:-release}"
 DIST="$ROOT/../dist"
 APP="$DIST/Sonocles.app"
 
-swift build -c "$CONFIG" --package-path "$ROOT"
+# One invocation, not two. --show-bin-path is cheap but it still plans the
+# build, and there is no reason to do that twice for a path we can ask for once.
 BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" --show-bin-path)"
+swift build -c "$CONFIG" --package-path "$ROOT"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

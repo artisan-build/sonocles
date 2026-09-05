@@ -50,12 +50,20 @@ public final class Service: @unchecked Sendable {
         var listening = false
         var starting = false
         var levelDb: Double?
+        var preparation: Preparation?
+        /// The last progress actually written to the log, which is not the
+        /// same as the last one received — comparing against the latter
+        /// throttles everything away, since consecutive callbacks never differ
+        /// by the threshold.
+        var loggedPreparation: Preparation?
     }
 
     /// Forwarded from the running session, for a UI or a terminal to draw.
     public var onFrame: (@Sendable (Hypothesis, Frame, UInt64) -> Void)?
     public var onLevel: (@Sendable (Double) -> Void)?
     public var onListeningChanged: (@Sendable (Bool) -> Void)?
+    /// Model download and compilation, reported before listening begins.
+    public var onPreparation: (@Sendable (Preparation) -> Void)?
 
     public init(config: Config, note: @escaping @Sendable (String) -> Void) {
         self.note = note
@@ -77,7 +85,7 @@ public final class Service: @unchecked Sendable {
                     self?.status()
                         ?? .init(
                             state: "idle", listening: false, engine: "-", clients: 0, uptime: 0,
-                            levelDb: nil)
+                            levelDb: nil, preparing: nil, preparingFraction: nil)
                 }
             )
             http = server
@@ -111,9 +119,21 @@ public final class Service: @unchecked Sendable {
     public var hardwareFormat: AVAudioFormat? { state.withLock { $0.sidecar?.hardwareFormat } }
     public var engineFormat: AVAudioFormat? { state.withLock { $0.sidecar?.engineFormat } }
 
+    /// Whether a progress line is worth printing, given the last one printed.
+    private static func isNotable(_ now: Preparation, after previous: Preparation?) -> Bool {
+        guard let previous else { return true }
+
+        switch (previous, now) {
+        case (.downloading(let was, _, _), .downloading(let current, _, _)):
+            return abs(current - was) >= 0.05 || current >= 1
+        default:
+            return previous != now
+        }
+    }
+
     public func status() -> HTTPServer.Status {
-        let (listening, starting, level) = state.withLock {
-            ($0.listening, $0.starting, $0.levelDb)
+        let (listening, starting, level, preparation) = state.withLock {
+            ($0.listening, $0.starting, $0.levelDb, $0.preparation)
         }
 
         return HTTPServer.Status(
@@ -122,7 +142,9 @@ public final class Service: @unchecked Sendable {
             engine: engineName,
             clients: transports.reduce(0) { $0 + $1.clientCount },
             uptime: Date().timeIntervalSince(started),
-            levelDb: listening ? level : nil
+            levelDb: listening ? level : nil,
+            preparing: preparation?.summary,
+            preparingFraction: preparation?.fraction
         )
     }
 
@@ -148,6 +170,30 @@ public final class Service: @unchecked Sendable {
 
         do {
             let sidecar = try Sidecar(config: config, note: note)
+
+            sidecar.onPreparation = { [weak self] preparation in
+                guard let self else { return }
+
+                // State and the UI want every update; the log does not. A
+                // 220 MB download fires this hundreds of times, and a terminal
+                // scrolling a line per chunk is noise pretending to be
+                // information — so notes go out on a phase change or every five
+                // percent, whichever comes first.
+                let worthLogging = self.state.withLock { state -> Bool in
+                    state.preparation = preparation.isFinished ? nil : preparation
+
+                    guard Self.isNotable(preparation, after: state.loggedPreparation) else {
+                        return false
+                    }
+
+                    state.loggedPreparation = preparation
+                    return true
+                }
+
+                if worthLogging { self.note(preparation.summary) }
+
+                self.onPreparation?(preparation)
+            }
 
             sidecar.onLevel = { [weak self] db in
                 self?.state.withLock { $0.levelDb = db }
@@ -193,6 +239,8 @@ public final class Service: @unchecked Sendable {
                 state.listening = false
                 state.starting = false
                 state.levelDb = nil
+                state.preparation = nil
+                state.loggedPreparation = nil
             }
             return state.sidecar
         }

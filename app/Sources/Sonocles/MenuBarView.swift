@@ -49,7 +49,53 @@ struct MenuBarView: View {
         .padding(.vertical, 11)
     }
 
-    private var live: some View {
+    @ViewBuilder private var live: some View {
+        if let preparation = model.preparation {
+            PreparationView(preparation: preparation)
+        } else {
+            listening
+        }
+    }
+
+    /// The first launch fetches ~220 MB and then compiles it for the Neural
+    /// Engine — tens of seconds during which a meter reading silence and an
+    /// empty transcript would be actively misleading, since nothing is wrong
+    /// and nothing is listening yet. So this replaces the live view outright
+    /// rather than sitting above it.
+    private struct PreparationView: View {
+        let preparation: Preparation
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(spacing: 7) {
+                    ProgressView().controlSize(.small)
+                    Text(preparation.summary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Brand.body)
+                }
+
+                // A determinate bar only when the fraction is real. Compiling
+                // has no measurable progress, and a bar invented to keep
+                // something moving would be the same lie as reporting an
+                // unmeasured latency as zero.
+                if let fraction = preparation.fraction {
+                    ProgressView(value: fraction)
+                        .progressViewStyle(.linear)
+                        .tint(Brand.stress)
+                } else {
+                    ProgressView().progressViewStyle(.linear).tint(Brand.stress)
+                }
+
+                Text("One time only — the models cache on disk.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Brand.script)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: 92, alignment: .center)
+        }
+    }
+
+    private var listening: some View {
         VStack(alignment: .leading, spacing: 10) {
             LevelMeter(db: model.heldDb, reading: model.levelDb)
 

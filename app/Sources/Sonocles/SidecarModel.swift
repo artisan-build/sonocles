@@ -30,6 +30,10 @@ final class SidecarModel {
     var status = "Idle"
     var engine: EngineChoice = .fluid160
 
+    /// Model download and compilation, before listening can begin. Nil once
+    /// the models are resident, which is every launch after the first.
+    var preparation: Preparation?
+
     /// Control-API credentials, edited in the popover.
     var authEnabled = CredentialStore.isEnabled
     var username = CredentialStore.username
@@ -53,6 +57,12 @@ final class SidecarModel {
 
         service.onLevel = { [weak self] db in
             Task { @MainActor in self?.levelDb = db }
+        }
+
+        service.onPreparation = { [weak self] preparation in
+            Task { @MainActor in
+                self?.preparation = preparation.isFinished ? nil : preparation
+            }
         }
 
         service.onListeningChanged = { [weak self] listening in
@@ -120,6 +130,7 @@ final class SidecarModel {
     }
 
     private func clearLive() {
+        preparation = nil
         text = ""
         lagMs = nil
         gapMs = nil

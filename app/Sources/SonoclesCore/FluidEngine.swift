@@ -56,6 +56,9 @@ public final class FluidEngine: SpeechEngine, @unchecked Sendable {
     private let note: @Sendable (String) -> Void
     private var continuation: AsyncStream<Box>.Continuation?
 
+    /// Reports model download and compilation before listening can begin.
+    public var onPreparation: (@Sendable (Preparation) -> Void)?
+
     public init(chunk: StreamingChunkSize, note: @escaping @Sendable (String) -> Void) {
         self.manager = StreamingEouAsrManager(chunkSize: chunk)
         self.chunkMs = chunk.durationMs
@@ -68,9 +71,22 @@ public final class FluidEngine: SpeechEngine, @unchecked Sendable {
     public func preferredFormat() async -> AVAudioFormat? { nil }
 
     public func start(onHypothesis: @escaping @Sendable (Hypothesis, UInt64) -> Void) async throws {
-        note("loading Parakeet EOU (\(chunkMs) ms chunks) — first run downloads from HuggingFace…")
-        try await manager.loadModels()
-        note("models resident")
+        note("loading Parakeet EOU (\(chunkMs) ms chunks)…")
+
+        let report = onPreparation
+        try await manager.loadModels(progressHandler: { progress in
+            switch progress.phase {
+            case .listing:
+                report?(.listing)
+            case .downloading(let completed, let total):
+                report?(
+                    .downloading(fraction: progress.fractionCompleted, file: completed, of: total))
+            case .compiling(let name):
+                report?(.compiling(model: name))
+            }
+        })
+
+        report?(.ready)
 
         let (stream, cont) = AsyncStream<Box>.makeStream()
         continuation = cont
