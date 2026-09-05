@@ -1,19 +1,18 @@
 #if canImport(SwiftUI)
 import SwiftUI
 
-/// Sonocles' palette: Attic red-figure pottery.
+/// Sonocles' palette: limestone and terracotta.
 ///
 /// Not Pteroprompter's. An earlier version of this file lifted that palette
 /// verbatim and called it family resemblance, which was a generous word for
 /// borrowing. The two are siblings and one consumes the other, but a tool
 /// with its own name deserves its own colours.
 ///
-/// The source is specific rather than vaguely classical. Attic vases from the
-/// fifth century BC are three materials and nothing else: the terracotta of
-/// the clay, the black slip fired over it, and the pale bone of the
-/// unpainted ground. Those vases are also, very often, *pictures of
-/// performance* — the chorus, the aulos player, the actor holding a mask.
-/// It is the right well to draw from, and it lands nowhere near amber.
+/// Greek, but a temple rather than a museum case: pale limestone, fired
+/// terracotta, a little olive and bronze. The site is illustrated in the same
+/// key with flat comic drawings rather than photographed artifacts — an earlier
+/// pass did the artifacts beautifully and produced a page that read like a
+/// catalogue, which is a strange register for a 220 MB menu bar utility.
 ///
 /// It stays dark for the same reason the prompter does. This sits over
 /// whatever you are actually doing, frequently while a camera is running,

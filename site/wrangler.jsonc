@@ -9,5 +9,7 @@
   //     wrangler pages domain add sonocles.com
   "name": "sonocles",
   "compatibility_date": "2026-09-01",
-  "pages_build_output_dir": "."
+  "pages_build_output_dir": ".",
+  // Config and lockfiles are not the website.
+  "exclude": ["wrangler.jsonc"]
 }

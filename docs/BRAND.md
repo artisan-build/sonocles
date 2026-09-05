@@ -112,47 +112,36 @@ open the CLI and check.
 
 ## Palette
 
-**Attic red-figure pottery.** Not Pteroprompter's.
+**Limestone and terracotta.** Not Pteroprompter's.
 
-An earlier version of this document argued that sharing the prompter's palette
-was accurate family resemblance. It was not; it was borrowing, and it made two
-products look like one. They are siblings and one consumes the other, but a tool
-with its own name deserves its own colours.
+An earlier version of this document argued that sharing the prompter's amber was
+accurate family resemblance. It was not; it was borrowing, and it made two
+products look like one.
 
-The source is specific rather than vaguely classical. Fifth-century Attic vases
-are three materials and nothing else — the terracotta of the clay, the black
-slip fired over it, and the pale bone of the unpainted ground — and they are very
-often *pictures of performance*: the chorus, the aulos player, the actor holding
-a mask. It is the right well to draw from, and it lands nowhere near amber.
+Greek, but a temple rather than a museum case: pale limestone ground, fired
+terracotta accent, a little olive and bronze. Warm, bright, and cheerful enough
+to carry a joke.
 
-The tradition has two techniques, and we use both:
-
-- **Red-figure** — light figures on black slip. The app. It stays dark because
-  it sits over whatever you are actually doing, frequently while a camera is
-  running, and should never flash white at you mid-take.
-- **Black-figure** — dark figures on bare clay. The site. Light, warm, and
-  unmistakably not the same page as the prompter's.
-
-Values live in `SonoclesCore/Brand.swift`.
+The app stays dark — it sits over whatever you are actually doing, often while a
+camera is running, and should never flash white at you mid-take. The site is
+light. That is not a drift; it is the same palette, and a tool and a poster want
+opposite grounds.
 
 | role | token | value |
 |---|---|---|
-| black slip, deepest | `slip` | `#100C0A` |
-| ground | `ground` | `#16110E` |
+| deepest ground (app) | `slip` | `#100C0A` |
 | popover | `panel` | `#1C1611` |
-| raised | `raised` | `#241C16` |
 | inset / meter cell | `field` | `#2B211A` |
-| unpainted ground, brightest text | `bone` | `#EFE3D0` |
+| brightest text (app) | `bone` | `#EFE3D0` |
 | body text | `body` | `#CDBBA3` |
-| secondary | `faint` | `#9A8874` |
 | **absent values** | `script` | `#6B5C4B` |
-| **the signature — fired clay** | `terracotta` | `#C86F45` |
-| aged bronze — listening, healthy | `verdigris` | `#7FA88C` |
-| ochre — attention without alarm | `ochre` | `#D9A441` |
-| iron oxide — hot, recording, stop | `oxide` | `#B4453A` |
+| **the signature** | `terracotta` | `#C86F45` |
+| listening, healthy | `verdigris` | `#7FA88C` |
+| hot, recording, stop | `oxide` | `#B4453A` |
+| site ground | limestone | `#FAF2E4` |
+| site accent | terracotta | `#C4552E` |
 
-Views name the *role*, not the pigment, so a palette change stays in one file
-instead of spreading through the interface.
+Views name the *role*, not the pigment, so a palette change stays in one file.
 
 `script` is load-bearing beyond its name: it is the colour of a value we do not
 have. A missing latency, an unmeasured level, an empty transcript. Absence gets
@@ -181,28 +170,22 @@ opening anything.
 
 ## The plates
 
-The site is illustrated with generated Attic red-figure vase paintings, each
-captioned as a museum catalogue object — accession line, attribution, century.
-The register is academic and completely straight.
+Flat comic illustration that has clearly *looked* at Greek vase painting rather
+than pretending to be one. Warm characters with real faces, thick outlines,
+completely flat fills, limestone ground.
 
-That is the whole joke, and it only works if nobody winks. A caption reading
-"conventionally read as an allegory of resource contention" is funny precisely
-because it is written the way a real label is written. The moment the page
-nudges the reader, it becomes a costume rather than a conceit.
+The first attempt generated photographed antiquities with museum catalogue
+captions. They were genuinely beautiful and completely wrong: solemn, reverent,
+and asking a reader to admire an object when the point was to make them smile.
+A tiny free utility should not present itself as an exhibit. Those prompts are
+still in `art/make.py` under `STYLE`, because the work was good even though the
+direction was not.
 
-`art/make.py` generates them. Prompts obey the real drawing conventions —
-reserved figures, black slip, relief line, profile faces — so the only
-anachronism is ever the *subject*. A fifth-century painter handed a microphone
-would have drawn it exactly like that.
-
-Two working notes. **No lettering, ever**: the model cannot spell Greek, and
-gibberish reads as carelessness rather than antiquity, so the wordmark is set in
-Cinzel in the page instead. And **specify clothing explicitly** — classical
-nudity is authentic to the source and will get a generation refused by content
-moderation, which costs a retry and teaches nothing.
-
-The last caption on the page admits they are not ancient. Holding that to the
-end is the setup; saying it at all is the manners.
+`art/make.py` generates both sets. Two working notes, learned the expensive way.
+**No lettering, ever** — the model cannot spell Greek and gibberish reads as
+carelessness. And **specify clothing explicitly**: classical nudity is authentic
+to the source and will get a generation refused by content moderation, which
+costs a retry and teaches nothing.
 
 ## Copy
 

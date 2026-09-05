@@ -4,163 +4,173 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sonocles — words, while you're still saying them</title>
-<meta name="description" content="An on-device speech sidecar for the Mac. It hears you and streams what you said — about 180 milliseconds behind you, and nowhere else.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231C1611'/%3E%3Ccircle cx='8' cy='16' r='2.6' fill='%23C86F45'/%3E%3Cpath d='M13 10a9 9 0 0 1 0 12' stroke='%23C86F45' stroke-width='2.1' fill='none' stroke-linecap='round'/%3E%3Cpath d='M18.5 7a14.5 14.5 0 0 1 0 18' stroke='%23C86F45' stroke-width='2.1' fill='none' stroke-linecap='round' opacity='.7'/%3E%3C/svg%3E">
+<meta name="description" content="A free, open-source speech sidecar for the Mac. It hears you and streams what you said — about 180 milliseconds behind you, and nowhere else.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23F2ECE0'/%3E%3Ccircle cx='8' cy='16' r='2.8' fill='%23C4552E'/%3E%3Cpath d='M13 10a9 9 0 0 1 0 12' stroke='%23C4552E' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M18.5 7a14.5 14.5 0 0 1 0 18' stroke='%23C4552E' stroke-width='2.4' fill='none' stroke-linecap='round' opacity='.65'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400;9..144,500;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* Black-figure: dark slip on bare clay. The app is the same palette
-     inverted — red-figure — which is the other half of the same tradition. */
+  /* Limestone and terracotta. Lighter and cooler than the prompter's ground,
+     and considerably less solemn than the version of this page that looked
+     like a museum catalogue. */
   :root {
-    --clay:#EAE0D0; --clay-deep:#E1D4BF; --clay-line:#D3C3AB;
-    --slip:#1C1611; --slip-soft:#47382C; --slip-faint:#6B5C4B;
-    --script:#8D7C66;
-    --terracotta:#A94E2C; --terracotta-soft:#C86F45;
-    --verdigris:#4F7A63; --oxide:#9C3B31;
-    --display:'Cormorant Garamond',Georgia,serif;
-    --roman:'Cinzel',Georgia,serif;
+    --stone:#FAF2E4; --stone-deep:#EFE5D2; --stone-sink:#E0D4BE; --stone-line:#DED0B8;
+    --ink:#2A211A; --ink-soft:#4E4034; --ink-faint:#7A6A59; --script:#9C8C77;
+    --terracotta:#C4552E; --terracotta-soft:#DD7A4E; --brick:#94331E;
+    --olive:#6E7A52;
+    --display:'Fraunces',Georgia,serif;
     --sans:'Instrument Sans',ui-sans-serif,system-ui,sans-serif;
     --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   * { box-sizing:border-box; }
   html { scroll-behavior:smooth; }
   body {
-    margin:0; background:var(--clay); color:var(--slip-soft);
-    font-family:var(--sans); font-size:16.5px; line-height:1.66;
+    margin:0; background:var(--stone); color:var(--ink-soft);
+    font-family:var(--sans); font-size:17px; line-height:1.65;
     -webkit-font-smoothing:antialiased;
   }
-  .wrap { width:min(92vw,880px); margin:0 auto; }
-  a { color:var(--terracotta); text-decoration:none; border-bottom:1px solid rgba(169,78,44,.3); }
+  .wrap { width:min(92vw,920px); margin:0 auto; }
+  a { color:var(--terracotta); text-decoration:none; border-bottom:2px solid rgba(196,85,46,.26); }
   a:hover { border-bottom-color:var(--terracotta); }
-  h1,h2 { font-family:var(--display); font-weight:500; color:var(--slip); line-height:1.12; letter-spacing:-.005em; }
+  h1,h2,h3 { font-family:var(--display); color:var(--ink); line-height:1.1;
+    font-variation-settings:'SOFT' 30,'WONK' 1; margin:0; }
   code,.mono { font-family:var(--mono); }
-  em { font-style:italic; }
 
-  header { padding:36px 0 0; }
-  .brandbar { display:flex; align-items:baseline; gap:12px; }
-  .brandbar .name {
-    font-family:var(--roman); font-weight:600; font-size:19px;
-    color:var(--slip); letter-spacing:.09em;
+  /* A colonnade, drawn rather than photographed: fluting as a repeating
+     gradient, capitals as a band above it. Cheap, crisp at any width, and it
+     gives every section a floor to stand on. */
+  .colonnade { height:34px; position:relative; }
+  .colonnade::before {
+    content:''; position:absolute; inset:0 0 6px 0;
+    background:
+      repeating-linear-gradient(90deg,
+        var(--stone-deep) 0 5px, var(--stone-sink) 5px 6px,
+        var(--stone-deep) 6px 11px, transparent 11px 30px);
   }
-  .say { color:var(--script); font-size:12.5px; font-family:var(--mono); letter-spacing:.02em; }
-  .brandbar svg { align-self:center; }
-  .brandbar .gh { margin-left:auto; font-size:13.5px; border-bottom-color:transparent; }
+  .colonnade::after {
+    content:''; position:absolute; left:0; right:0; bottom:0; height:6px;
+    background:var(--terracotta); opacity:.85;
+  }
+  .step { height:0; border-top:2px solid var(--stone-line); position:relative; margin:0; }
+  .step::after { content:''; position:absolute; left:0; top:5px; width:74px; height:3px; background:var(--terracotta); }
+
+  header { padding:26px 0 0; }
+  .brandbar { display:flex; align-items:center; gap:12px; }
+  .brandbar .name { font-family:var(--display); font-weight:700; font-size:23px; color:var(--ink);
+    font-variation-settings:'SOFT' 40,'WONK' 1; letter-spacing:-.01em; }
+  .say { color:var(--script); font-size:12.5px; font-family:var(--mono); }
+  .brandbar .gh { margin-left:auto; font-size:14px; border-bottom-color:transparent; font-weight:500; }
   .brandbar .gh:hover { border-bottom-color:var(--terracotta); }
+
+  .hero { padding:56px 0 20px; }
   .free {
-    display:inline-block; margin:0 0 22px; font-family:var(--roman); font-size:11px;
-    letter-spacing:.2em; text-transform:uppercase; color:var(--terracotta);
-    border:1px solid rgba(169,78,44,.34); border-radius:999px; padding:5px 13px; font-weight:600;
+    display:inline-block; margin:0 0 20px; font-size:12px; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase; color:#fff; background:var(--terracotta);
+    border-radius:999px; padding:6px 15px;
   }
+  .hero h1 { font-size:clamp(44px,7.6vw,80px); font-weight:600; letter-spacing:-.022em; margin-bottom:24px; }
+  .hero h1 em { font-style:normal; color:var(--terracotta); }
+  .lede { font-size:clamp(18px,2.2vw,22px); color:var(--ink-soft); max-width:56ch; margin:0 0 12px; }
+  .sub { color:var(--ink-faint); max-width:58ch; margin:0; font-size:16.5px; }
 
-  .hero { padding:78px 0 60px; }
-  .hero h1 { font-size:clamp(42px,7.4vw,72px); margin:0 0 24px; }
-  .lede { font-size:clamp(17.5px,2.2vw,21px); color:var(--slip-soft); max-width:58ch; margin:0 0 14px; }
-  .sub { color:var(--slip-faint); max-width:60ch; margin:0; font-size:16px; }
+  section { padding:62px 0; }
+  section h2 { font-size:clamp(30px,4.6vw,46px); font-weight:600; letter-spacing:-.018em; margin-bottom:14px; }
+  .kicker { font-family:var(--mono); font-size:11.5px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--terracotta); margin:0 0 14px; font-weight:500; }
+  .lead { color:var(--ink-soft); max-width:64ch; }
+  .pull { font-family:var(--display); font-size:clamp(22px,3.1vw,30px); line-height:1.34;
+    color:var(--ink); max-width:52ch; margin:0 0 20px; font-weight:500;
+    font-variation-settings:'SOFT' 40,'WONK' 1; }
 
-  /* Frames sit on the slip — a shard of the app dropped into the page. */
-  .stream {
-    margin:46px 0 0; background:var(--slip); border-radius:12px;
-    padding:20px 22px; font-family:var(--mono); font-size:13.5px; overflow-x:auto;
-  }
-  .stream .row { display:flex; gap:15px; white-space:nowrap; padding:3px 0; color:var(--script); }
-  .stream .row .t { color:#CDBBA3; }
+  figure { margin:38px 0 0; }
+  figure img { width:100%; height:auto; display:block; }
+  /* Square plates at full measure swamp the text they illustrate. */
+  figure.fig-mid { max-width:560px; margin-left:auto; margin-right:auto; }
+  figure.fig-mid figcaption { text-align:center; margin-left:auto; margin-right:auto; }
+  figcaption { margin:13px 0 0; font-size:14.5px; color:var(--ink-faint); max-width:60ch; }
+  figcaption b { color:var(--ink-soft); font-weight:600; }
+  .fig-sm { max-width:330px; }
+
+  .two { display:grid; gap:40px; grid-template-columns:1.1fr .9fr; align-items:center; }
+  @media (max-width:780px){ .two { grid-template-columns:1fr; } }
+
+  /* Frames sit on ink — the one dark thing on the page, so they read as the
+     product rather than as decoration. */
+  .stream { margin:36px 0 0; background:var(--ink); border-radius:14px; padding:20px 22px;
+    font-family:var(--mono); font-size:13.5px; overflow-x:auto; }
+  .stream .row { display:flex; gap:15px; white-space:nowrap; padding:3px 0; color:#8B7C6B; }
+  .stream .row .t { color:#EDE4D6; }
   .stream .row .n { color:var(--terracotta-soft); }
-  .stream .cap { color:var(--slip-faint); font-size:12px; margin:14px 0 0; white-space:normal; }
-  @media (prefers-reduced-motion:no-preference) {
-    .r1{animation:fade .5s both .1s}.r2{animation:fade .5s both .5s}
-    .r3{animation:fade .5s both .9s}.r4{animation:fade .5s both 1.3s}
-    .r5{animation:fade .5s both 1.7s}
-    @keyframes fade { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:none} }
+  .stream .cap { color:#8B7C6B; font-size:12px; margin:14px 0 0; white-space:normal; }
+  @media (prefers-reduced-motion:no-preference){
+    .r1{animation:fade .5s both .1s}.r2{animation:fade .5s both .5s}.r3{animation:fade .5s both .9s}
+    .r4{animation:fade .5s both 1.3s}.r5{animation:fade .5s both 1.7s}
+    @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   }
-
-  section { padding:66px 0; border-top:1px solid var(--clay-line); }
-  section h2 { font-size:clamp(29px,4.2vw,40px); margin:0 0 12px; }
-  .kicker {
-    font-family:var(--roman); font-size:11px; letter-spacing:.22em;
-    text-transform:uppercase; color:var(--terracotta); margin:0 0 16px; font-weight:600;
-  }
-  .lead { color:var(--slip-soft); max-width:64ch; }
 
   .tablewrap { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; margin:28px 0 0; font-size:15px; }
-  th,td { text-align:left; padding:12px; border-bottom:1px solid var(--clay-line); }
-  th { color:var(--script); font-weight:500; font-size:12px; font-family:var(--roman); letter-spacing:.1em; text-transform:uppercase; }
+  table { width:100%; border-collapse:collapse; margin:28px 0 0; font-size:15.5px; }
+  th,td { text-align:left; padding:13px 12px; border-bottom:1px solid var(--stone-line); }
+  th { color:var(--script); font-weight:600; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; }
   td.num { font-family:var(--mono); }
-  tr.win td { color:var(--slip); font-weight:500; }
+  tr.win td { color:var(--ink); font-weight:600; background:rgba(196,85,46,.07); }
   tr.win td.num { color:var(--terracotta); }
 
-  .grid { display:grid; gap:22px; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); margin-top:32px; }
-  .card { background:var(--clay-deep); border-radius:12px; padding:22px 23px; }
-  .card h3 { font-family:var(--sans); font-weight:600; font-size:15.5px; margin:0 0 9px; color:var(--slip); }
-  .card p { margin:0; font-size:14.5px; color:var(--slip-faint); }
-  .fig { font-family:var(--mono); color:var(--terracotta); }
+  .grid { display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); margin-top:34px; }
+  .card { background:var(--stone-deep); border-radius:14px; padding:22px 23px; border-bottom:4px solid var(--stone-sink); }
+  .card:nth-child(3n+1) { border-bottom-color:var(--terracotta); }
+  .card:nth-child(3n+2) { border-bottom-color:var(--olive); }
+  .card h3 { font-family:var(--sans); font-weight:600; font-size:16px; margin:0 0 9px; color:var(--ink); }
+  .card p { margin:0; font-size:14.5px; color:var(--ink-faint); }
+  .fig-num { font-family:var(--mono); color:var(--terracotta); }
 
-  pre {
-    background:var(--slip); border-radius:11px; padding:18px 20px; overflow-x:auto;
-    font-family:var(--mono); font-size:13.5px; color:#CDBBA3; line-height:1.75; margin:24px 0 0;
-  }
-  pre .c { color:var(--script); }
-  pre .k { color:var(--terracotta-soft); }
+  ul.uses { list-style:none; padding:0; margin:26px 0 0; max-width:64ch; }
+  ul.uses li { padding:13px 0 13px 30px; border-bottom:1px solid var(--stone-line); font-size:16px; position:relative; }
+  ul.uses li::before { content:''; position:absolute; left:2px; top:22px; width:13px; height:13px;
+    border:2px solid var(--terracotta); border-left:0; border-bottom:0; border-radius:0 12px 0 0; }
+  ul.uses li b { color:var(--ink); font-weight:600; }
 
-  footer { padding:54px 0 76px; border-top:1px solid var(--clay-line); color:var(--slip-faint); font-size:14.5px; }
-  footer p { margin:0 0 7px; }
-  footer .name { font-family:var(--roman); letter-spacing:.07em; color:var(--slip-soft); font-weight:600; }
-  .note { color:var(--slip-faint); font-size:14px; }
+  pre { background:var(--ink); border-radius:14px; padding:19px 21px; overflow-x:auto;
+    font-family:var(--mono); font-size:13.5px; color:#EDE4D6; line-height:1.75; margin:24px 0 0; }
+  pre .c { color:#8B7C6B; } pre .k { color:var(--terracotta-soft); }
 
-  /* Plates are presented as catalogue objects. The labels are written straight
-     — academic register describing an ancient scene that happens to describe a
-     modern engineering problem. The joke only works if nobody winks. */
-  figure { margin:44px 0 0; }
-  figure img {
-    width:100%; height:auto; display:block; border-radius:3px;
-    box-shadow:0 18px 46px -22px rgba(28,22,17,.55), 0 2px 6px rgba(28,22,17,.09);
-  }
-  figcaption {
-    margin:15px 0 0; font-family:var(--display); font-size:15px; font-style:italic;
-    color:var(--slip-faint); line-height:1.55; max-width:62ch;
-  }
-  figcaption b { font-style:normal; font-weight:500; color:var(--slip-soft); }
-  figcaption .acc { font-family:var(--mono); font-style:normal; font-size:11.5px;
-    letter-spacing:.06em; color:var(--script); display:block; margin-top:6px; }
-  figure.plate-sm { max-width:340px; }
-  .two { display:grid; gap:36px; grid-template-columns:1.15fr .85fr; align-items:center; }
-  @media (max-width:760px) { .two { grid-template-columns:1fr; } }
-  .pull { font-family:var(--display); font-size:clamp(21px,2.9vw,27px); line-height:1.42;
-    color:var(--slip); max-width:52ch; font-style:italic; margin:0 0 18px; }
-  ul.uses { list-style:none; padding:0; margin:26px 0 0; max-width:62ch; }
-  ul.uses li { padding:11px 0; border-bottom:1px solid var(--clay-line); font-size:15.5px; }
-  ul.uses li b { color:var(--slip); font-weight:600; }
-  .etym { font-family:var(--display); font-size:19px; font-style:italic; color:var(--slip-soft); max-width:56ch; }
+  footer { padding:50px 0 80px; color:var(--ink-faint); font-size:15px; }
+  footer p { margin:0 0 8px; }
+  footer .name { font-family:var(--display); font-weight:700; color:var(--ink); }
+  .note { color:var(--script); font-size:14px; }
+  .greek { font-family:var(--display); font-size:clamp(24px,3.4vw,34px); color:var(--terracotta);
+    font-weight:500; margin:0 0 8px; font-variation-settings:'SOFT' 40,'WONK' 1; }
 </style>
 </head>
 <body>
+
+<div class="colonnade"></div>
+
 <div class="wrap">
 
 <header>
   <div class="brandbar">
-    <svg width="25" height="25" viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="6.5" cy="16" r="2.7" fill="#A94E2C"/>
-      <path d="M11.5 9.5a10 10 0 0 1 0 13" stroke="#A94E2C" stroke-width="2.1" fill="none" stroke-linecap="round"/>
-      <path d="M17 6.5a16 16 0 0 1 0 19" stroke="#A94E2C" stroke-width="2.1" fill="none" stroke-linecap="round" opacity=".78"/>
-      <path d="M22.5 3.5a22 22 0 0 1 0 25" stroke="#A94E2C" stroke-width="2.1" fill="none" stroke-linecap="round" opacity=".56"/>
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="7" cy="16" r="3" fill="#C4552E"/>
+      <path d="M12 9.5a10 10 0 0 1 0 13" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <path d="M17.5 6.5a16 16 0 0 1 0 19" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".72"/>
+      <path d="M23 3.5a22 22 0 0 1 0 25" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".45"/>
     </svg>
     <span class="name">Sonocles</span>
     <span class="say">so-NOK-leez</span>
-    <a class="gh" href="https://github.com/artisan-build/sonocles">GitHub</a>
+    <a class="gh" href="https://github.com/artisan-build/sonocles">GitHub →</a>
   </div>
 </header>
 
 <div class="hero">
   <span class="free">Free · Open source · MIT</span>
-  <h1>Words, while you're<br>still saying them.</h1>
+  <h1>Words, while you're<br><em>still saying them.</em></h1>
   <p class="lede">Sonocles listens to your Mac's microphone and streams what you say — word by word, about 180&nbsp;milliseconds behind you.</p>
   <p class="sub">Everything runs on the Neural Engine. Nothing leaves the machine.</p>
 
   <figure>
-    <img src="img/hero.png" alt="Attic red-figure vase fragment: a seated speaker, concentric sound arcs leaving his mouth, and a seated scribe writing on a wax tablet as they arrive at his ear." width="1536" height="1024">
-    <figcaption><b>Speaker and scribe.</b> Fragment of a krater, c. 440&nbsp;BC. Speech is shown leaving the mouth as three concentric arcs struck from a single point; the scribe writes as they arrive rather than after they stop. The painter has given him no pause in which to catch up.
-      <span class="acc">Artisan Build Collection · not accessioned · probably not ancient</span></figcaption>
+    <img src="img/flat-hero.png" alt="Illustration: a cheerful bearded philosopher speaking, sound arcs sweeping from his mouth to a delighted scribe who is keeping up easily." width="1536" height="1024">
+    <figcaption><b>The whole product, basically.</b> One person talks. Something else keeps up. The difficult part is the second half.</figcaption>
   </figure>
 
   <div class="stream" aria-label="Example event stream">
@@ -173,24 +183,25 @@
   </div>
 </div>
 
+<div class="step"></div>
 <section>
   <p class="kicker">Why it exists</p>
   <h2>It started as crackly audio.</h2>
   <p class="pull">The speech-follow built into the teleprompter was fighting the encoder for CPU. The prompter kept up. The audio did not.</p>
-  <p class="lead">OBS wants every core it can get. So does a software encoder. Adding speech recognition to that same contest meant dropped samples, and dropped samples on a take you cannot re-shoot are not a performance problem, they are a lost afternoon.</p>
-  <p class="lead" style="margin-top:14px">The Neural Engine, meanwhile, was sitting completely idle. It is a separate piece of silicon that no encoder is competing for. Moving the listening there did not make it faster so much as make it <em>free</em> — it stopped taking anything the recording needed.</p>
+  <p class="lead">OBS wants every core it can get. So does a software encoder. Adding speech recognition to that same scrap meant dropped samples — and dropped samples on a take you cannot re-shoot are not a performance problem, they are a lost afternoon.</p>
+  <p class="lead" style="margin-top:14px">The Neural Engine, meanwhile, was sitting there doing absolutely nothing. It is a separate piece of silicon that no encoder is competing for. Moving the listening onto it did not make it faster so much as make it <em>free</em>: it stopped taking anything the recording needed.</p>
 
   <figure>
-    <img src="img/contention.png" alt="Vase panel: two craftsmen crowded at one small bench, elbows colliding, the scribe's line skidding off course, while an identical bench stands empty beneath." width="1536" height="1024">
-    <figcaption><b>Two craftsmen at one bench.</b> The scribe's line skids as his elbow is struck; neither man is at fault and neither can move. A second bench, identical and entirely unused, stands beneath the first. Conventionally read as an allegory of resource contention.
-      <span class="acc">Attributed to the Scheduler Painter · c. 440 BC</span></figcaption>
+    <img src="img/flat-contention.png" alt="Illustration: two figures crammed at one small desk, elbows colliding, the scribe's stylus skidding off his tablet, while an identical empty desk sits beside them." width="1536" height="1024">
+    <figcaption><b>Two craftsmen, one desk, and a perfectly good second desk.</b> Nobody is doing anything wrong. That is what makes it so annoying.</figcaption>
   </figure>
 </section>
 
+<div class="step"></div>
 <section>
   <p class="kicker">The distinction</p>
-  <h2>This is not a dictation app.</h2>
-  <p class="lead">Dictation gives you a sentence once you have finished saying it. That is fine when you are writing and nothing downstream is waiting. It is useless when something is: a teleprompter that has to keep your pace, a cue that has to fire on a word, an editor that needs to know when you said it rather than when the transcript turned up.</p>
+  <h2>It is not a dictation app.</h2>
+  <p class="lead">Dictation hands you a sentence once you have finished saying it. Perfectly good, when you are writing and nothing downstream is waiting. Useless when something is: a teleprompter that has to keep your pace, a cue that has to fire on a word, an editor that needs to know when you said it rather than when the transcript turned up.</p>
   <div class="tablewrap">
   <table>
     <tr><th></th><th>Dictation</th><th>Sonocles</th></tr>
@@ -200,33 +211,14 @@
     <tr><td>You are</td><td>writing</td><td>performing</td></tr>
   </table>
   </div>
-
-  <p class="lead" style="margin-top:30px">If dictation is what you actually want, use <a href="https://www.sonari.audio/">Sonari</a> — it is very good, it runs Parakeet and WhisperKit locally, and it is made by a friend. We compared notes and concluded the use cases genuinely diverge: Sonari is built around the moment you stop speaking, and this one is built around the moment you have not.</p>
+  <p class="lead" style="margin-top:28px">If dictation <em>is</em> what you want, use <a href="https://www.sonari.audio/">Sonari</a>. It is genuinely good, it runs locally too, and it is made by a friend. We compared notes and concluded the use cases diverge: Sonari is built around the moment you stop speaking. This one is built around the moment you have not.</p>
 </section>
 
-<section>
-  <p class="kicker">What it is for</p>
-  <h2>Driving a prompter, mostly.</h2>
-  <p class="lead">That is the honest answer — it exists because <a href="https://pteroprompter.com">Pteroprompter</a> needed it, and that is still the case it is tuned for. But nothing about it is prompter-shaped. It streams words and timestamps to a socket; what listens is your business.</p>
-  <ul class="uses">
-    <li><b>Speech-follow scrolling</b> — the script keeps your pace instead of a fixed rate you have to chase.</li>
-    <li><b>Cue firing</b> — a control token in the script triggers the instant you reach it, not a second and a half later.</li>
-    <li><b>Editorial markers</b> — every frame carries the audio time it was spoken, so markers land where the words are.</li>
-    <li><b>Live captioning</b> — for a stream, a talk, or a room, without a cloud round trip.</li>
-    <li><b>Anything with a socket</b> — a lighting cue, a slide advance, a bot that answers when it hears its name.</li>
-  </ul>
-
-  <figure class="plate-sm" style="max-width:420px">
-    <img src="img/chorus.png" alt="Vase cup interior: five identical chorus members in a rank, all in profile, mouths open in unison, with sound arcs radiating toward the rim." width="1024" height="1024">
-    <figcaption><b>Chorus, speaking as one.</b> Five figures, one voice, one stream leaving the group. The painter has not distinguished them; there was no reason to.
-      <span class="acc">Tondo of a kylix · c. 450 BC</span></figcaption>
-  </figure>
-</section>
-
+<div class="step"></div>
 <section>
   <p class="kicker">The measurement</p>
-  <h2>Word by word, not sentence by sentence.</h2>
-  <p class="lead">One instrument, one sentence, one microphone. Apple's own Speech framework delivers that sentence in four bursts, 3.7&nbsp;seconds apart. We ship the comparison so you can re-run it rather than take our word for it.</p>
+  <h2>Word by word, not<br>sentence by sentence.</h2>
+  <p class="lead">One instrument, one sentence, one microphone. Apple's own Speech framework delivers that sentence in four bursts, 3.7&nbsp;seconds apart. We ship the comparison so you can re-run it instead of believing us.</p>
   <div class="tablewrap">
   <table>
     <tr><th>Engine</th><th>Arrival gap</th><th>Behind live</th><th>Words per arrival</th></tr>
@@ -239,33 +231,54 @@
 make baseline</pre>
 </section>
 
+<div class="step"></div>
+<section>
+  <p class="kicker">What it is for</p>
+  <h2>Driving a prompter, mostly.</h2>
+  <p class="lead">That is the honest answer. It exists because <a href="https://pteroprompter.com">Pteroprompter</a> needed it, and that is still what it is tuned for. But nothing about it is prompter-shaped — it streams words and timestamps at a socket, and what listens is your business.</p>
+  <ul class="uses">
+    <li><b>Speech-follow scrolling</b> — the script keeps your pace instead of a fixed rate you have to chase.</li>
+    <li><b>Cue firing</b> — a control token triggers the instant you reach it, not a second and a half later.</li>
+    <li><b>Editorial markers</b> — every frame carries the audio time it was spoken, so markers land on the words.</li>
+    <li><b>Live captioning</b> — for a stream, a talk, or a room, with no cloud round trip.</li>
+    <li><b>Anything with a socket</b> — a lighting cue, a slide advance, a bot that answers to its own name.</li>
+  </ul>
+
+  <figure class="fig-mid">
+    <img src="img/flat-theatre.png" alt="Illustration: a Greek amphitheatre seen from above as concentric rings radiating from one tiny figure on the central stage, reading equally as a sound wave." width="1024" height="1024">
+    <figcaption><b>An amphitheatre, from above.</b> Concentric rings around one small figure — which is also, exactly, how you draw a voice leaving a mouth. The building is a diagram of what it is for. We took the coincidence and made it the logo.</figcaption>
+  </figure>
+</section>
+
+<div class="step"></div>
 <section>
   <p class="kicker">What it does</p>
-  <h2>Four things worth knowing.</h2>
+  <h2>Five things worth knowing.</h2>
   <div class="grid">
     <div class="card">
       <h3>It knows <em>when</em> you said it</h3>
       <p>Every frame carries the audio time it describes, not just the time it arrived. Arrival time drifts with the delivery schedule; audio time does not. That is the difference between a marker you can cut on and one you have to nudge.</p>
     </div>
     <div class="card">
+      <h3>It does not want your CPU</h3>
+      <p>The models run on the Neural Engine, which your encoder is not competing for. Not a benchmark boast — it is the entire reason the thing was written. Recognition that costs you cores costs you takes.</p>
+    </div>
+    <div class="card">
       <h3>It does not make things up</h3>
-      <p>Thirty seconds of piano at <span class="fig">-9&nbsp;dBFS</span> produced zero words. A transducer emits tokens as acoustic evidence arrives, so with no speech there is nothing to emit. Models that hallucinate over music are a real hazard when the output drives a scroll.</p>
+      <p>Thirty seconds of piano at <span class="fig-num">-9&nbsp;dBFS</span> produced zero words. A transducer emits tokens as acoustic evidence arrives, so with no speech there is nothing to emit. Models that hallucinate over music are a genuine hazard when the output drives a scroll.</p>
     </div>
     <div class="card">
       <h3>Nothing leaves your Mac</h3>
-      <p>The models download once and run on the Neural Engine. The sockets bind to loopback only. There is no account, no key and no server — not as a policy, but because none was ever built.</p>
-    </div>
-    <div class="card">
-      <h3>It does not want your CPU</h3>
-      <p>The models run on the Neural Engine, which your encoder is not competing for. This is not a benchmark boast — it is the entire reason the thing was written. Recognition that costs you cores costs you takes.</p>
+      <p>Models download once and run on device. The sockets bind to loopback only. There is no account, no key and no server — not as a policy, but because none was ever built.</p>
     </div>
     <div class="card">
       <h3>Anything can drive it</h3>
-      <p>SSE and WebSocket, both live at once. An HTTP control API to start and stop it, behind Basic auth if you want it. And a CLI that reports its own latency, because the claims here should be yours to check.</p>
+      <p>SSE and WebSocket, both live at once. An HTTP control API to start and stop it, behind Basic auth if you want. And a CLI that reports its own latency, because the numbers up there should be yours to check.</p>
     </div>
   </div>
 </section>
 
+<div class="step"></div>
 <section>
   <p class="kicker">Using it</p>
   <h2>Point something at a socket.</h2>
@@ -275,55 +288,44 @@ make baseline</pre>
   <pre>{ <span class="k">"type"</span>: "partial", <span class="k">"text"</span>: "the menu bar",
   <span class="k">"audioStart"</span>: 40.28, <span class="k">"audioEnd"</span>: 40.8,
   <span class="k">"lagMs"</span>: 200, <span class="k">"seq"</span>: 3 }</pre>
-  <p class="note" style="margin-top:20px">Use <code>audioEnd</code>, not <code>ts</code>. A missing <code>lagMs</code> means unmeasured — never zero.</p>
+  <p class="note" style="margin-top:20px">Use <code>audioEnd</code>, not <code>ts</code>. A missing <code>lagMs</code> means unmeasured — never zero. We are quite firm about this.</p>
 </section>
 
+<div class="step"></div>
 <section>
   <p class="kicker">The name</p>
   <h2>Renowned for sound.</h2>
-  <p class="etym">κλέος — <em>kleos</em> — the glory that exists because it is spoken aloud and heard.</p>
-  <p class="lead" style="margin-top:18px">The <span class="mono">-cles</span> in Sophocles and Pericles is the Greek <span class="mono">-κλῆς</span>, from <em>kleos</em>: renown. It descends from a root meaning <strong style="color:var(--slip)">to hear</strong> — the same one that gives English the word <em>loud</em>. In Homer, <em>kleos</em> is specifically the fame that survives because bards sing it and people hear it.</p>
-  <p class="lead" style="margin-top:14px">So the suffix does not merely mean famous. It means <em>heard of</em>. We would like to claim that was the plan.</p>
-  <div class="two" style="margin-top:40px">
+  <div class="two" style="margin-top:26px">
     <div>
-      <p class="lead"><b style="color:var(--slip)">Sono-</b> is Latin: <em>sonus</em>, sound. <b style="color:var(--slip)">-cles</b> is Greek: <em>kleos</em>, heard-of. The name is a seam between two languages, which is not scholarship so much as an accident we have decided to be pleased about.</p>
-      <p class="note" style="margin-top:14px">So is <em>television</em>. Nobody minds.</p>
+      <p class="greek">κλέος</p>
+      <p class="lead">The <span class="mono">-cles</span> in Sophocles and Pericles is the Greek <span class="mono">-κλῆς</span>, from <em>kleos</em>: renown. It comes down from a root meaning <b style="color:var(--ink)">to hear</b> — the same one that gives English the word <em>loud</em>. In Homer it is specifically the fame that survives because bards sing it and people hear it.</p>
+      <p class="lead" style="margin-top:14px">So the suffix does not merely mean famous. It means <em>heard of</em>. We would love to claim that was the plan.</p>
+      <p class="note" style="margin-top:14px"><b style="color:var(--ink-soft)">Sono-</b> is Latin, mind you. So the name is a seam between two languages, which is not scholarship so much as an accident we have decided to be pleased about. So is <em>television</em>. Nobody minds.</p>
     </div>
-    <figure class="plate-sm" style="margin:0">
-      <img src="img/listener.png" alt="Vase panel: a single youth standing in profile, entirely still, one hand cupped behind the ear, with faint sound arcs arriving at his hand." width="1024" height="1024">
-      <figcaption><b>Youth listening.</b> The figure performs no action. The painter has given him nothing to do but hear.
-        <span class="acc">Lekythos panel · c. 450 BC</span></figcaption>
+    <figure class="fig-sm" style="margin:0">
+      <img src="img/flat-listener.png" alt="Illustration: a round friendly bearded figure cupping an enormous ear, eyes squeezed shut in theatrical concentration, sound arcs arriving at his hand." width="1024" height="1024">
+      <figcaption><b>Heard of.</b></figcaption>
     </figure>
   </div>
 </section>
 
+<div class="step"></div>
 <section>
-  <p class="kicker">The mark</p>
-  <h2>An amphitheatre and a sound wave<br>are the same drawing.</h2>
-  <p class="lead">Seen from above, the tiers of a Greek theatre are concentric arcs struck from a single point on the orchestra floor — which is also, exactly, how you draw a voice leaving a mouth. The building is a diagram of what it is for. We took the coincidence.</p>
+  <p class="kicker">Anyway</p>
+  <h2>Here is a Greek man<br>with a podcast.</h2>
+  <p class="lead">He has been talking for some time. The small winged one has kept up with every word, roughly 180&nbsp;milliseconds behind, and has not once had to ask him to repeat himself.</p>
   <figure>
-    <img src="img/theatre.png" alt="Vase lid seen from above: a Greek amphitheatre drawn as concentric tiers radiating from a single standing figure at the centre, reading equally as a sound wave." width="1024" height="1024">
-    <figcaption><b>Theatre, from above.</b> Concentric tiers about a single figure in the orchestra. The arrangement is acoustic before it is architectural: every seat is placed where the voice already goes.
-      <span class="acc">Pyxis lid · c. 440 BC</span></figcaption>
+    <img src="img/flat-mic.png" alt="Illustration: a relaxed bearded figure reclining with a wine cup, talking into a retro broadcast microphone, while a small winged figure behind him takes notes with intense concentration." width="1536" height="1024">
+    <figcaption><b>Nobody in this picture finds any of it unusual.</b> Which is, in fairness, the goal.</figcaption>
   </figure>
 </section>
 
-<section>
-  <p class="kicker">One more</p>
-  <h2>The painter drew what he saw.</h2>
-  <figure style="margin-top:26px">
-    <img src="img/anachronism.png" alt="Vase panel: a reclining bearded symposiast speaking into a large studio broadcast microphone on a stand, sound arcs travelling into the grille, while a small winged figure transcribes onto a wax tablet." width="1536" height="1024">
-    <figcaption><b>Symposiast with instrument.</b> The reclining figure addresses an object on a slender stand, into which his speech visibly travels. The winged attendant transcribes without pause. The instrument is unattested elsewhere in the corpus and its identification remains contested.
-      <span class="acc">Attributed to the Berlin Painter, disputed · c. 440 BC</span></figcaption>
-  </figure>
-</section>
+<div class="colonnade" style="transform:scaleY(-1); margin-top:30px"></div>
 
 <footer>
-  <p><span class="name">Sonocles</span> — an on-device speech sidecar for the Mac.</p>
-  <p>Apple Silicon, macOS 14 or later. Models cache on first run.</p>
+  <p><span class="name">Sonocles</span> — a speech sidecar for the Mac. Apple Silicon, macOS 14 or later.</p>
   <p>Free and open source under the MIT licence. <a href="https://github.com/artisan-build/sonocles">Source on GitHub</a>.</p>
   <p style="margin-top:18px">Made for <a href="https://pteroprompter.com">Pteroprompter</a>. Useful on its own.</p>
-  <p class="note" style="margin-top:22px">Plates generated for this page and presented as catalogue objects. They are not ancient. The joke required that nobody say so until the end.</p>
 </footer>
 
 </div>
