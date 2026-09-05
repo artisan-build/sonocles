@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  NativePHP scaffolds this file with the three JIT/memory entitlements Electron
+  and the PHP runtime need, and nothing else. For most apps that is right.
+
+  For this one it is the difference between working and silently not.
+
+  The hardened runtime checks com.apple.security.device.audio-input *before* TCC
+  is consulted. Without it, a signed app cannot record and cannot ask to: no
+  prompt appears, and the app never shows up in System Settings > Privacy &
+  Security > Microphone at all. An empty list there is not "denied", it is "the
+  request never happened" — and it presents exactly like a healthy pipeline that
+  simply hears nothing. That failure cost the Swift build a long session; see
+  docs/ENGINES.md.
+
+  NSMicrophoneUsageDescription is necessary but not sufficient, and NativePHP
+  already sets it in electron-builder.mjs under mac.extendInfo. Both gates have
+  to be open, and the failure with only one of them looks identical to the
+  failure with neither.
+
+  This file is also electron-builder's `entitlementsInherit`, which is what gets
+  applied to the nested Mach-O binaries inside the bundle — including
+  extras/sonocles-cli, the process that actually opens the microphone. That is
+  why the entitlement belongs here rather than only on the outer app.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+  </dict>
+</plist>
