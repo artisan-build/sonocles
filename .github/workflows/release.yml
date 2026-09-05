@@ -14,15 +14,24 @@ name: Release
 # So the workflow signs properly when the secrets are present and degrades
 # loudly when they are not. Set these to get a distributable build:
 #
-#   MACOS_CERT_P12        base64 of a Developer ID Application .p12
-#   MACOS_CERT_PASSWORD   the password for that .p12
-#   MACOS_SIGN_IDENTITY   e.g. "Developer ID Application: Artisan Build, Inc (83AD4SGJLW)"
+#   APPLE_CERT_P12_BASE64  base64 of a Developer ID Application .p12
+#   APPLE_CERT_PASSWORD    the password for that .p12
 #
 # And these to notarize, so Gatekeeper opens it without a right-click:
 #
-#   NOTARY_KEY_P8         base64 of an App Store Connect .p8 private key
-#   NOTARY_KEY_ID         that key's ID
-#   NOTARY_ISSUER_ID      the issuer UUID
+#   APPLE_API_KEY_P8       base64 of an App Store Connect .p8 private key
+#   APPLE_API_KEY_ID       that key's ID
+#   APPLE_API_ISSUER_ID    the issuer UUID
+#
+# These names match artisan-build/ballast-cli deliberately. Both repos sign
+# with the same Developer ID and notarize through the same App Store Connect
+# key, so one set of organization secrets can serve both. Renaming here was
+# cheaper than renaming in a pipeline that already ships.
+#
+# There is no signing-identity secret. The identity is read back out of the
+# throwaway keychain after import, because it is not secret — it is stamped
+# into every binary we sign — and one less secret is one less thing to keep
+# in sync across repos.
 #
 # Produce the first one with:
 #   security find-identity -v -p codesigning          # confirm the identity
@@ -66,8 +75,8 @@ jobs:
       - name: Check for signing secrets
         id: have
         env:
-          CERT: ${{ secrets.MACOS_CERT_P12 }}
-          NOTARY: ${{ secrets.NOTARY_KEY_P8 }}
+          CERT: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          NOTARY: ${{ secrets.APPLE_API_KEY_P8 }}
         run: |
           if [ -n "$CERT" ]; then echo "cert=true" >> "$GITHUB_OUTPUT"; else echo "cert=false" >> "$GITHUB_OUTPUT"; fi
           if [ -n "$NOTARY" ]; then echo "notary=true" >> "$GITHUB_OUTPUT"; else echo "notary=false" >> "$GITHUB_OUTPUT"; fi
@@ -78,46 +87,56 @@ jobs:
         id: signing
         if: steps.have.outputs.cert == 'true'
         env:
-          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
-          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_CERT_P12_BASE64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
         run: |
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
           PASSPHRASE="$(uuidgen)"
           security create-keychain -p "$PASSPHRASE" "$KEYCHAIN"
           security set-keychain-settings -lut 900 "$KEYCHAIN"
           security unlock-keychain -p "$PASSPHRASE" "$KEYCHAIN"
-          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          echo "$APPLE_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
           security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
-            -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+            -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: \
             -s -k "$PASSPHRASE" "$KEYCHAIN" >/dev/null
           security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
           rm -f "$RUNNER_TEMP/cert.p12"
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep "Developer ID Application" \
+            | head -1 \
+            | sed -E 's/.*"(.*)".*/\1/')"
+          if [ -z "$IDENTITY" ]; then
+            echo "::error title=No Developer ID::The .p12 imported but contains no Developer ID Application identity."
+            exit 1
+          fi
+          echo "Signing as: $IDENTITY"
+          echo "identity=$IDENTITY" >> "$GITHUB_OUTPUT"
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Build and bundle
         env:
-          SIGN_ID: ${{ secrets.MACOS_SIGN_IDENTITY || '-' }}
+          SIGN_ID: ${{ steps.signing.outputs.identity || '-' }}
         run: ./app/Scripts/bundle.sh
 
       - name: Warn if unsigned
         if: steps.have.outputs.cert != 'true'
         run: |
-          echo "::warning title=Ad-hoc signature::No MACOS_CERT_P12 secret, so this build is ad-hoc signed. It will not pass Gatekeeper, and macOS will treat every rebuild as a different app for microphone permission."
+          echo "::warning title=Ad-hoc signature::No APPLE_CERT_P12_BASE64 secret, so this build is ad-hoc signed. It will not pass Gatekeeper, and macOS will treat every rebuild as a different app for microphone permission."
 
       - name: Notarize
         if: steps.have.outputs.cert == 'true' && steps.have.outputs.notary == 'true'
         env:
-          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
-          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
-          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
-          echo "$NOTARY_KEY_P8" | base64 --decode > "$RUNNER_TEMP/key.p8"
+          echo "$APPLE_API_KEY_P8" | base64 --decode > "$RUNNER_TEMP/key.p8"
           ditto -c -k --keepParent dist/Sonocles.app "$RUNNER_TEMP/notarize.zip"
           xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
             --key "$RUNNER_TEMP/key.p8" \
-            --key-id "$NOTARY_KEY_ID" \
-            --issuer "$NOTARY_ISSUER_ID" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
             --wait
           # Staple, so the app opens offline without a Gatekeeper round trip.
           xcrun stapler staple dist/Sonocles.app
