@@ -43,6 +43,12 @@ words and timestamps to a socket, and what listens is your business.
 [**Download the latest release**](https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg)
 — Apple Silicon, macOS 14+. That link always points at the current version.
 
+Or from Homebrew:
+
+```bash
+brew install --cask artisan-build/tap/sonocles
+```
+
 Or build it yourself:
 
 ## Quick start
