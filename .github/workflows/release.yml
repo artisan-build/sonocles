@@ -57,7 +57,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Full history, not the default depth-1. bundle.sh derives
+      # CFBundleVersion from `git rev-list --count HEAD`, and on a shallow
+      # clone that does not fail — it cheerfully returns 1, so v0.1.1 shipped
+      # with the same build number as v0.1.0. A wrong answer, not an error.
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Version
         id: v
