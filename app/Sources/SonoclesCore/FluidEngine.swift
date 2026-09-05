@@ -26,6 +26,21 @@ import Foundation
 /// That keeps text and timestamps consistent with each other, and puts the
 /// arrival stamp where the work actually finished instead of wherever a
 /// callback happened to be scheduled.
+///
+/// ## Utterances
+///
+/// The loop resets the manager after every end-of-utterance, because the
+/// library latches `eouDetected` until it is reset and accumulates the
+/// transcript forever otherwise. Skipping the reset produces exactly two bugs,
+/// both of which survived until someone just talked at it for half a minute:
+/// only the first utterance is ever finalised, and `text` grows without bound —
+/// a thirty-five second session still reporting `audioStart` from second three,
+/// which over a full talk means an ever-growing string in every frame at five
+/// frames a second.
+///
+/// The cost of resetting is that token timings restart at zero, so the loop
+/// keeps its own offset. Timestamps stay absolute on the session timeline,
+/// which is the whole reason a consumer can trust them for placing markers.
 public final class FluidEngine: SpeechEngine, @unchecked Sendable {
     public let name: String
 
@@ -65,10 +80,19 @@ public final class FluidEngine: SpeechEngine, @unchecked Sendable {
 
         Task {
             var lastText = ""
-            var wasEou = false
+
+            /// Seconds of audio handed to the engine across the whole session.
+            var fedSeconds = 0.0
+            /// Where the current utterance's zero sits on that timeline.
+            var utteranceOffset = 0.0
 
             do {
                 for await box in stream {
+                    let format = box.buffer.format
+                    if format.sampleRate > 0 {
+                        fedSeconds += Double(box.buffer.frameLength) / format.sampleRate
+                    }
+
                     try await manager.appendAudio(box.buffer)
                     try await manager.processBufferedAudio()
 
@@ -79,25 +103,36 @@ public final class FluidEngine: SpeechEngine, @unchecked Sendable {
                     let text = await manager.getPartialTranscript()
                     let eou = await manager.eouDetected
 
-                    guard text != lastText || eou != wasEou else { continue }
+                    guard text != lastText || eou else { continue }
 
-                    // Token timings are elapsed milliseconds from the start of
-                    // the session — the same clock the audio counter runs on,
-                    // so lag is directly comparable across engines.
+                    // Token timings are milliseconds from the start of the
+                    // *utterance*, so the offset puts them back on the session
+                    // timeline the audio counter runs on. That is what keeps
+                    // lag comparable across engines and markers placeable.
                     let stamps = await manager.getTokenTimestampsMs()
                     let audio = stamps.last.map {
-                        Double(stamps.first ?? 0) / 1000...Double($0) / 1000
+                        utteranceOffset + Double(stamps.first ?? 0) / 1000...utteranceOffset
+                            + Double($0) / 1000
                     }
 
                     if !text.isEmpty {
                         onHypothesis(
-                            Hypothesis(text: text, isFinal: eou && !wasEou, audio: audio),
+                            Hypothesis(text: text, isFinal: eou, audio: audio),
                             received
                         )
                     }
 
-                    lastText = text
-                    wasEou = eou
+                    if eou {
+                        // Re-arm. The library latches this flag until reset, so
+                        // without it no later utterance is ever finalised and
+                        // the transcript accumulates for the life of the
+                        // process.
+                        await manager.reset()
+                        utteranceOffset = fedSeconds
+                        lastText = ""
+                    } else {
+                        lastText = text
+                    }
                 }
             } catch {
                 note("stream error: \(error)")

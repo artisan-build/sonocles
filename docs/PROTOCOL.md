@@ -44,6 +44,31 @@ holding a socket can want the same stream at the same time.
 `text` and `ts` are the original prompter-ears contract and have not moved.
 Everything else is additive: a consumer reading only `text` is unaffected.
 
+### `text` is the current utterance, not the session
+
+Each `final` closes an utterance and the next `partial` starts empty. A consumer
+that wants a running transcript accumulates the finals itself.
+
+This is not merely a preference. The underlying engine latches its
+end-of-utterance flag until it is reset and accumulates the transcript
+indefinitely otherwise, so an earlier build finalised only the *first* utterance
+of a session and grew `text` without bound — thirty-five seconds in, every frame
+still carried every word since second three, five times a second. Over a talk
+that is untenable.
+
+Resetting between utterances costs the engine's token timings, which restart at
+zero. The sidecar keeps its own offset so `audioStart` and `audioEnd` stay
+absolute on the session timeline across every reset:
+
+| utterance | window |
+|---|---|
+| one | 0.76 – 4.76 |
+| two | 9.28 – 11.60 |
+| three | 16.20 – 18.76 |
+
+That is what makes the timestamps usable for placing markers rather than merely
+ordering words.
+
 ### On `lagMs` being signed, and sometimes absent
 
 Negative means the engine reported audio ahead of what we had captured — a real

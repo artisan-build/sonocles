@@ -126,3 +126,14 @@ Three consequences worth remembering:
   `idle` means it was refused. Reporting `listening` while silent is the bug
   this whole section exists to prevent, and is now impossible: capture cannot
   claim to be listening without the grant.
+
+## Known: finals lag by the end-of-utterance debounce
+
+A `final` arrives 1.6–3.1 s after the speech it describes, because the engine
+waits out `eouDebounceMs` (1280 ms by default) of silence before deciding an
+utterance ended, and then still has to finish decoding.
+
+That is fine for what finals are for — they are settled text, and settling takes
+evidence — but it means **nothing time-sensitive should wait for one**. Partials
+arrive every ~200 ms at ~180 ms behind live and are what should drive a scroll
+or fire a cue. Finals are for the transcript.
