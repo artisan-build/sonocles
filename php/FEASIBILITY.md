@@ -265,9 +265,32 @@ Error: The appleId property is required when using notarization ...
 done notarizing build.artisan.sonocles.php.
 ```
 
-For this project that is exactly the wrong failure mode — the released v0.1.0
-DMG being unsigned is already the highest-value open item, and a pipeline that
-says "done notarizing" when it did not is how that happens twice.
+For this project that is exactly the wrong failure mode, and not
+hypothetically: the released v0.1.0 DMG *did* ship ad-hoc signed, presenting to
+users as "Sonocles is damaged and can't be opened". It has since been fixed —
+v0.1.0's assets were replaced and v0.1.1/v0.1.2 are signed and notarised through
+CI — but a pipeline that prints "done notarizing" when it did not notarise is
+exactly how that happens a second time.
+
+It is worth naming the pattern, because it is the most transferable thing in
+this report and it has nothing to do with language choice. Every expensive
+failure across both codebases has been **a plausible success line over a real
+failure**, never an exception:
+
+- `codesign --verify --deep --strict` reporting a bundle `valid on disk` while
+  a nested executable inside it still carried an ad-hoc signature. Apple's
+  notary service was the only check in the pipeline that caught it.
+- `git rev-list --count HEAD` returning `1` rather than failing on a
+  depth-1 CI clone, so an `|| echo 1` fallback never fired and two releases
+  shipped the same build number.
+- `AVAudioEngine` starting happily without a microphone grant and delivering
+  silence forever.
+- `native:run` printing `build the electron main process successfully`
+  immediately before dying on the entry file that build did not produce.
+- `notarize.js` printing `done notarizing`.
+
+None of these throw. Choosing Swift or PHP does not protect you from any of
+them.
 
 ## What is proven
 
