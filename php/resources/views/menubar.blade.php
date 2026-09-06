@@ -156,8 +156,18 @@ function render(frame) {
   while (stream.children.length > 60) stream.firstElementChild.remove()
   stream.scrollTop = stream.scrollHeight
 
-  // lagMs is signed and may be absent. Absent is not zero — see PROTOCOL.md.
-  show('lag', frame.lagMs ?? null, 'ms')
+  // Partials only, and not because finals are unimportant.
+  //
+  // A final trails its speech by 1.6-3.1 s by construction — it waits out the
+  // 1280 ms end-of-utterance debounce and then still has to decode. A partial
+  // sits ~180 ms behind the live edge. Those are two unrelated distributions,
+  // and a tile that alternates between them reads as wild jitter in a number
+  // that is in fact steady. This tile answers "how far behind the speaker are
+  // we", which is a question only partials can answer.
+  if (frame.type !== 'final') {
+    // lagMs is signed and may be absent. Absent is not zero — see PROTOCOL.md.
+    show('lag', frame.lagMs ?? null, 'ms')
+  }
 
   const now = performance.now()
   show('gap', lastArrival === null ? null : Math.round(now - lastArrival), 'ms')

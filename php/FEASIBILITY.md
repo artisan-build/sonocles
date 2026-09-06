@@ -2,6 +2,10 @@
 
 **Short answer: the app, yes. The engine, no — and it should not be.**
 
+Built, signed, notarised, and measured: a NativePHP menu bar app doing live
+on-device speech recognition on the Neural Engine, **180 ms behind the speaker**,
+with the PHP front end adding **1 ms**.
+
 The shell, the menu bar, the popover, the control plane, the packaging and the
 notarisation are all straightforwardly NativePHP. Recognition is not, and no
 amount of effort makes it so. What that leaves is not a compromise: it is the
@@ -11,10 +15,11 @@ consumer of a protocol built for consumers.
 
 This directory is that front end, built and running.
 
-Status as written: the PHP application drives the real Swift engine and its
-control API. The packaged, signed, notarised bundle is **not yet verified** —
-see "What is not yet proven" at the bottom, which is the honest boundary of
-this report.
+Status: **built, signed with a real Developer ID, and verified end to end.**
+A packaged `Sonocles.app` runs its own bundled PHP, spawns the Swift engine out
+of `Contents/extras`, opens the microphone under the hardened runtime and
+transcribes live speech at the same latency the Swift app achieves. The
+measurements are below.
 
 ---
 
@@ -87,6 +92,19 @@ code producing it is unchanged and nothing was inserted behind it.
 PHP's only traffic is `/status`, `/start` and `/stop` — three calls that happen
 when a person clicks something, where latency is invisible.
 
+**Measured**, on a real voice through an SM7B into the running NativePHP app —
+70 frames, the front end's own cost sampled per frame as `Date.now() - frame.ts`:
+
+| | min | median | p90 | max |
+|---|---|---|---|---|
+| engine lag behind live (partials, n=66) | 120 ms | **180 ms** | 220 ms | 240 ms |
+| front end's own cost (n=70) | 0 ms | **1 ms** | 2 ms | 3 ms |
+
+The median is 180 ms — the same figure `docs/ENGINES.md` reports for the Swift
+app, because it is the same engine and nothing was inserted behind it. Electron
+and Laravel together cost about a millisecond, which is what "not in the path"
+looks like when you measure it instead of asserting it.
+
 Route frames through PHP instead and you would add a socket hop, a Laravel
 request lifecycle and a second serialisation to every ~200 ms arrival, in
 exchange for nothing. `resources/views/menubar.blade.php` therefore reports the
@@ -128,6 +146,34 @@ including `extras/sonocles-cli`, the process that actually opens the microphone.
 Worth saying plainly: **this is a real gap in NativePHP's defaults for any app
 that records.** It is also the single most useful thing to report upstream.
 
+**Verified against the signature, not the config.** After `native:build`,
+`codesign -d --entitlements` reports the microphone entitlement on *both* the
+outer app and the nested engine binary — `entitlementsInherit` does reach
+`Contents/extras/sonocles-cli`, which was the open risk:
+
+```
+Sonocles.app                      flags=0x10000(runtime)  + device.audio-input
+Sonocles.app/Contents/extras/sonocles-cli
+                                  flags=0x10000(runtime)  + device.audio-input
+```
+
+Both carry the hardened runtime and chain to Apple Root CA through
+`Developer ID Application: Artisan Build, Inc`. The packaged app then went
+`starting` → `listening` and transcribed a spoken sentence at 160-180 ms lag.
+
+**Notarised and stapled**, using the existing `sonocles` keychain profile:
+
+```
+status: Accepted
+Sonocles.app: accepted
+source=Notarized Developer ID
+origin=Developer ID Application: Artisan Build, Inc (83AD4SGJLW)
+```
+
+That is the answer to question 4 in full. The bundle shape NativePHP produces is
+something `codesign --options runtime` accepts, the entitlement survives to the
+nested binary, and Apple notarises the result without complaint.
+
 ---
 
 ## The architecture
@@ -160,9 +206,10 @@ Honest accounting, because the brief asked for it:
 - **Two toolchains.** Shipping needs Xcode *and* Node *and* Composer. CI has to
   build the Swift binary before electron-builder runs. That is a real tax on a
   project that currently needs only `swift build`.
-- **Bundle size.** Electron plus a static PHP runtime is ~200 MB before the
-  16 MB engine and before the ~219 MB of models downloaded on first run. The
-  Swift app is a fraction of that.
+- **Bundle size.** Measured, not estimated: the packaged app is **397M** on
+  disk (147M compressed as a DMG), against ** 32M** for the Swift build of the
+  same product — and both then download ~219 MB of models on first run. Electron
+  plus a static PHP runtime is most of that difference.
 - **Two signing surfaces.** The outer app and the nested engine binary both have
   to be signed correctly, and the entitlement has to reach the nested one.
 - **A second TCC identity.** A different bundle id means microphone grants do
@@ -186,43 +233,81 @@ is a more useful article than a port would have been.
 
 ---
 
+## Two more NativePHP bugs found on the way
+
+Both cost real time, and both are worth reporting upstream alongside the
+entitlement.
+
+**1. `native:install --publish` produces a skeleton that cannot build.** The
+prebuilt `electron-plugin/dist` is missing `server/pdfPageSize.js`, which
+`server/api/system.js` imports. `npm run build` fails with
+`Could not resolve "../pdfPageSize.js"`. The source file
+(`electron-plugin/src/server/pdfPageSize.ts`) is present, so the fix is to
+rebuild the plugin from source once after publishing:
+
+```bash
+cd nativephp/electron && npm run plugin:build
+```
+
+What made this expensive is that `native:run` reports **`build the electron main
+process successfully`** and *then* fails with the unrelated-looking
+`No electron app entry file found: out/main/index.js`. The success line is
+printed by a different step than the one that failed; `npm run build` shows the
+actual error immediately.
+
+**2. A failed notarisation reports success.** `build/notarize.js` wraps the
+`notarize()` call in a try/catch that logs the error and then unconditionally
+prints `done notarizing <app-id>.` A build with missing or wrong credentials
+therefore ends on a success line with a stack trace scrolled off above it:
+
+```
+Error: The appleId property is required when using notarization ...
+done notarizing build.artisan.sonocles.php.
+```
+
+For this project that is exactly the wrong failure mode — the released v0.1.0
+DMG being unsigned is already the highest-value open item, and a pipeline that
+says "done notarizing" when it did not is how that happens twice.
+
 ## What is proven
 
 Verified on this machine (Apple Silicon, macOS 26.6.2, PHP 8.4.23,
-nativephp/desktop 2.3.0):
+nativephp/desktop 2.3.0, Electron 40.10.2):
 
 - NativePHP desktop v2.3.0 installs on Laravel 13 and scaffolds cleanly.
 - The bundled PHP runtime has no `ffi` (read from `php-extensions.txt`).
-- `ChildProcess`, `MenuBar`, `NATIVEPHP_EXTRAS_PATH` and the electron-builder
-  entitlement/`extendInfo` hooks exist as described (read from source, not docs).
-- **PHP drives the real Swift engine.** With `sonocles-cli --idle` running,
-  `GET /engine/status` returns the engine's live state through
-  `App\Support\Sidecar`:
-  ```json
-  {"up":true,"engine":{"state":"idle","listening":false,
-   "engine":"Parakeet 160 ms","clients":0,"uptime":12.25}}
-  ```
-- The menu bar template icon renders legibly at 22 pt on both light and dark
-  grounds (checked as an alpha composite, not assumed).
+- The app boots: Electron → bundled PHP on :8100 → `Process [sonocles-engine]
+  spawned!` → engine bound on 7357/7358, from `NATIVEPHP_EXTRAS_PATH`.
+- The popover renders, drives `/start` and `/stop`, and streams recognised words
+  live from the engine's WebSocket.
+- **Latency measured on a real voice**: engine median 180 ms, front end median
+  1 ms. Table in question 3.
+- **Packaged and signed with a real Developer ID.** Hardened runtime and the
+  microphone entitlement on both the app and the nested engine binary;
+  `codesign --verify --deep --strict` passes and the bundle satisfies its
+  Designated Requirement.
+- **Microphone capture works in the packaged bundle.** It went `starting` →
+  `listening` and transcribed spoken sentences at 160-180 ms.
 
-## What is not yet proven
+Non-speech behaviour, WER and CPU are all untouched here — they are properties
+of the engine, and this front end does not change them. The gaps
+`docs/ENGINES.md` lists remain exactly as they were.
 
-Stated plainly rather than glossed, because the difference matters:
+## What is still not proven
 
-1. **The packaged app has not been built.** `native:build` has not run, so the
-   bundle layout, the nested-binary signing and `codesign -d --entitlements` on
-   both the app and `Contents/extras/sonocles-cli` are unverified. The
-   entitlement claim in question 4 is read from configuration, not from a
-   signature.
-2. **Microphone capture end-to-end inside the Electron bundle is untested.**
-   This is the one that could still bite: whether TCC attributes the request to
-   the outer app or to the nested binary, and whether `entitlementsInherit`
-   actually reaches `extras/`. Everything else in this report is robust to that
-   answer; the packaging story is not.
-3. **The front end's own latency cost is instrumented but unmeasured.** The
-   popover computes it; no speech has been run through it yet.
-4. **Notarisation has not been attempted** from this project.
-
-None of these change the answer to the four questions. All of them are the
-difference between "this should work" and "this works", and item 2 is the one
-worth doing next.
+1. **Nobody else's Mac has opened it.** Gatekeeper accepts it here, but here is
+   the machine that built it. The one caveat worth knowing: I notarised the DMG
+   after the fact, which staples the *disk image* — the `.app` inside carries no
+   ticket of its own, so a copy of it dragged out and run on an offline machine
+   would have nothing local to verify against. Running notarisation through
+   NativePHP's own `afterSign` hook (with the three `NATIVEPHP_APPLE_*` variables
+   set) staples the app itself, before the DMG is built, and is the right way to
+   ship this.
+2. **Only this machine, only arm64.** One host, one OS version, one run of each
+   measurement. No variance, no repetition count — the same methodological
+   thinness `docs/ENGINES.md` admits to, inherited rather than fixed.
+3. **The models were already downloaded.** First-run behaviour — a ~219 MB
+   download and Core ML compile inside a sandboxed, signed bundle writing to
+   `~/Library/Application Support/FluidAudio` — has not been exercised. It is
+   the most likely remaining surprise.
+4. **Nothing about updates.** `NATIVEPHP_UPDATER_ENABLED=false` here, deliberately.

@@ -14,9 +14,24 @@ Electron.
 ## Running it
 
 ```bash
+composer install
+cd nativephp/electron && npm run plugin:build && cd ../..   # see note below
 swift build -c release --package-path ../app   # build the engine
 ./bin/sync-sidecar.sh                          # copy it into extras/
-composer install && php artisan native:run     # start the app
+php artisan native:run                         # start the app
+```
+
+**The `plugin:build` line is not optional.** NativePHP 2.3.0 publishes an
+`electron-plugin/dist` that is missing `server/pdfPageSize.js`, so the Electron
+main process cannot be bundled until the plugin is rebuilt from its own source.
+Without it `native:run` prints `build the electron main process successfully`
+and then dies on `No electron app entry file found` — the success line comes
+from a different step than the failure. `npm run build` shows the real error.
+
+To package it:
+
+```bash
+php artisan native:build mac arm64             # signs from the keychain identity
 ```
 
 `bin/make-icons.php` regenerates the menu bar template icons.
