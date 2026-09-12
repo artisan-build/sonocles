@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import SonoclesCore
@@ -34,10 +35,16 @@ final class SidecarModel {
     /// the models are resident, which is every launch after the first.
     var preparation: Preparation?
 
-    /// Control-API credentials, edited in the popover.
-    var authEnabled = CredentialStore.isEnabled
-    var username = CredentialStore.username
-    var password = CredentialStore.readPassword() ?? ""
+    /// The bearer token every route is behind, for the popover to show and
+    /// copy. Read from the service once the sockets are bound; nil until then.
+    var token: String?
+    /// The Control API section open in the popover.
+    var pairingOpen = false
+    /// The token shown in full, or masked to its ends.
+    var tokenShown = false
+    /// Rotate is two clicks: the first arms it, the second does it. A
+    /// rotation cuts off every other paired client, so it is not one slip.
+    var rotateArmed = false
 
     private var service: Service?
     private var lastArrival: UInt64?
@@ -87,6 +94,7 @@ final class SidecarModel {
         do {
             try service.bind()
             self.service = service
+            token = service.token
             status = "Idle — sockets up"
         } catch {
             status = "Could not bind: \(error.localizedDescription)"
@@ -117,16 +125,42 @@ final class SidecarModel {
         service?.use(engine: choice)
     }
 
-    /// Credentials take effect on the next bind, because the HTTP server reads
-    /// them when it is constructed. Saving while running is allowed and simply
-    /// applies at next launch rather than silently doing nothing.
-    func saveCredentials() {
-        CredentialStore.save(username: username, password: password)
-        authEnabled = CredentialStore.isEnabled
-        status =
-            authEnabled
-            ? "Control API locked — restart to apply"
-            : "Control API open — restart to apply"
+    /// Where the token lives, so the popover can say so.
+    var tokenFile: String { TokenStore.standard.fileURL.path }
+
+    /// The token, masked to its ends: enough to compare, not enough to use.
+    var maskedToken: String? {
+        guard let token, token.count > 12 else { return token }
+        return "\(token.prefix(6))…\(token.suffix(6))"
+    }
+
+    func copyToken() {
+        guard let token else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(token, forType: .string)
+        status = "Token copied"
+    }
+
+    /// Same as `POST /token/rotate`, in-process: the file is rewritten and the
+    /// old token is dead for every request after this. Every other paired
+    /// client has to read the file again; that is what rotation is for, and
+    /// why it takes two clicks.
+    func rotateToken() {
+        guard rotateArmed else {
+            rotateArmed = true
+            Task {
+                try? await Task.sleep(for: .seconds(6))
+                rotateArmed = false
+            }
+            return
+        }
+        rotateArmed = false
+        do {
+            token = try service?.rotateToken()
+            status = "Token rotated — paired clients must re-read the file"
+        } catch {
+            status = "Could not rotate: \(error.localizedDescription)"
+        }
     }
 
     private func clearLive() {

@@ -85,8 +85,10 @@ Use `audioEnd`, not `ts`. Arrival time carries the jitter of the delivery
 schedule on top of the actual timing; `audioEnd` is when the words were said.
 A missing `lagMs` means *unmeasured*, never zero.
 
-There is also an HTTP control API — `GET /status`, `POST /start`, `POST /stop` —
-behind optional Basic auth. Full details in
+There is also an HTTP control API — `GET /status`, `POST /start`, `POST /stop`.
+Every route on both sockets, the event stream included, is behind a bearer
+token the app writes to `~/Library/Application Support/Sonocles/token`; an app
+running as you reads it and is paired, a web page cannot. Full details in
 [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ## Why not Apple's Speech framework

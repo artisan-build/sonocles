@@ -20,19 +20,24 @@ public final class Service: @unchecked Sendable {
         public var websocket: Bool
         public var httpPort: UInt16
         public var wsPort: UInt16
+        /// Where the bearer token lives. The default is the file every paired
+        /// client reads; tests point it at a temporary directory.
+        public var tokenStore: TokenStore
 
         public init(
             sidecar: Sidecar.Config = .init(),
             http: Bool = true,
             websocket: Bool = true,
             httpPort: UInt16 = 7357,
-            wsPort: UInt16 = 7358
+            wsPort: UInt16 = 7358,
+            tokenStore: TokenStore = .standard
         ) {
             self.sidecar = sidecar
             self.http = http
             self.websocket = websocket
             self.httpPort = httpPort
             self.wsPort = wsPort
+            self.tokenStore = tokenStore
         }
     }
 
@@ -43,6 +48,10 @@ public final class Service: @unchecked Sendable {
     private var http: HTTPServer?
     private var websocket: WebSocketServer?
     private var transports: [Transport] = []
+
+    /// One checker for both transports, so a rotation lands on both at once.
+    /// Created in `bind`, when the token file is first read.
+    private var auth: BearerAuth?
 
     private struct State {
         var config = Config()
@@ -70,15 +79,31 @@ public final class Service: @unchecked Sendable {
         state.withLock { $0.config = config }
     }
 
+    /// The bearer token every route is behind, once `bind` has read or
+    /// created it. Exposed so the process that owns the sockets — the app,
+    /// the CLI, a test — can pair without reading the file back.
+    public var token: String? { auth.map { $0.current } }
+
     /// Bring the sockets up. Capture is not started here — that is `startListening`.
+    ///
+    /// The token file is read (or created) here rather than at init, so a
+    /// service that is never bound never writes to Application Support.
     public func bind() throws {
         let config = state.withLock { $0.config }
         var built: [Transport] = []
 
+        let auth = BearerAuth(token: try config.tokenStore.loadOrCreate())
+        self.auth = auth
+
         if config.http {
-            let server = try HTTPServer(
-                port: config.httpPort, credentials: CredentialStore.current())
+            let server = try HTTPServer(port: config.httpPort, auth: auth)
             server.handlers = HTTPServer.Handlers(
+                discovery: { [weak self] in
+                    self?.discovery()
+                        ?? .init(
+                            name: "Sonocles", version: Service.version, auth: "bearer",
+                            ports: .init(http: config.httpPort, ws: nil))
+                },
                 start: { [weak self] in self?.startListening() },
                 stop: { [weak self] in self?.stopListening() },
                 status: { [weak self] in
@@ -86,6 +111,10 @@ public final class Service: @unchecked Sendable {
                         ?? .init(
                             state: "idle", listening: false, engine: "-", clients: 0, uptime: 0,
                             levelDb: nil, preparing: nil, preparingFraction: nil)
+                },
+                rotateToken: { [weak self] in
+                    guard let self else { throw CocoaError(.fileWriteUnknown) }
+                    return try self.rotateToken()
                 }
             )
             http = server
@@ -93,7 +122,7 @@ public final class Service: @unchecked Sendable {
         }
 
         if config.websocket {
-            let server = try WebSocketServer(port: config.wsPort)
+            let server = try WebSocketServer(port: config.wsPort, auth: auth)
             websocket = server
             built.append(server)
         }
@@ -110,7 +139,39 @@ public final class Service: @unchecked Sendable {
         websocket = nil
     }
 
+    /// Write a new token and make every later request on both transports
+    /// compare against it. The old token is dead after this returns.
+    ///
+    /// Behind `POST /token/rotate` and the popover's Rotate button. Every
+    /// other paired client has to read the file again — that is what rotation
+    /// is for.
+    @discardableResult
+    public func rotateToken() throws -> String {
+        guard let auth else { throw CocoaError(.fileWriteUnknown) }
+        let token = try state.withLock { $0.config.tokenStore }.rotate()
+        auth.update(to: token)
+        note("token rotated")
+        return token
+    }
+
+    /// The version stamped into the bundle at build time, or `dev` for a bare
+    /// executable such as the CLI, which has no Info.plist to carry one.
+    public static var version: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
+    }
+
+    /// `GET /` — name, version, auth scheme, ports.
+    public func discovery() -> HTTPServer.Discovery {
+        let config = state.withLock { $0.config }
+        return HTTPServer.Discovery(
+            name: "Sonocles", version: Self.version, auth: "bearer",
+            ports: .init(http: config.httpPort, ws: config.websocket ? config.wsPort : nil))
+    }
+
     public var isListening: Bool { state.withLock { $0.listening } }
+
+    /// The configuration as it stands — the engine can change via `use`.
+    public var config: Config { state.withLock { $0.config } }
 
     public var engineName: String {
         state.withLock { $0.sidecar?.engineName ?? $0.config.sidecar.engine.label }

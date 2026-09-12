@@ -247,7 +247,8 @@ because none was ever built.
 
 **Anything can drive it.**
 SSE and WebSocket, both live at once. An HTTP control API to start and stop it,
-behind Basic auth if you want it. A CLI that reports its own latency, because
+behind a token your apps can read and a web page cannot. A CLI that reports
+its own latency, because
 the claims above should be yours to check rather than ours to assert.
 
 A note on that third one, because it is the kind of thing that creeps back.

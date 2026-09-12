@@ -51,11 +51,16 @@ do {
                   --plain    one line per event, no ANSI
                   --quiet    finals only, no partial trace
 
-                Control API (Basic auth when configured in the app):
-                  GET  /events   server-sent event stream
-                  GET  /status   listening state, engine, client count, uptime
-                  POST /start    begin capture
-                  POST /stop     end capture
+                Control API (bearer token, every route — see docs/PROTOCOL.md):
+                  GET  /              discovery: name, version, auth scheme, ports
+                  GET  /events        server-sent event stream (?access_token=…)
+                  GET  /status        listening state, engine, client count, uptime
+                  POST /start         begin capture
+                  POST /stop          end capture
+                  POST /token/rotate  new token; the old one is dead after the reply
+
+                The token is at ~/Library/Application Support/Sonocles/token,
+                created on first bind, readable only by you.
                 """)
             exit(0)
         default: break
@@ -86,15 +91,14 @@ do {
 
 var endpoints: [String] = []
 if config.http {
-    endpoints.append("http http://127.0.0.1:\(config.httpPort) (/events /status /start /stop)")
+    endpoints.append("http http://127.0.0.1:\(config.httpPort) (/ /events /status /start /stop)")
 }
 if config.websocket { endpoints.append("ws ws://127.0.0.1:\(config.wsPort)") }
 monitor.note(
     endpoints.isEmpty ? "no transports — measuring only" : endpoints.joined(separator: " · "))
-monitor.note(
-    CredentialStore.current() == nil
-        ? "control API is open (no credentials configured)"
-        : "control API requires Basic auth")
+if !endpoints.isEmpty {
+    monitor.note("bearer token in \(config.tokenStore.fileURL.path)")
+}
 
 if idle {
     monitor.note("idle — POST /start to begin capture")

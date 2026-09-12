@@ -11,15 +11,16 @@ CONFIG   ?= release
 PORT     ?= 7357
 SIGN_ID  ?= Developer ID Application: Artisan Build, Inc (83AD4SGJLW)
 
-# Curl's -u only appends credentials when both are set, so the control targets
-# work unauthenticated by default and lock down the moment you export these.
-USER     ?=
-PASS     ?=
-AUTH     := $(if $(USER),-u $(USER):$(PASS),)
+# Every route is behind the bearer token the sidecar writes on first bind.
+# TOKEN wins if set; otherwise it is read from the file, which is what any
+# same-machine client does. See docs/PROTOCOL.md § Authentication.
+TOKEN_FILE := $(HOME)/Library/Application Support/Sonocles/token
+TOKEN    ?= $(shell cat "$(TOKEN_FILE)" 2>/dev/null)
+AUTH     := -H "Authorization: Bearer $(TOKEN)"
 
 .DEFAULT_GOAL := help
 .PHONY: help build test run baseline idle app launch install uninstall \
-        status start stop events deploy clean fmt lint
+        status discover rotate start stop events deploy clean fmt lint
 
 help: ## Show this help
 	@echo "Sonocles — on-device speech sidecar"
@@ -29,7 +30,7 @@ help: ## Show this help
 	@echo
 	@echo "  CONFIG=debug        build unoptimised (default: release)"
 	@echo "  PORT=7357           control API port for status/start/stop"
-	@echo "  USER=x PASS=y       credentials, when the control API is locked"
+	@echo "  TOKEN=…             bearer token (default: read from the token file)"
 
 build: ## Build everything
 	swift build -c $(CONFIG) --package-path $(APP)
@@ -66,6 +67,12 @@ uninstall: ## Remove the app from /Applications
 status: ## Ask the running sidecar what it is doing
 	@curl -s $(AUTH) http://127.0.0.1:$(PORT)/status && echo
 
+discover: ## Ask the running sidecar who it is
+	@curl -s $(AUTH) http://127.0.0.1:$(PORT)/ && echo
+
+rotate: ## Issue a new token; every other paired client must re-read the file
+	@curl -s $(AUTH) -X POST http://127.0.0.1:$(PORT)/token/rotate && echo
+
 start: ## Tell the running sidecar to begin listening
 	@curl -s $(AUTH) -X POST http://127.0.0.1:$(PORT)/start && echo
 
@@ -73,7 +80,7 @@ stop: ## Tell the running sidecar to stop listening
 	@curl -s $(AUTH) -X POST http://127.0.0.1:$(PORT)/stop && echo
 
 events: ## Tail the event stream (-N matters: without it curl buffers)
-	@curl -sN http://127.0.0.1:$(PORT)/events
+	@curl -sN "http://127.0.0.1:$(PORT)/events?access_token=$(TOKEN)"
 
 deploy: ## Push the marketing page to Cloudflare Pages
 	cd site && npx --yes wrangler@4 pages deploy --branch=main
