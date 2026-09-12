@@ -30,8 +30,11 @@ class NativeAppServiceProvider implements ProvidesPhpIni
         MenuBar::create()
             ->icon(resource_path('menubar/sonoclesTemplate.png'))
             ->tooltip('Sonocles')
-            ->width(380)
-            ->height(520)
+            // The Swift popover's frame: 344 pt wide, and the blade's height
+            // with its centre panel at 92 pt. It is not resizable, so a
+            // taller state would clip — every state is 92 pt on purpose.
+            ->width(344)
+            ->height(259)
             ->resizable(false)
             ->url(url('/'));
     }

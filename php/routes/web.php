@@ -2,6 +2,7 @@
 
 use App\Support\Sidecar;
 use Illuminate\Support\Facades\Route;
+use Native\Desktop\Facades\App;
 
 /*
  * The popover, and the three control calls behind it.
@@ -34,3 +35,10 @@ Route::get('/engine/status', function () {
 
 Route::post('/engine/start', fn () => response()->json(Sidecar::start() ?? ['error' => 'no engine']));
 Route::post('/engine/stop', fn () => response()->json(Sidecar::stop() ?? ['error' => 'no engine']));
+
+// The popover's Quit, which the Swift app gets from NSApplication for free.
+Route::post('/app/quit', function () {
+    App::quit();
+
+    return response()->noContent();
+});
