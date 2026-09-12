@@ -1,0 +1,18 @@
+/* Code blocks: expressive-code renders them; we restate the ground so a dark
+ * block on the limestone page uses the site's own ink, not GitHub's. The
+ * landing page's <pre> blocks and the event-stream frame use the same ink. */
+.expressive-code {
+	--ec-frm-edBg: var(--code-ground);
+	--ec-frm-edActTabBg: var(--code-ground);
+	--ec-frm-tbBg: var(--code-inset);
+	--ec-frm-edActTabFg: var(--code-text);
+	--ec-frm-edTabBrdCol: transparent;
+	--ec-brdCol: transparent;
+	--ec-codeFg: var(--code-text);
+	margin: 1.25rem 0;
+}
+.expressive-code .frame.has-title .header {
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	letter-spacing: 0.08em;
+}

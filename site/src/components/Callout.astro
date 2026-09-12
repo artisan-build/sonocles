@@ -1,0 +1,51 @@
+---
+// A boxed aside. `note` is the default; `trap` is for the things that cost a
+// take (oxide); `rule` is for a sentence the protocol requires in these words
+// — "absent is not zero" — set in olive, the colour of a healthy reading.
+interface Props {
+	kind?: 'note' | 'trap' | 'rule';
+	title?: string;
+}
+const { kind = 'note', title } = Astro.props;
+---
+
+<aside class:list={['callout', `callout--${kind}`]}>
+	{title && <p class="callout__title">{title}</p>}
+	<div class="callout__body"><slot /></div>
+</aside>
+
+<style>
+	.callout {
+		margin: 1.4rem 0;
+		padding: 0.9rem 1.1rem;
+		border-radius: 0 12px 12px 0;
+		border-left: 3px solid var(--terracotta);
+		background: var(--terracotta-wash);
+		font-size: 0.93rem;
+	}
+	.callout--trap {
+		border-left-color: var(--oxide);
+		background: color-mix(in oklab, var(--oxide) 10%, var(--stone));
+	}
+	.callout--rule {
+		border-left-color: var(--olive);
+		background: color-mix(in oklab, var(--olive) 12%, var(--stone));
+	}
+	.callout__title {
+		font-family: var(--mono);
+		font-size: 0.7rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--terracotta-ink);
+		margin: 0 0 0.4rem;
+	}
+	.callout--trap .callout__title {
+		color: var(--oxide);
+	}
+	.callout--rule .callout__title {
+		color: var(--olive);
+	}
+	.callout__body :global(p:last-child) {
+		margin-bottom: 0;
+	}
+</style>

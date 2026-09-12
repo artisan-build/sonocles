@@ -1,9 +1,9 @@
 {
-  // Cloudflare Pages (Direct Upload) for the Sonocles marketing page.
+  // Cloudflare Pages (Direct Upload) for sonocles.com.
   //
-  // There is no build step: the site is one HTML file and its plates, so the
-  // output directory is the source directory. Deploy with `make deploy` from
-  // the repo root, or let the workflow do it on a push that touches site/.
+  // Astro builds into dist/, so that is the output directory. The site used
+  // to be one HTML file whose source directory was its output; it is not any
+  // more, which is why `make deploy` and the workflow both build first.
   //
   // The custom domain is attached once, via the API — wrangler 4 removed the
   // `pages domain` subcommand:
@@ -14,5 +14,5 @@
   // Already done for sonocles.com.
   "name": "sonocles",
   "compatibility_date": "2026-09-01",
-  "pages_build_output_dir": "."
+  "pages_build_output_dir": "./dist"
 }

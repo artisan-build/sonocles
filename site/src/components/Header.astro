@@ -1,0 +1,75 @@
+---
+// The brandbar: mark · wordmark · pronunciation in mono · Docs · GitHub.
+// Identical on the landing page and every docs page; the only thing the
+// re-platform added is the Docs link.
+import Mark from './Mark.astro';
+const path = Astro.url.pathname;
+const inDocs = path === '/docs' || path.startsWith('/docs/');
+---
+
+<header class="header">
+	<div class:list={['wrap', { 'wrap--wide': inDocs }]}>
+		<div class="brandbar">
+			<a href="/" class="brand" aria-label="Sonocles home">
+				<Mark size={30} />
+				<span class="name">Sonocles</span>
+				<span class="say">so-NOK-leez</span>
+			</a>
+			<nav class="nav" aria-label="Site">
+				<a href="/docs" aria-current={inDocs ? 'page' : undefined}>Docs</a>
+				<a href="https://github.com/artisan-build/sonocles">GitHub →</a>
+			</nav>
+		</div>
+	</div>
+</header>
+
+<style>
+	.header {
+		padding: 26px 0 0;
+	}
+	.brandbar {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+	.brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		border-bottom: 0;
+		color: var(--ink);
+		min-width: 0;
+	}
+	.name {
+		font-family: var(--display);
+		font-weight: 700;
+		font-size: 23px;
+		color: var(--ink);
+		font-variation-settings: 'SOFT' 40, 'WONK' 1;
+		letter-spacing: -0.01em;
+	}
+	.say {
+		color: var(--script);
+		font-size: 12.5px;
+		font-family: var(--mono);
+	}
+	.nav {
+		margin-left: auto;
+		display: flex;
+		gap: 22px;
+		font-size: 14px;
+		font-weight: 500;
+	}
+	.nav a {
+		border-bottom-color: transparent;
+	}
+	.nav a:hover,
+	.nav a[aria-current='page'] {
+		border-bottom-color: var(--terracotta-ink);
+	}
+	@media (max-width: 480px) {
+		.say {
+			display: none;
+		}
+	}
+</style>

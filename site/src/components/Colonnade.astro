@@ -1,0 +1,11 @@
+---
+// The colonnade at the head and foot of every page. The foot one is the head
+// one upside down; the CSS lives in base.css so the landing page and the
+// docs draw the same building.
+interface Props {
+	foot?: boolean;
+}
+const { foot = false } = Astro.props;
+---
+
+<div class:list={['colonnade', { 'colonnade--foot': foot }]} role="presentation"></div>

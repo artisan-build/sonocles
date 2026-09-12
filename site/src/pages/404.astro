@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Not found — Sonocles" description="Nothing at this path.">
+	<section class="wrap nf">
+		<p class="kicker">404</p>
+		<h1>Nothing at this path.</h1>
+		<p class="nf__lede">
+			A missing page is not a dropped frame; the sequence numbers are all there. It was moved, or
+			it never existed. Either way there is nothing here to hear.
+		</p>
+		<p class="nf__links">
+			<a class="btn btn-primary" href="/">The front page</a>
+			<a class="btn btn-ghost" href="/docs">The docs</a>
+		</p>
+	</section>
+</Base>
+
+<style>
+	.nf {
+		padding-block: 5rem 2rem;
+	}
+	.nf h1 {
+		font-size: clamp(2.2rem, 6vw, 3.6rem);
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		margin: 0.6rem 0 1.2rem;
+	}
+	.nf__lede {
+		font-size: 1.1rem;
+		max-width: 36rem;
+		color: var(--ink-soft);
+	}
+	.nf__links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		margin-top: 1.6rem;
+	}
+</style>

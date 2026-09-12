@@ -1,11 +1,18 @@
 <!doctype html>
 <!--
-  Source for site/img/og.png — the social card, composed rather than cropped.
+  Source for site/public/img/og.png — the social card, composed rather than
+  cropped. Not part of the Astro build; it is opened from disk, once, when the
+  card changes.
 
   The hero illustration is 3:2 and social cards are 1.91:1, so scaling it to fit
   would either letterbox or cut the scribe out of frame, and the scribe is the
   half that makes the joke. This lays out the same elements at the right shape
-  instead. Regenerate by screenshotting this at exactly 1200x630.
+  instead. Regenerate by screenshotting this at exactly 1200x630:
+
+      cd site && "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+        --headless --disable-gpu --hide-scrollbars \
+        --screenshot="$PWD/public/img/og.png" --window-size=1200,630 \
+        --virtual-time-budget=4000 "file://$PWD/og.html"
 
   Three things here are load-bearing and were each a defect once:
 
@@ -15,7 +22,7 @@
      to put a foot.
   2. The art sits flush to the bottom edge, not past it. It used to hang
      18px below, which sliced the legs off the scribe's stool.
-  3. The ground is --card-ground, not --stone. flat-hero.png is opaque and its
+  3. The ground is --card-ground, not --stone. The hero plate is opaque and its
      own ground is #FCF3E3, two levels off the site's #FAF2E4 — enough to draw
      a visible vertical seam down the card at the image's left edge. Matching
      the card to the art makes the rectangle disappear. Keep them equal; if the
@@ -65,7 +72,7 @@
 </style></head>
 <body>
   <div class="colonnade"></div>
-  <img class="art" src="img/flat-hero.png" alt="">
+  <img class="art" src="src/assets/plates/hero.png" alt="">
   <div class="pad">
     <div class="brand">
       <svg width="34" height="34" viewBox="0 0 32 32">

@@ -1,0 +1,277 @@
+---
+// Docs shell: the same header, a sidebar in reading order, the article with
+// an on-this-page rail at wide widths, prev/next, and a banner when the page
+// is written ahead of the code (draft: true).
+import type { MarkdownHeading } from 'astro';
+import Base from './Base.astro';
+import { docsNav, docsHref, neighbours, staticDocs } from '../lib/docs-nav';
+
+interface Props {
+	id: string;
+	title: string;
+	description: string;
+	draft?: boolean;
+	existing: Set<string>;
+	headings?: MarkdownHeading[];
+	wide?: boolean; // let the article use the full column (the API reference)
+}
+const { id, title, description, draft = false, headings = [], wide = false } = Astro.props;
+const existing = new Set([...Astro.props.existing, ...staticDocs]);
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const { prev, next } = neighbours(id, existing);
+---
+
+<Base title={`${title} — Sonocles docs`} description={description}>
+	<div class:list={['wrap', 'wrap--wide', 'docs', { 'docs--wide': wide }]}>
+		<aside class="sidebar">
+			<p class="kicker">Docs</p>
+			<nav aria-label="Documentation">
+				<ul>
+					{
+						docsNav.map((entry) =>
+							existing.has(entry.id) ? (
+								<li class:list={{ nested: entry.id.includes('/') }}>
+									<a href={docsHref(entry.id)} aria-current={entry.id === id ? 'page' : undefined}>
+										{entry.label}
+									</a>
+								</li>
+							) : (
+								<li class:list={['soon', { nested: entry.id.includes('/') }]}>
+									<span>{entry.label}</span>
+								</li>
+							),
+						)
+					}
+				</ul>
+			</nav>
+		</aside>
+		<article class:list={['article', { 'article--wide': wide }]} data-pagefind-body>
+			{
+				draft && (
+					<p class="draft" role="note">
+						<strong>Draft.</strong> Written ahead of the code. The words are the intent; the
+						software is not there yet.
+					</p>
+				)
+			}
+			<h1>{title}</h1>
+			<p class="lede">{description}</p>
+			<div class="prose">
+				<slot />
+			</div>
+			<nav class="pager" aria-label="Previous and next">
+				{prev ? <a class="pager__prev" href={docsHref(prev.id)}><span>← previous</span>{prev.label}</a> : <span />}
+				{next ? <a class="pager__next" href={docsHref(next.id)}><span>next →</span>{next.label}</a> : <span />}
+			</nav>
+		</article>
+		{
+			toc.length > 2 && (
+				<aside class="rail">
+					<p class="kicker">On this page</p>
+					<ul>
+						{toc.map((h) => (
+							<li class:list={{ deep: h.depth === 3 }}>
+								<a href={`#${h.slug}`}>{h.text}</a>
+							</li>
+						))}
+					</ul>
+				</aside>
+			)
+		}
+	</div>
+</Base>
+
+<style>
+	.docs {
+		display: grid;
+		grid-template-columns: 200px minmax(0, 1fr) 190px;
+		gap: 3rem;
+		padding-block: 2.5rem 1rem;
+	}
+	.sidebar ul,
+	.rail ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		font-family: var(--mono);
+		font-size: 0.8rem;
+	}
+	.sidebar li {
+		margin: 0 0 0.65rem;
+	}
+	.sidebar li.nested {
+		padding-left: 1rem;
+	}
+	.sidebar a,
+	.rail a {
+		color: var(--ink-soft);
+		border-bottom: 0;
+	}
+	.sidebar a:hover,
+	.rail a:hover {
+		color: var(--terracotta-ink);
+	}
+	.sidebar a[aria-current='page'] {
+		color: var(--terracotta-ink);
+	}
+	.sidebar .soon span {
+		color: var(--script);
+	}
+	.sidebar .soon span::after {
+		content: ' ·';
+	}
+	.rail {
+		position: sticky;
+		top: 1.5rem;
+		align-self: start;
+	}
+	.rail ul {
+		font-size: 0.74rem;
+	}
+	.rail li {
+		margin: 0 0 0.5rem;
+		line-height: 1.35;
+	}
+	.rail li.deep {
+		padding-left: 0.8rem;
+	}
+	.article {
+		max-width: 46rem;
+		min-width: 0;
+	}
+	.docs--wide {
+		width: min(100% - 2 * var(--gutter), 1360px);
+	}
+	.article--wide {
+		max-width: none;
+	}
+	.article h1 {
+		font-size: clamp(2rem, 4.5vw, 2.7rem);
+		font-weight: 600;
+		letter-spacing: -0.018em;
+		margin-bottom: 0.8rem;
+	}
+	.lede {
+		font-size: 1.1rem;
+		color: var(--ink-soft);
+		margin: 0 0 2rem;
+		max-width: 60ch;
+	}
+	.draft {
+		font-size: 0.9rem;
+		color: var(--terracotta-ink);
+		background: var(--terracotta-wash);
+		border-left: 3px solid var(--terracotta);
+		padding: 0.7rem 1rem;
+		border-radius: 0 8px 8px 0;
+		margin: 0 0 1.6rem;
+	}
+	.prose :global(p) {
+		margin: 0 0 1em;
+	}
+	.prose :global(h2) {
+		font-size: 1.6rem;
+		font-weight: 600;
+		letter-spacing: -0.015em;
+		margin: 2.6rem 0 0.8rem;
+	}
+	.prose :global(h3) {
+		font-size: 1.15rem;
+		font-weight: 600;
+		margin: 1.8rem 0 0.6rem;
+	}
+	.prose :global(h2 a),
+	.prose :global(h3 a) {
+		color: inherit;
+		border-bottom: 0;
+	}
+	.prose :global(ul),
+	.prose :global(ol) {
+		padding-left: 1.3rem;
+		margin: 0 0 1em;
+	}
+	.prose :global(li) {
+		margin-bottom: 0.35rem;
+	}
+	.prose :global(table) {
+		margin: 1.2rem 0;
+		font-size: 0.93rem;
+	}
+	.prose :global(td:first-child code),
+	.prose :global(th) {
+		white-space: nowrap;
+	}
+	.prose :global(:not(pre) > code) {
+		font-size: 0.86em;
+		padding: 0.1em 0.4em;
+		border-radius: 5px;
+		background: var(--stone-deep);
+		color: var(--ink);
+	}
+	.prose :global(blockquote) {
+		margin: 1.4rem 0;
+		padding-left: 1rem;
+		border-left: 3px solid var(--stone-line);
+		color: var(--ink);
+		font-family: var(--display);
+		font-variation-settings: 'SOFT' 40, 'WONK' 1;
+		font-size: 1.2rem;
+		line-height: 1.4;
+	}
+	.pager {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-top: 3.5rem;
+		padding-top: 1.4rem;
+		border-top: 1px solid var(--stone-line);
+		font-weight: 500;
+	}
+	.pager a {
+		border-bottom: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+	.pager__next {
+		text-align: right;
+	}
+	.pager span {
+		font-family: var(--mono);
+		font-size: 0.68rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-faint);
+	}
+	@media (max-width: 1100px) {
+		.docs {
+			grid-template-columns: 200px minmax(0, 1fr);
+		}
+		.rail {
+			display: none;
+		}
+	}
+	@media (max-width: 760px) {
+		/* a wide table scrolls inside its own box rather than widening the page */
+		.prose :global(table) {
+			display: block;
+			max-width: 100%;
+			overflow-x: auto;
+		}
+		.docs {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 1.5rem;
+		}
+		.sidebar ul {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.4rem 1rem;
+		}
+		.sidebar li {
+			margin: 0;
+		}
+		.sidebar li.nested {
+			padding-left: 0;
+		}
+	}
+</style>
