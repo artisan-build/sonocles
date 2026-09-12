@@ -1,0 +1,203 @@
+@import './tokens.css';
+
+* {
+	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+	text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background: var(--stone);
+	color: var(--ink-soft);
+	font-family: var(--sans);
+	font-size: 17px;
+	line-height: 1.65;
+	-webkit-font-smoothing: antialiased;
+	min-height: 100dvh;
+	display: flex;
+	flex-direction: column;
+}
+
+main {
+	flex: 1;
+}
+
+a {
+	color: var(--terracotta-ink);
+	text-decoration: none;
+	border-bottom: 2px solid rgba(168, 67, 31, 0.28);
+}
+a:hover {
+	border-bottom-color: var(--terracotta-ink);
+}
+
+h1,
+h2,
+h3,
+h4 {
+	font-family: var(--display);
+	color: var(--ink);
+	line-height: 1.1;
+	font-variation-settings: 'SOFT' 30, 'WONK' 1;
+	margin: 0;
+}
+
+code,
+kbd,
+pre,
+.mono {
+	font-family: var(--mono);
+}
+
+/* inline code — dark blocks are expressive-code's */
+:not(pre) > code {
+	font-size: 0.9em;
+}
+
+/* The landing page's column. min(92vw, 920px) is the measure the page has
+ * always had; --gutter is 4vw so the same number reads as a gutter. */
+.wrap {
+	width: min(100% - 2 * var(--gutter), var(--page));
+	margin-inline: auto;
+}
+.wrap--wide {
+	width: min(100% - 2 * var(--gutter), var(--page-wide));
+}
+
+/* A colonnade, drawn rather than photographed: fluting as a repeating
+ * gradient, capitals as a band above it. Cheap, crisp at any width, and it
+ * gives every section a floor to stand on. */
+.colonnade {
+	height: 34px;
+	position: relative;
+}
+.colonnade::before {
+	content: '';
+	position: absolute;
+	inset: 0 0 6px 0;
+	background: repeating-linear-gradient(
+		90deg,
+		var(--stone-deep) 0 5px,
+		var(--stone-sink) 5px 6px,
+		var(--stone-deep) 6px 11px,
+		transparent 11px 30px
+	);
+}
+.colonnade::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 6px;
+	background: var(--terracotta);
+	opacity: 0.85;
+}
+.colonnade--foot {
+	transform: scaleY(-1);
+	margin-top: 30px;
+}
+
+/* A step: the hairline with a short terracotta segment that opens every section. */
+.step {
+	height: 0;
+	border-top: 2px solid var(--stone-line);
+	position: relative;
+	margin: 0;
+}
+.step::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 5px;
+	width: 74px;
+	height: 3px;
+	background: var(--terracotta);
+}
+
+/* kicker: mono, uppercase, spaced — furniture, never competing with a heading */
+.kicker {
+	font-family: var(--mono);
+	font-size: 11.5px;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: var(--terracotta-ink);
+	margin: 0 0 14px;
+	font-weight: 500;
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 9px;
+	font-weight: 600;
+	font-size: 16px;
+	padding: 13px 22px;
+	border-radius: 999px;
+	border: 0;
+	text-decoration: none;
+}
+.btn-primary {
+	background: var(--terracotta-deep);
+	color: #fff;
+}
+.btn-primary:hover {
+	background: var(--brick);
+}
+.btn-ghost {
+	background: transparent;
+	color: var(--ink);
+	border: 2px solid var(--stone-line);
+}
+.btn-ghost:hover {
+	border-color: var(--terracotta);
+}
+
+.tablewrap,
+.table-scroll {
+	overflow-x: auto;
+}
+table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 28px 0 0;
+	font-size: 15.5px;
+}
+th,
+td {
+	text-align: left;
+	padding: 13px 12px;
+	border-bottom: 1px solid var(--stone-line);
+	vertical-align: top;
+}
+th {
+	color: var(--script);
+	font-weight: 600;
+	font-size: 11.5px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+td.num {
+	font-family: var(--mono);
+}
+
+.note {
+	color: var(--script);
+	font-size: 14px;
+}
+
+:focus-visible {
+	outline: 2px solid var(--terracotta);
+	outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	* {
+		animation: none !important;
+		transition: none !important;
+	}
+}

@@ -82,8 +82,8 @@ stop: ## Tell the running sidecar to stop listening
 events: ## Tail the event stream (-N matters: without it curl buffers)
 	@curl -sN "http://127.0.0.1:$(PORT)/events?access_token=$(TOKEN)"
 
-deploy: ## Push the marketing page to Cloudflare Pages
-	cd site && npx --yes wrangler@4 pages deploy --branch=main
+deploy: ## Build the site and push it to Cloudflare Pages
+	cd site && pnpm install --frozen-lockfile && pnpm deploy
 
 fmt: ## Format the Swift sources in place
 	@xcrun swift-format --in-place --recursive $(APP)/Sources $(APP)/Tests

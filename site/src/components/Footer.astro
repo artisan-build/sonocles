@@ -1,0 +1,41 @@
+---
+import Colonnade from './Colonnade.astro';
+const path = Astro.url.pathname;
+const inDocs = path === '/docs' || path.startsWith('/docs/');
+---
+
+<footer class="footer">
+	<div class:list={['wrap', { 'wrap--wide': inDocs }]}>
+		{/* Inside the column, as it always was: the head colonnade runs the
+		    full width of the page, the foot one is the width of the text. */}
+		<Colonnade foot />
+		<p><span class="name">Sonocles</span> — live speech-to-text for the Mac. Apple Silicon, macOS 14 or later.</p>
+		<p>Free and open source under the MIT licence. <a href="https://github.com/artisan-build/sonocles">Source on GitHub</a>.</p>
+		<p class="made">Built for <a href="https://pteroprompter.com">Pteroprompter</a> by <b>ProjektGopher Multimedia</b>, an <b>Artisan Build</b> property. Useful on its own, mind you.</p>
+	</div>
+</footer>
+
+<style>
+	.footer {
+		padding: 0 0 80px;
+		color: var(--ink-faint);
+		font-size: 15px;
+	}
+	.footer p {
+		margin: 0 0 8px;
+	}
+	.footer p:first-of-type {
+		margin-top: 50px;
+	}
+	.name {
+		font-family: var(--display);
+		font-weight: 700;
+		color: var(--ink);
+	}
+	.footer .made {
+		margin-top: 18px;
+	}
+	.made b {
+		color: var(--ink-soft);
+	}
+</style>

@@ -1,0 +1,6 @@
+# Cloudflare Pages redirects. Paths only — a host-level rule lives in the zone.
+#
+# /download always points at the current release, the same way the button on
+# the front page does, so the URL can be said out loud or typed from a slide.
+/download  https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg  302
+/releases  https://github.com/artisan-build/sonocles/releases  302

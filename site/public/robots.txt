@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://sonocles.com/sitemap-index.xml

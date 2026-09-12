@@ -1,0 +1,62 @@
+---
+// A card: a title, a body, an optional link and a colour along the bottom —
+// the landing page's feature cards, which cycle terracotta, olive, stone.
+interface Props {
+	title: string;
+	href?: string;
+	tone?: 'terracotta' | 'olive' | 'stone';
+	code?: string;
+}
+const { title, href, tone = 'terracotta', code } = Astro.props;
+const Tag = href ? 'a' : 'div';
+---
+
+<Tag class:list={['card', `card--${tone}`]} href={href}>
+	<p class="card__title">
+		{code && <code class="card__code">{code}</code>}
+		{title}
+	</p>
+	<div class="card__body"><slot /></div>
+</Tag>
+
+<style>
+	.card {
+		display: block;
+		background: var(--stone-deep);
+		border-radius: 14px;
+		padding: 22px 23px 14px;
+		border-bottom: 4px solid var(--terracotta);
+		color: inherit;
+	}
+	.card--olive {
+		border-bottom-color: var(--olive);
+	}
+	.card--stone {
+		border-bottom-color: var(--stone-sink);
+	}
+	a.card:hover .card__title {
+		color: var(--terracotta-ink);
+	}
+	.card__title {
+		font-family: var(--sans);
+		font-weight: 600;
+		font-size: 16px;
+		margin: 0 0 9px;
+		color: var(--ink);
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.5rem;
+	}
+	.card__code {
+		font-size: 0.8rem;
+		color: var(--terracotta-ink);
+	}
+	.card__body {
+		font-size: 14.5px;
+		color: var(--ink-faint);
+	}
+	.card__body :global(p) {
+		margin: 0 0 0.6rem;
+	}
+</style>

@@ -1,0 +1,53 @@
+/* Sonocles palette and type — docs/BRAND.md is the source; this file names
+ * the roles. Views use the role, never the pigment, so a palette change stays
+ * here. The site is light (limestone); the app is dark and lives elsewhere.
+ *
+ * Limestone and terracotta. Two terracottas and a darkened script, for
+ * contrast rather than taste: --terracotta stays the signature and is used
+ * for fills, rules and display type, where it is either large or not carrying
+ * any text at all. Anything small and load-bearing — links, kickers, the
+ * numbers in the table, white on a button — uses --terracotta-ink or
+ * --terracotta-deep, which are the same hue far enough down to clear 4.5:1.
+ * Measured, not guessed: script was 2.94, links 4.03, card body 4.17,
+ * button 4.48 before the split. */
+:root {
+	/* ground */
+	--stone: #faf2e4;
+	--stone-deep: #efe5d2;
+	--stone-sink: #e0d4be;
+	--stone-line: #ded0b8;
+
+	/* ink */
+	--ink: #2a211a;
+	--ink-soft: #4e4034;
+	--ink-faint: #6b5c4c;
+	--script: #7a6a59; /* a value we do not have */
+
+	/* the signature */
+	--terracotta: #c4552e;
+	--terracotta-soft: #dd7a4e;
+	--terracotta-ink: #a8431f;
+	--terracotta-deep: #b2461f;
+	--brick: #94331e;
+	--terracotta-wash: #f3e3d6;
+
+	/* states */
+	--olive: #6e7a52; /* listening, healthy */
+	--oxide: #b4453a; /* hot, recording, stop */
+
+	/* code and data blocks — the one dark surface, on the site and in the app */
+	--code-ground: var(--ink);
+	--code-inset: #3a2e25;
+	--code-text: #ede4d6;
+	--stream-dim: #9e8f7c;
+
+	/* type — one display face with its axes, one sans, one mono */
+	--display: 'Fraunces', Georgia, serif;
+	--sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+	--mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+	/* measure — the landing page's 920px column, and a wider one for docs */
+	--page: 920px;
+	--page-wide: 1200px;
+	--gutter: 4vw;
+}

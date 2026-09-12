@@ -119,7 +119,7 @@ A monorepo. Each directory builds independently.
 app/     the macOS app, the CLI, and the core they share (Swift)
 art/     header and plate sources
 docs/    findings, protocol, brand, decisions
-site/    the marketing page (a single static file)
+site/    sonocles.com — the marketing page and the docs (Astro)
 ```
 
 `app/` is a plain SwiftPM package — `swift build` inside it needs nothing from

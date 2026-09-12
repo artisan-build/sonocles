@@ -1,0 +1,41 @@
+---
+// The step-and-kicker section rhythm of the landing page: a hairline with a
+// short terracotta segment, a mono kicker, a Fraunces heading.
+interface Props {
+	kicker: string;
+	id?: string;
+}
+const { kicker, id } = Astro.props;
+---
+
+<div class="step"></div>
+<section class="section" id={id}>
+	<p class="kicker">{kicker}</p>
+	<slot />
+</section>
+
+<style>
+	.section {
+		padding: 62px 0;
+	}
+	.section :global(h2) {
+		font-size: clamp(30px, 4.6vw, 46px);
+		font-weight: 600;
+		letter-spacing: -0.018em;
+		margin-bottom: 14px;
+	}
+	.section :global(.lead) {
+		color: var(--ink-soft);
+		max-width: 64ch;
+	}
+	.section :global(.pull) {
+		font-family: var(--display);
+		font-size: clamp(22px, 3.1vw, 30px);
+		line-height: 1.34;
+		color: var(--ink);
+		max-width: 52ch;
+		margin: 0 0 20px;
+		font-weight: 500;
+		font-variation-settings: 'SOFT' 40, 'WONK' 1;
+	}
+</style>
