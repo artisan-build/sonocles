@@ -123,33 +123,57 @@ accurate family resemblance. It was not; it was borrowing, and it made two
 products look like one.
 
 Greek, but a temple rather than a museum case: pale limestone ground, fired
-terracotta accent, a little olive and bronze. Warm, bright, and cheerful enough
-to carry a joke.
+terracotta accent, a little olive. Warm, bright, and cheerful enough to carry
+a joke.
 
-The app stays dark — it sits over whatever you are actually doing, often while a
-camera is running, and should never flash white at you mid-take. The site is
-light. That is not a drift; it is the same palette, and a tool and a poster want
-opposite grounds.
+**One palette, both surfaces.** The menu bar app and the NativePHP app use
+the site's palette as it stands: limestone ground, ink text, terracotta
+signature, the state colours below. Not a dark theme, and not Pteroprompter's.
+An earlier version of this document argued the app should stay dark because
+it sits over a running take; what that produced was the prompter's popover
+with the pigments swapped, and Rheocles' apps — which start from the site —
+showed it up. The only dark surfaces anywhere are code and data blocks, on
+the site and in the app alike: the stream of frames on the page, the live
+transcript in the popover. Those use the `code-*` tokens.
 
-| role | token | value |
-|---|---|---|
-| deepest ground (app) | `slip` | `#100C0A` |
-| popover | `panel` | `#1C1611` |
-| inset / meter cell | `field` | `#2B211A` |
-| brightest text (app) | `bone` | `#EFE3D0` |
-| body text | `body` | `#CDBBA3` |
-| **absent values** | `script` | `#6B5C4B` |
-| **the signature** | `terracotta` | `#C86F45` |
-| listening, healthy | `verdigris` | `#7FA88C` |
-| hot, recording, stop | `oxide` | `#B4453A` |
-| site ground | limestone | `#FAF2E4` |
-| site accent | terracotta | `#C4552E` |
+Two terracottas and a darkened script, for contrast rather than taste.
+`terracotta` is the signature and is used for fills, rules, marks and display
+type, where it is either large or carrying no text. Anything small and
+load-bearing — links, kickers, the numbers in the table, a state pill — uses
+`terracotta-ink`, the same hue far enough down to clear 4.5:1 on limestone;
+white on a button uses `terracotta-deep` for the same reason.
+
+| role | token | value | note |
+|---|---|---|---|
+| ground | `stone` | `#FAF2E4` | the plaster |
+| inset — cards, the idle panel | `stone-deep` | `#EFE5D2` | |
+| sunk — a track, a card's foot | `stone-sink` | `#E0D4BE` | |
+| rule | `stone-line` | `#DED0B8` | |
+| ink | `ink` | `#2A211A` | |
+| ink, soft / faint | `ink-soft` `ink-faint` | `#4E4034` `#6B5C4C` | |
+| **the signature** | `terracotta` | `#C4552E` | fills, rules, marks; 4.0:1 on limestone, so never small text |
+| signature, as text | `terracotta-ink` | `#A8431F` | 5.4:1 on limestone |
+| signature, as a button ground | `terracotta-deep` | `#B2461F` | white on it is 5.5:1; `brick` `#94331E` on hover |
+| listening, healthy | `olive` | `#6E7A52` | shared with Rheocles |
+| hot signal, recording, stop | `oxide` | `#B4453A` | shared — record red is family DNA |
+| **absent values** | `script` | `#7A6A59` | shared — a value we do not have |
+| code / data block ground | `code-ground` | `#2A211A` | `ink`; the site's `pre` and `.stream`, the app's transcript |
+| code / data block inset | `code-inset` | `#3B2F27` | the app's empty meter cells; the site has no meter |
+| code / data block text | `code-text` | `#EDE4D6` | |
+| code / data block, dim | `code-dim` | `#9E8F7C` | the site's `--stream-dim` |
+| signature on a code block | `terracotta-soft` | `#DD7A4E` | terracotta on dark; nowhere else |
 
 Views name the *role*, not the pigment, so a palette change stays in one file.
+`app/Sources/Sonocles/Brand.swift` is that file for the menu bar app.
 
 `script` is load-bearing beyond its name: it is the colour of a value we do not
 have. A missing latency, an unmeasured level, an empty transcript. Absence gets
-its own colour so it is never mistaken for a number.
+its own colour so it is never mistaken for a number — on the dark block as much
+as on limestone.
+
+State colours are a small language and the menu bar app speaks it: `script`
+idle, `olive` listening, `oxide` hot, `terracotta-ink` preparing — on
+limestone, the same as on this site.
 
 ## Type
 
@@ -167,6 +191,14 @@ One display face doing wordmark, headings and pull quotes is the decision —
 it is fewer webfonts, and the variable axes give it the range that two static
 faces were there to provide.
 
+The menu bar app ships the same three faces under the OFL —
+`app/Sources/Sonocles/Fonts/`, licences beside them — and registers them for
+its own process at launch, so the popover sets its wordmark in Fraunces at
+weight 700, `SOFT 30` `WONK 1`, its prose in Instrument Sans and its numbers
+in IBM Plex Mono, exactly as the page does. Every role falls back to the
+system face of the same character if registration fails, because a popover
+with no text is worse than one in the wrong font.
+
 No marble textures, no laurel wreaths, no columns. The classical reference lives
 in the letterforms and the palette, which is where it can be taken seriously.
 
@@ -175,9 +207,13 @@ in the letterforms and the palette, which is where it can be taken seriously.
 Concentric arcs. An amphitheatre seen from above and a sound wave are the same
 drawing, which is the sort of coincidence worth taking.
 
-At menu bar size the mark gives way to legibility — a filled waveform while
-listening, an outline while idle, so state reads from across the room without
-opening anything.
+At menu bar size the mark gives way to legibility: idle dims the whole mark to
+40 %, listening draws it at full strength, so state reads from across the room
+without opening anything. Whole-mark dimming rather than per-arc, because
+per-arc reads at 64 pt in a design review and not at all at 18 pt in a menu
+bar, which is the only size that matters. It is a template `NSImage`, drawn
+from shapes, so it takes the bar's own colour on either ground — see
+`MenuBarIcon.swift` for why a bare SwiftUI view there renders nothing at all.
 
 ## The plates
 

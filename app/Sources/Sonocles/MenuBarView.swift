@@ -12,19 +12,30 @@ import SwiftUI
 /// pinned at silence looks broken, and a meter shown during a model download
 /// looks broken *and* is irrelevant, since nothing is listening yet. Each state
 /// gets its own panel rather than one panel that lies in two of them.
+///
+/// Styled as sonocles.com is: limestone ground, ink, the terracotta signature,
+/// and a 4 pt terracotta rule along the top — the foot of the site's colonnade
+/// — so the popover and the site open the same way. Dark is for the live
+/// transcript only, the way the site's stream of frames is dark on the
+/// limestone page: it is the one thing here that is data rather than chrome.
 struct MenuBarView: View {
     @Bindable var model: SidecarModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            Rectangle().fill(Brand.terracotta).frame(height: 4)
             header
-            Rectangle().fill(Brand.field).frame(height: 1)
+            rule
             centre
-            Rectangle().fill(Brand.field).frame(height: 1)
+            rule
             controls
         }
         .frame(width: 344)
-        .background(Brand.panel)
+        .background(Brand.ground)
+    }
+
+    private var rule: some View {
+        Rectangle().fill(Brand.line).frame(height: 1)
     }
 
     // MARK: - header
@@ -32,14 +43,18 @@ struct MenuBarView: View {
     private var header: some View {
         HStack(spacing: 9) {
             SonoclesMark(progress: model.running ? 1 : 0.34)
-                .foregroundStyle(model.running ? Brand.stress : Brand.ghost)
+                .foregroundStyle(model.running ? Brand.terracotta : Brand.script)
                 .frame(width: 19, height: 19)
                 .animation(.easeOut(duration: 0.25), value: model.running)
 
-            Text("Sonocles")
-                .font(.system(size: 13.5, weight: .semibold))
-                .foregroundStyle(Brand.bright)
-                .kerning(0.2)
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Text("Sonocles")
+                    .font(Type.wordmark(15))
+                    .foregroundStyle(Brand.ink)
+                Text("so-NOK-leez")
+                    .font(Type.mono(9))
+                    .foregroundStyle(Brand.inkFaint)
+            }
 
             Spacer()
 
@@ -55,11 +70,17 @@ struct MenuBarView: View {
     }
 
     private var stateColour: Color {
-        if model.preparation != nil { return Brand.stress }
-        return model.running ? Brand.quote : Brand.ghost
+        if model.preparation != nil { return Brand.terracottaInk }
+        return model.running ? Brand.olive : Brand.script
     }
 
     // MARK: - centre
+
+    /// The transcript is data and sits on the dark block; the other two
+    /// states are prose and sit on the inset, like the site's cards.
+    private var showingTranscript: Bool {
+        model.preparation == nil && model.running
+    }
 
     @ViewBuilder private var centre: some View {
         Group {
@@ -74,7 +95,7 @@ struct MenuBarView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(Brand.ink)
+        .background(showingTranscript ? Brand.Block.panel : Brand.inset)
     }
 
     /// The first launch fetches ~220 MB and compiles it for the Neural Engine.
@@ -83,8 +104,8 @@ struct MenuBarView: View {
     private func preparing(_ preparation: Preparation) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(preparation.summary)
-                .font(.system(size: 12))
-                .foregroundStyle(Brand.body)
+                .font(Type.body(12))
+                .foregroundStyle(Brand.inkSoft)
 
             // A bar only where the fraction is real. Compiling has no
             // measurable progress, so it gets a pulse instead — animating a bar
@@ -97,8 +118,8 @@ struct MenuBarView: View {
             }
 
             Text("One time only — the models cache on disk.")
-                .font(.system(size: 10))
-                .foregroundStyle(Brand.script)
+                .font(Type.body(10))
+                .foregroundStyle(Brand.inkFaint)
         }
         .frame(height: 92, alignment: .center)
     }
@@ -111,8 +132,8 @@ struct MenuBarView: View {
             // the popover down — at five frames a second that would be a twitch,
             // not an interface.
             Text(model.text.isEmpty ? "Listening…" : model.text)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(model.text.isEmpty ? Brand.script : Brand.body)
+                .font(Type.mono(12))
+                .foregroundStyle(model.text.isEmpty ? Brand.script : Brand.Block.text)
                 .lineLimit(3, reservesSpace: true)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -130,14 +151,14 @@ struct MenuBarView: View {
     private var idle: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Not listening")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Brand.faint)
+                .font(Type.body(12, .medium))
+                .foregroundStyle(Brand.ink)
             Text(
                 "The stream stays open — anything can start it, including "
                     + "a POST to /start."
             )
-            .font(.system(size: 10.5))
-            .foregroundStyle(Brand.script)
+            .font(Type.body(10.5))
+            .foregroundStyle(Brand.inkFaint)
             .fixedSize(horizontal: false, vertical: true)
         }
         .frame(height: 92, alignment: .center)
@@ -149,11 +170,11 @@ struct MenuBarView: View {
     private func stat(_ label: String, _ value: String?) -> some View {
         HStack(spacing: 5) {
             Text(label)
-                .font(.system(size: 10))
-                .foregroundStyle(Brand.script)
+                .font(Type.mono(10))
+                .foregroundStyle(Brand.Block.dim)
             Text(value ?? "··")
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(value == nil ? Brand.script : Brand.stress)
+                .font(Type.mono(11))
+                .foregroundStyle(value == nil ? Brand.script : Brand.Block.terracotta)
         }
     }
 
@@ -161,21 +182,24 @@ struct MenuBarView: View {
 
     private var controls: some View {
         VStack(alignment: .leading, spacing: 11) {
-            HStack {
-                Text("Engine")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Brand.faint)
-
-                Spacer()
-
-                Picker("", selection: Binding(get: { model.engine }, set: { model.use($0) })) {
-                    ForEach(EngineChoice.allCases, id: \.self) { choice in
-                        Text(choice.label).tag(choice)
-                    }
+            // The engine, as a segmented control drawn from shapes. A menu
+            // `Picker` is AppKit-backed and `ImageRenderer` cannot rasterise
+            // it, so every design review of this popover had a yellow box
+            // where the picker was. The full name sits beside the label
+            // because four full names do not fit in 316 pt.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Engine")
+                        .font(Type.body(11))
+                        .foregroundStyle(Brand.inkFaint)
+                    Spacer()
+                    Text(model.engineLabel)
+                        .font(Type.mono(9.5))
+                        .foregroundStyle(Brand.script)
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .frame(width: 182)
+                Segmented(
+                    options: EngineChoice.allCases.map { ($0, Self.short($0)) },
+                    selection: Binding(get: { model.engine }, set: { model.use($0) }))
             }
 
             // Endpoints, not switches. The sockets bind at launch and stay up
@@ -191,24 +215,29 @@ struct MenuBarView: View {
                 pairing
             } label: {
                 Text("Control API")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Brand.faint)
+                    .font(Type.body(11))
+                    .foregroundStyle(Brand.inkFaint)
             }
 
             HStack(spacing: 8) {
-                Button(model.running ? "Stop" : "Start listening") {
+                // Start is the site's button; Stop is the family's record red.
+                // Preparing greys it to script, the colour of a thing that is
+                // not there yet, and disables it.
+                PillButton(
+                    model.running ? "Stop" : "Start listening",
+                    colour: model.preparation != nil
+                        ? Brand.script : model.running ? Brand.oxide : Brand.terracottaDeep,
+                    filled: true
+                ) {
                     model.running ? model.stop() : model.start()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Brand.stress)
                 .disabled(model.preparation != nil)
 
                 Spacer()
 
-                Button("Quit") { NSApplication.shared.terminate(nil) }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Brand.faint)
+                PillButton("Quit", colour: Brand.terracottaInk, filled: false) {
+                    NSApplication.shared.terminate(nil)
+                }
             }
         }
         .padding(.horizontal, 14)
@@ -224,53 +253,81 @@ struct MenuBarView: View {
                     + "Apps running as you read it from the file and are paired; "
                     + "a web page cannot. Rotating cuts off every paired client."
             )
-            .font(.system(size: 10))
-            .foregroundStyle(Brand.script)
+            .font(Type.body(10))
+            .foregroundStyle(Brand.inkFaint)
             .fixedSize(horizontal: false, vertical: true)
 
             Text(model.tokenFile)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(Brand.ghost)
+                .font(Type.mono(10))
+                .foregroundStyle(Brand.script)
                 .lineLimit(1)
                 .truncationMode(.middle)
 
             // The full token does not fit on one line at this width, so it
-            // wraps when shown; masked, it is one short line.
-            Text((model.tokenShown ? model.token : model.maskedToken) ?? "—")
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(Brand.bright)
+            // wraps when shown; masked, it is one short line. A missing token
+            // — the sockets not yet bound — reads in the colour of absence.
+            Text((model.tokenShown ? model.token : model.maskedToken) ?? "··")
+                .font(Type.mono(11))
+                .foregroundStyle(model.token == nil ? Brand.script : Brand.ink)
                 .lineLimit(model.tokenShown ? 2 : 1)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
+                .modifier(FieldChrome())
 
             HStack(spacing: 8) {
-                Button(model.tokenShown ? "Hide" : "Show") { model.tokenShown.toggle() }
-                    .font(.system(size: 11))
-                    .disabled(model.token == nil)
+                PillButton(
+                    model.tokenShown ? "Hide" : "Show",
+                    colour: model.token == nil ? Brand.script : Brand.terracottaInk,
+                    filled: false, compact: true
+                ) {
+                    model.tokenShown.toggle()
+                }
+                .disabled(model.token == nil)
 
-                Button("Copy") { model.copyToken() }
-                    .font(.system(size: 11))
-                    .disabled(model.token == nil)
+                PillButton(
+                    "Copy", colour: model.token == nil ? Brand.script : Brand.terracottaInk,
+                    filled: false, compact: true
+                ) {
+                    model.copyToken()
+                }
+                .disabled(model.token == nil)
 
                 Spacer()
 
-                Button(model.rotateArmed ? "Really rotate" : "Rotate") { model.rotateToken() }
-                    .font(.system(size: 11))
-                    .tint(model.rotateArmed ? Brand.stress : nil)
-                    .disabled(model.token == nil)
+                // Armed, it turns oxide and fills: the second click is the
+                // one that cuts every paired client off.
+                PillButton(
+                    model.rotateArmed ? "Really rotate" : "Rotate",
+                    colour: model.token == nil
+                        ? Brand.script : model.rotateArmed ? Brand.oxide : Brand.terracottaInk,
+                    filled: model.rotateArmed, compact: true
+                ) {
+                    model.rotateToken()
+                }
+                .disabled(model.token == nil)
             }
         }
         .padding(.top, 7)
     }
 
+    /// Segment labels: what distinguishes the engines, and nothing else.
+    private static func short(_ choice: EngineChoice) -> String {
+        switch choice {
+        case .fluid160: "160 ms"
+        case .fluid320: "320 ms"
+        case .fluid1280: "1280 ms"
+        case .apple: "Apple"
+        }
+    }
+
     private func endpoint(_ label: String, _ port: String) -> some View {
         HStack(spacing: 4) {
             Text(label)
-                .font(.system(size: 10))
+                .font(Type.mono(10))
                 .foregroundStyle(Brand.script)
             Text(port)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(Brand.ghost)
+                .font(Type.mono(10))
+                .foregroundStyle(Brand.inkFaint)
         }
     }
 }
@@ -282,6 +339,8 @@ struct MenuBarView: View {
 /// detail the bar throws away — a quiet room floor sits at the bottom of the
 /// bar but still moves the number, which is what proves the microphone is live
 /// when nobody is speaking.
+///
+/// Drawn on the dark block, in the block's own colours.
 struct LevelMeter: View {
     let db: Double
     let reading: Double
@@ -301,22 +360,23 @@ struct LevelMeter: View {
             }
 
             Text(reading <= -119 ? "––" : String(format: "%.0f", reading))
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(reading <= -119 ? Brand.script : Brand.faint)
+                .font(Type.mono(10))
+                .foregroundStyle(reading <= -119 ? Brand.script : Brand.Block.text)
                 .frame(width: 24, alignment: .trailing)
 
             Text("dB")
-                .font(.system(size: 9))
-                .foregroundStyle(Brand.script)
+                .font(Type.mono(9))
+                .foregroundStyle(Brand.Block.dim)
         }
     }
 
-    /// Amber through the working range, red at the top, using the prompter's
-    /// own key so a hot signal reads here the way a REC light does there.
+    /// Terracotta through the working range, oxide at the top — the family's
+    /// record red, so a hot signal reads here the way a REC light does in
+    /// the prompter.
     private func colour(for index: Int) -> Color {
-        guard index < filled else { return Brand.field }
+        guard index < filled else { return Brand.Block.field }
 
-        return index >= 18 ? Brand.rec : Brand.stress
+        return index >= 18 ? Brand.oxide : Brand.Block.terracotta
     }
 }
 
@@ -332,9 +392,9 @@ struct ProgressBar: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
-                Capsule().fill(Brand.field)
+                Capsule().fill(Brand.sink)
                 Capsule()
-                    .fill(Brand.stress)
+                    .fill(Brand.terracotta)
                     .frame(width: max(3, geometry.size.width * min(1, max(0, fraction))))
             }
         }
@@ -355,7 +415,7 @@ struct WorkingPulse: View {
         HStack(spacing: 5) {
             ForEach(0..<3, id: \.self) { index in
                 Circle()
-                    .fill(Brand.stress)
+                    .fill(Brand.terracotta)
                     .frame(width: 5, height: 5)
                     .opacity(bright ? 0.95 : 0.25)
                     .animation(
@@ -369,5 +429,82 @@ struct WorkingPulse: View {
         }
         .frame(height: 5)
         .onAppear { bright = true }
+    }
+}
+
+/// The site's pill button, drawn from shapes.
+///
+/// A system `Button` in a bordered style is AppKit-backed and neither matches
+/// the panel nor survives `ImageRenderer` — so the design could not be
+/// reviewed without a human at a screen. A capsule and a label solve both.
+struct PillButton: View {
+    let label: String
+    let colour: Color
+    let filled: Bool
+    /// Row-sized: for controls that sit beside a pill, not in a bar.
+    var compact = false
+    let action: () -> Void
+
+    init(
+        _ label: String, colour: Color, filled: Bool, compact: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.label = label
+        self.colour = colour
+        self.filled = filled
+        self.compact = compact
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(Type.body(compact ? 9.5 : 11, .semibold))
+                .foregroundStyle(filled ? Brand.ground : colour)
+                .padding(.horizontal, compact ? 8 : 12)
+                .padding(.vertical, compact ? 2.5 : 5)
+                .background(Capsule().fill(filled ? colour : .clear))
+                .overlay(Capsule().strokeBorder(colour, lineWidth: filled ? 0 : 1.2))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// A choice drawn from shapes: the site's pill, split into equal segments.
+struct Segmented<Value: Hashable>: View {
+    let options: [(Value, String)]
+    @Binding var selection: Value
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(options, id: \.0) { value, label in
+                let on = value == selection
+                Button {
+                    selection = value
+                } label: {
+                    Text(label)
+                        .font(Type.body(11, .semibold))
+                        .foregroundStyle(on ? Brand.ground : Brand.terracottaInk)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(on ? Brand.terracottaDeep : .clear)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(Brand.terracottaInk, lineWidth: 1.2))
+    }
+}
+
+/// A text field's frame, drawn, so it sits on limestone the way the site's
+/// install chip does rather than in the system's rounded border.
+struct FieldChrome: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Brand.ground))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Brand.line, lineWidth: 1))
     }
 }

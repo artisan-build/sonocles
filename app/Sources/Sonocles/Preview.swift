@@ -14,10 +14,10 @@ import SwiftUI
 ///
 /// One known limitation: `ImageRenderer` cannot rasterise AppKit-backed
 /// controls, and draws them as a filled accent rectangle with a "no entry"
-/// glyph instead. The engine `Picker` shows up that way and is fine in the real
-/// app. It is worth knowing before chasing it — and it is why the progress bar
-/// here is drawn from shapes rather than borrowed from `ProgressView`, which
-/// had the same problem and did not match the meter either.
+/// glyph instead. Nothing here uses one any more — the progress bar, the
+/// buttons, the field chrome and the engine picker are all drawn from
+/// shapes for exactly this reason — and anything added later that does will
+/// show up that way in these PNGs before it shows up on a screen.
 @MainActor
 enum Preview {
     static func renderIfRequested() -> Bool {
@@ -136,19 +136,19 @@ enum Preview {
                 ForEach([17, 19, 34, 64], id: \.self) { size in
                     VStack(spacing: 8) {
                         SonoclesMark(lineWidth: size <= 20 ? 1.35 : 2.4)
-                            .foregroundStyle(Brand.stress)
+                            .foregroundStyle(Brand.terracotta)
                             .frame(width: CGFloat(size), height: CGFloat(size))
                         SonoclesMark(progress: 0.34, lineWidth: size <= 20 ? 1.35 : 2.4)
-                            .foregroundStyle(Brand.ghost)
+                            .foregroundStyle(Brand.script)
                             .frame(width: CGFloat(size), height: CGFloat(size))
                         Text("\(size)")
-                            .font(.system(size: 8))
+                            .font(Type.mono(8))
                             .foregroundStyle(Brand.script)
                     }
                 }
             }
             .padding(22)
-            .background(Brand.panel)
+            .background(Brand.ground)
         )
     }
 
