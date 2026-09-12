@@ -1,0 +1,80 @@
+---
+title: Authentication
+description: A bearer token, always, on every route and both transports. Written to a file your apps can read and a web page cannot.
+---
+import Callout from '../../components/Callout.astro';
+
+Every route on both sockets is behind a bearer token, the event stream
+included. The app writes it to
+
+```
+~/Library/Application Support/Sonocles/token
+```
+
+with mode `0600` the first time the sockets come up. It is 64 hex characters
+on one line. Any app running as the same user reads the file and is paired;
+nothing else can.
+
+## The three places it goes
+
+- **HTTP:** `Authorization: Bearer <token>` on every request, including
+  `GET /`. Missing or wrong → `401` with `{ "error": "authentication required" }`
+  and `WWW-Authenticate: Bearer realm="Sonocles"`. The check runs before
+  routing, so an unknown path is `401` without the token and `404` with it —
+  the route table is not enumerable without the token. `OPTIONS` preflight
+  is the one unauthenticated answer, because a browser sends it before it
+  will attach the header.
+- **SSE:** `EventSource` cannot set headers, so
+  `GET /events?access_token=<token>` is accepted as well (RFC 6750 §2.3).
+  Loopback only, so the URL form exposes nothing a local page could not read
+  from the header form.
+- **WebSocket:** the first frame must be `{"auth": "<token>"}`, answered
+  `{"id": null, "status": 200, "body": {"authenticated": true}}`. Until then
+  every other frame is answered `{"id": …, "status": 401, "body": {"error":
+  "authentication required"}}` and no event is delivered. A header on the
+  upgrade would be the HTTP-shaped way, but a browser `WebSocket` cannot set
+  one, so the frame is the one way that works everywhere and it is the only
+  way. An `id` in the frame, of any JSON type, is echoed in the answer.
+
+## Rotating it
+
+`POST /token/rotate`, or the Rotate button in the popover, writes a new
+token to the file and refuses the old one from the very next request, on
+both transports. Every paired client has to read the file again; a
+WebSocket that authenticated with the old token stays up but must `auth`
+again before it receives anything. Rotate it if the code was ever shown
+somewhere it should not have been.
+
+```sh
+TOKEN="$(cat ~/Library/Application\ Support/Sonocles/token)"
+curl -s -H "Authorization: Bearer $TOKEN" -X POST http://127.0.0.1:7357/token/rotate
+```
+
+```json
+{ "token": "3f9c0a7e5d1b2c4a6e8f0b1d3c5a7e9f2b4d6c8a0e1f3b5d7c9a2e4f6b8d0c1e" }
+```
+
+If the file cannot be written it answers `500` with the error shape and the
+old token stays valid — a rotation that half-happened would lock everyone
+out, the caller included.
+
+## Why a token on loopback
+
+The threat is not the network; the sockets never leave `127.0.0.1`. The
+threat is a web page in your browser making requests to `localhost:7357` —
+which any page can do — and switching on a microphone, or reading the
+transcript of everything said near it. A token is the defence against that.
+A page cannot read a file on your disk; an app running as you can. That is
+the entire mechanism, and it is why the lock costs nothing to have on: it
+is on, always, and same-machine apps pair by reading the file.
+
+<Callout kind="note" title="What this replaced">
+An earlier scheme had optional HTTP Basic on the control routes, with
+`/events` left open because `EventSource` had no way to carry a credential.
+Two things were wrong with it. The lock was off by default, so a fresh
+install let any page in the user's browser switch on the microphone; and
+the transcript was readable by the same page regardless. The token in the
+query string is what makes closing the stream possible. Release 0.1.2 still
+carries the old scheme; the token ships in the next one, and this page
+describes the code on `main`.
+</Callout>

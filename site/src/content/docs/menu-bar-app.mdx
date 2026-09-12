@@ -1,0 +1,81 @@
+---
+title: The menu bar app
+description: A mark that tells you whether it is listening, and a popover with a meter, the last few words, two numbers, an engine picker and the token. Nothing in it that the API cannot do.
+---
+import Callout from '../../components/Callout.astro';
+
+Sonocles.app has no window and no Dock icon. It lives in the menu bar and
+opens as a popover, and it is a thin shell over the same `Service` the CLI
+drives and the HTTP API controls. That is deliberate: anything clever added
+to the popover would be behaviour the measurements never saw and the API
+cannot reach, so there is nothing clever in it.
+
+## The mark
+
+The mark is the state. Dimmed, it is idle; at full strength, it is
+listening. It is a template image, so it takes the menu bar's colour in
+light and dark and the dimming survives as opacity.
+
+The sockets are up either way. Idle means capture is off, not that the app
+is unreachable — `POST /start` works while the mark is dim, and that is the
+point of the split.
+
+## The popover
+
+**The meter.** Twenty cells over the useful range, −60 dBFS to clipping, and
+a numeric peak beside them. The number is driven straight from the audio
+thread, independent of the model, which is what makes it useful: a quiet
+room sits at the bottom of the bar but still moves the number, and that is
+the proof that the microphone is live when nobody is speaking. `––` means
+no reading at all.
+
+**The words.** The current utterance, up to three lines, head-truncated so
+the newest word is always visible. Height is reserved, so an arriving word
+never shoves the rest of the popover down — at five frames a second that
+would be a twitch, not an interface.
+
+**Two numbers.** `lag` is how far behind the live audio the last frame was;
+`every` is the gap since the frame before it. An unmeasured value shows as
+`··`, never as `0`. Rendering absence as a number is how an earlier build
+spent a session insisting it was real-time while measuring nothing at all.
+
+**Engine.** Parakeet 160 ms (the default), 320 ms, 1280 ms, or Apple
+SpeechAnalyzer on macOS 26. Switching restarts capture: the models differ,
+and a half-swapped pipeline would report numbers belonging to neither.
+[Engines](/docs/engines) has the measurements that chose the default.
+
+**Endpoints.** `HTTP :7357` and `WS :7358`. Labels, not switches — the
+sockets bind at launch and stay up for the life of the app.
+
+**Control API.** The token, masked to its ends, with Show, Copy and Rotate,
+and the path of the file it lives in. Rotate is two clicks: the first arms
+it for six seconds, the second does it. A rotation cuts off every other
+paired client until it re-reads the file, so it is not something to do on
+one slip.
+
+**Start listening / Stop.** The same thing as `POST /start` and
+`POST /stop`. Disabled while the models are being prepared.
+
+**Quit.** Takes the sockets down with it. There is no daemon behind the
+app; the app is the process.
+
+## The first run
+
+Before the first listen, the popover shows what the engine is doing instead
+of the meter: *Finding model files*, then a progress bar for the download,
+then a pulse for compiling. The bar is real when there is a fraction to
+report and a pulse when there is not — compiling has no measurable progress,
+and animating a bar to look busy would be the same lie as reporting an
+unmeasured latency as zero.
+
+<Callout kind="note" title="One time only">
+The models cache on disk. Every launch after the first goes straight to the
+microphone prompt, or straight to listening once that is granted.
+</Callout>
+
+## What it costs to leave running
+
+Idle, nothing: two bound ports and a dimmed mark. Listening, the Neural
+Engine and a microphone tap, and no CPU your encoder is competing for. That
+is the entire reason the thing was written, and it is what makes it
+something to leave listening for the length of a take.

@@ -1,0 +1,298 @@
+# Sonocles HTTP API — OpenAPI
+#
+# Hand-authored and first-class: CI binds the real `Service` — sockets up,
+# capture never started — and validates live responses against this file
+# (app/Tests/SonoclesCoreTests/ContractTests.swift), so "current with the
+# code" is enforced rather than aspired to. The site's API reference is
+# generated from it at build time (site/src/lib/openapi.ts). The WebSocket
+# transport carries the same frames — see docs/PROTOCOL.md for the framing.
+openapi: 3.1.0
+info:
+  title: Sonocles
+  version: 0.1.3
+  description: >
+    On-device speech-to-text, streamed live. The microphone as a stream of
+    JSON frames over server-sent events and WebSocket, about 180 ms behind the
+    speaker, and a small control API to start and stop it. Loopback only;
+    bearer token always.
+servers:
+  - url: http://127.0.0.1:7357
+security:
+  - bearer: []
+# The WebSocket transport (ws://127.0.0.1:7358) carries every frame GET /events
+# does, and nothing else: there are no commands over it yet. Not an OpenAPI
+# `path`; described here.
+x-websocket:
+  url: ws://127.0.0.1:7358
+  auth:
+    description: >
+      The first frame must authenticate; until it does, every other frame is
+      answered 401 and no event is delivered. A browser WebSocket cannot set
+      an Authorization header, so the frame is the only way. An `id` in the
+      frame, of any JSON type, is echoed in the answer.
+    request: { auth: '<token>' }
+    response: { id: null, status: 200, body: { authenticated: true } }
+  response:
+    description: >
+      After the auth answer, every message is a Frame — the same bytes
+      GET /events delivers as `data:` lines. Frames have no `status`; the
+      auth answer does.
+    example: { type: partial, text: the menu bar, ts: 1788569799791, seq: 3, audioStart: 40.28, audioEnd: 40.8, lagMs: 200 }
+  events:
+    description: The Frame schema, one per message — the two kinds are under Frames below.
+# Frames, as delivered on GET /events (SSE `data:` lines) and to every
+# authenticated WebSocket client — the same bytes on both.
+x-events:
+  - event: partial
+    description: A volatile hypothesis, revised as you speak; about one word each, roughly every 200 ms. What should drive a scroll or fire a cue.
+    example: { type: partial, text: the menu bar, ts: 1788569799791, seq: 3, audioStart: 40.28, audioEnd: 40.8, lagMs: 200 }
+  - event: final
+    description: Settled text for one utterance, 1.6–3.1 s after it ended. The next partial starts empty. For the transcript, never for timing.
+    example: { type: final, text: the menu bar app is listening, ts: 1788569802140, seq: 9, audioStart: 40.28, audioEnd: 42.12, lagMs: 1810 }
+paths:
+  /:
+    get:
+      operationId: discovery
+      summary: Who this is, how to authenticate, where the sockets are.
+      description: >
+        The first call a client makes. `auth` is always `bearer`; it is here so
+        a client written against a future scheme can tell which one it has
+        reached rather than guessing from a 401.
+      responses:
+        '200':
+          description: Discovery.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discovery'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /status:
+    get:
+      operationId: status
+      summary: What the sidecar is doing — idle, starting, or listening — and whether it hears anything.
+      description: >
+        `state` has three values rather than a boolean because `POST /start`
+        returns before capture is up: models load, macOS may ask for the
+        microphone. Poll until `listening`. `levelDb` is present only while
+        capturing; absent means unmeasured, never zero.
+      responses:
+        '200':
+          description: The current state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /start:
+    post:
+      operationId: start
+      summary: Begin capture. Answers at once with the state, which is `starting` until the models are resident and the microphone is granted.
+      description: >
+        Idempotent: a second `start` while starting or listening changes
+        nothing. On the first run the models download (~220 MB, once) and
+        compile for the Neural Engine, and `preparing` says which.
+      responses:
+        '200':
+          description: >
+            The state after the request — `starting` on the way up,
+            `listening` once there.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+              example: { state: starting, listening: false, engine: Parakeet 160 ms, clients: 1, uptime: 3.1, preparing: Downloading model — 42% (file 2 of 5), preparingFraction: 0.42 }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /stop:
+    post:
+      operationId: stop
+      summary: End capture. The sockets stay up; `start` brings it back.
+      description: >
+        Idempotent: `stop` on an idle sidecar answers `idle` and does nothing.
+      responses:
+        '200':
+          description: The state after the request — always `idle`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+              example: { state: idle, listening: false, engine: Parakeet 160 ms, clients: 1, uptime: 97.6 }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /events:
+    get:
+      operationId: events
+      summary: The stream — one Frame per data line, for as long as the connection is open.
+      description: >
+        `EventSource` cannot set a header, so the token is accepted as
+        `?access_token=` here (RFC 6750 §2.3). Frames arrive only while
+        listening; the connection opens either way, so a consumer can attach
+        before `start`.
+      parameters:
+        - name: access_token
+          in: query
+          required: false
+          description: The bearer token, for clients that cannot set the header.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: An open text/event-stream; each data line is a Frame.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /token/rotate:
+    post:
+      operationId: rotateToken
+      summary: Write a new token and refuse the old one from the next request, on both transports.
+      description: >
+        Takes no body. Every other paired client has to read the file again —
+        that is what rotation is for. A WebSocket that authenticated with the
+        old token stays up but must `auth` again.
+      responses:
+        '200':
+          description: The new token. The old one is dead after this response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: >
+            The token file could not be written. The old token stays valid,
+            so a half-rotation cannot lock everyone out.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: >
+        The contents of `~/Library/Application Support/Sonocles/token`, 64 hex
+        characters, mode 0600. Any app running as the user reads it and is
+        paired; a web page cannot. `Authorization: Bearer <token>` on every
+        request, `?access_token=` on `GET /events`, a first frame of
+        `{"auth": "<token>"}` on the WebSocket.
+  responses:
+    Unauthorized:
+      description: >
+        No token, or the wrong one. Carries `WWW-Authenticate: Bearer
+        realm="Sonocles"`. The check runs before routing, so an unknown path
+        without the token is 401, not 404.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      additionalProperties: false
+      example: { error: authentication required }
+      properties:
+        error:
+          type: string
+          description: For humans.
+    Discovery:
+      type: object
+      required: [name, version, auth, ports]
+      additionalProperties: false
+      example: { name: Sonocles, version: 0.1.2, auth: bearer, ports: { http: 7357, ws: 7358 } }
+      properties:
+        name:
+          type: string
+          const: Sonocles
+        version:
+          type: string
+          description: What the bundle was stamped with, or `dev` from the CLI, which has no bundle.
+        auth:
+          type: string
+          const: bearer
+        ports:
+          type: object
+          required: [http]
+          additionalProperties: false
+          properties:
+            http:
+              type: integer
+            ws:
+              type: integer
+              description: Absent when the WebSocket transport was not started.
+    Status:
+      type: object
+      required: [state, listening, engine, clients, uptime]
+      additionalProperties: false
+      example: { state: listening, listening: true, engine: Parakeet EOU 120M (160 ms), clients: 1, uptime: 41.2, levelDb: -19.4 }
+      properties:
+        state:
+          type: string
+          enum: [idle, starting, listening]
+        listening:
+          type: boolean
+        engine:
+          type: string
+          description: The engine's own name once running, else the configured choice.
+          example: Parakeet EOU 120M (160 ms)
+        clients:
+          type: integer
+          description: Connections across both transports.
+        uptime:
+          type: number
+          description: Seconds since the sockets came up.
+        levelDb:
+          type: number
+          description: Peak input level in dBFS. Present only while capturing — absent means unmeasured, never zero.
+        preparing:
+          type: string
+          description: What the engine is doing before it can listen — finding, downloading or compiling models. Absent once resident.
+        preparingFraction:
+          type: number
+          description: Fraction of the download complete, where one is knowable. Absent while compiling, which has no measurable progress and is not given an invented one.
+    Token:
+      type: object
+      required: [token]
+      additionalProperties: false
+      example: { token: 3f9c0a7e5d1b2c4a6e8f0b1d3c5a7e9f2b4d6c8a0e1f3b5d7c9a2e4f6b8d0c1e }
+      properties:
+        token:
+          type: string
+          description: 64 hex characters. Also written to the token file.
+    Frame:
+      type: object
+      description: >
+        One hypothesis on the wire. `text` and `ts` are the original contract;
+        everything else is additive.
+      required: [type, text, ts, seq]
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum: [partial, final]
+        text:
+          type: string
+          description: The current utterance, not the session. Each final closes one; the next partial starts empty.
+        ts:
+          type: integer
+          format: int64
+          description: Epoch milliseconds at emit — when we learned, not when it was said. Use audioEnd for timing.
+        seq:
+          type: integer
+          description: Monotonic. A gap means a dropped or reordered frame.
+        audioStart:
+          type: number
+          description: Seconds into the session's audio the text begins. Absent when the engine reported no timing.
+        audioEnd:
+          type: number
+          description: Seconds into the session's audio the text ends — when it was said, on the engine's own clock.
+        lagMs:
+          type: integer
+          description: Live audio edge minus audioEnd at emit. Signed — negative is a clock disagreement, surfaced rather than clamped. Absent means unmeasured, never zero.

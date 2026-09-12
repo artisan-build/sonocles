@@ -1,0 +1,133 @@
+---
+title: Troubleshooting
+description: The things that go wrong, what they look like, and what they mean. Most of them are macOS declining to say something.
+---
+import Callout from '../../components/Callout.astro';
+
+## It runs and hears nothing
+
+The mark is at full strength, `GET /status` says `listening: true`, the
+sockets are up, and not one word arrives. The meter is the tell: if it is
+dead, no audio is reaching the process.
+
+`AVAudioEngine` on macOS does not prompt. With no microphone grant it starts
+perfectly happily and delivers silence forever, so a denied app presents as
+a completely healthy pipeline that transcribes nothing. Sonocles asks for
+the grant before it starts the engine and refuses to report `listening`
+without it — but a grant that exists and does not apply to *this* build is
+the case that still catches people, and it comes in two forms.
+
+**The signing identity changed.** macOS grants permissions to a signing
+identity, not to a bundle. A build signed with a different certificate is a
+different app to Privacy, and every grant vanishes on the first properly
+signed build. Going from an ad-hoc local build to the Developer ID release
+is exactly this. Grant it again.
+
+**The CLI hears and the app does not.** A CLI inherits its terminal's
+microphone grant; a signed `.app` has its own identity and needs both
+`NSMicrophoneUsageDescription` in its `Info.plist` **and** the
+`com.apple.security.device.audio-input` entitlement. With the hardened
+runtime and no entitlement, the app cannot record and cannot ask to — the
+entitlement is checked *before* TCC is consulted, so no prompt appears and
+the app never appears in System Settings → Privacy & Security → Microphone
+at all. A release build has both; a local build signed by hand may not.
+
+<Callout kind="trap" title="If Sonocles is not in the list">
+An app that has never been able to ask does not appear in the Privacy pane
+at all. An empty list is not "denied", it is "the request never happened" —
+and the failure with only one of the plist key and the entitlement looks
+identical to the failure with neither.
+</Callout>
+
+The one comparison that settles it in a minute: run `make run` against the
+same audio. Fifteen events against zero, same sentence, same second, turned
+a day of possible theories into a two-line fix once, and it is written up
+in the repository's `docs/ENGINES.md` so it costs nothing next time.
+
+## Stuck on `starting`
+
+`POST /start` answered `starting` and `GET /status` still says so a minute
+later. That is `requestAccess` blocking on the microphone dialog: someone
+has to answer it. If the app is on a machine nobody is looking at, that is
+the whole problem.
+
+## It falls back to `idle` after `start`
+
+The grant was refused — the dialog was dismissed, or the app is denied in
+System Settings → Privacy & Security → Microphone. The status line in the
+popover says *could not start* with the reason. Grant it and start again;
+the app does not need relaunching.
+
+## Everything answers `401`
+
+The token in your client is not the token in the file. Either it was
+rotated — from the popover, or by another client's `POST /token/rotate` —
+or the client is sending it wrongly. Read the file again:
+
+```sh
+cat ~/Library/Application\ Support/Sonocles/token
+```
+
+Then check the form: `Authorization: Bearer <token>` on HTTP,
+`?access_token=` on the SSE URL, `{"auth": "<token>"}` as the first
+WebSocket frame. And a typo in the path looks the same: the check runs
+before routing, so an unknown path is `401` until the token is right and
+only then `404`.
+
+## The WebSocket connects and nothing arrives
+
+It has not authenticated. Until the first frame is `{"auth": "<token>"}`,
+every other frame is answered `401` and no event is delivered. Send the auth
+frame on `open`, and skip the one message that has a `status` — that is the
+answer, and frames never carry one.
+
+## The stream connects and nothing arrives
+
+Capture is not running. The sockets are up from launch; frames arrive only
+while listening. `GET /status` will say `idle`. `POST /start`, or press the
+button.
+
+## `lag` is over a second at first
+
+The startup transient. The buffer feeding the engine is unbounded, so
+silence captured before you start speaking accumulates a backlog the engine
+then chews through — 1660 → 1460 → 1380 → 1260 ms observed, settling near
+180 ms. Starting Sonocles before you start reading hides it entirely. It is
+real and not yet fixed.
+
+## Finals are late
+
+By design. A `final` waits out 1280 ms of silence before the engine will
+call the utterance ended, then finishes decoding: 1.6–3.1 s after the
+speech. Partials are what should drive anything with a deadline; finals are
+for the transcript.
+
+## It heard "debt"
+
+You said "dad". The 120M model mishears — "spoken" as "spoke", "arrives and"
+as "around" — and the trade is deliberate: 160 ms chunks are finer and less
+laggy than 320 ms, and accuracy is what pays for it. A fuzzy matcher
+downstream absorbs this; a clean transcript is not what this is for.
+
+## The Apple engine is refused
+
+`Apple SpeechAnalyzer` needs macOS 26, and building it needs an Xcode 26
+toolchain; on anything older the choice is refused with a message rather
+than silently swapped for Parakeet. It is kept only as the baseline for the
+comparison on [Engines](/docs/engines).
+
+## The port is in use
+
+The app binds `7357` and `7358` at launch. If either is held — a CLI you
+left running, another copy of the app — the popover's status line says
+*Could not bind* and the sockets are not up, though the popover itself
+still opens. Quit the other process, or start the CLI on other ports with
+`--http` and `--ws`. Rheocles is on `7447` and `7448` and does not collide.
+
+## The models will not download
+
+The first start fetches about 219 MB from Hugging Face. No network, or a
+proxy that blocks it, leaves the popover on *Finding model files* or a
+download that does not advance. The status line carries the error; it is
+once, and after it the models live in
+`~/Library/Application Support/FluidAudio` and never download again.
