@@ -1,0 +1,36 @@
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+Thumbs.db
+
+# --- Sonocles ---------------------------------------------------------------
+# The engine binary. 16 MB of Swift build product that bin/sync-sidecar.sh
+# copies in from app/.build; it is rebuilt, never edited, and does not belong
+# in a git history that already ships the source it comes from.
+/extras/
+
+# electron-builder output.
+/nativephp/electron/dist/
