@@ -186,7 +186,9 @@ struct MenuBarView: View {
             // `Picker` is AppKit-backed and `ImageRenderer` cannot rasterise
             // it, so every design review of this popover had a yellow box
             // where the picker was. The full name sits beside the label
-            // because four full names do not fit in 316 pt.
+            // because four full names do not fit in 316 pt. Only the engines
+            // this Mac can run are offered — the same list `GET /engine`
+            // answers as `available` — so Apple is not a segment on macOS 15.
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Engine")
@@ -198,7 +200,7 @@ struct MenuBarView: View {
                         .foregroundStyle(Brand.script)
                 }
                 Segmented(
-                    options: EngineChoice.allCases.map { ($0, Self.short($0)) },
+                    options: EngineChoice.available.map { ($0, Self.short($0)) },
                     selection: Binding(get: { model.engine }, set: { model.use($0) }))
             }
 

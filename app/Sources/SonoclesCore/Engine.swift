@@ -55,6 +55,75 @@ public enum EngineChoice: String, Sendable, CaseIterable {
         }
     }
 
-    /// What the CLI accepts, and what settings persist.
+    /// What the CLI accepts, what settings persist, and what goes on the
+    /// wire: `GET /engine` answers it and `POST /engine` takes it.
     public var slug: String { rawValue }
+
+    /// Whether this engine can run on a given OS.
+    ///
+    /// A pure function of the version, so it can be asserted without an
+    /// engine. `apple` is `SpeechAnalyzer`, which is macOS 26 and an Xcode 26
+    /// toolchain; on anything older it is compiled out and would only fail at
+    /// start. Parakeet runs everywhere the package does.
+    public func isAvailable(on version: OperatingSystemVersion) -> Bool {
+        switch self {
+        case .fluid160, .fluid320, .fluid1280:
+            return true
+        case .apple:
+            #if compiler(>=6.2)
+            return version.majorVersion >= 26
+            #else
+            return false
+            #endif
+        }
+    }
+
+    public var isAvailable: Bool {
+        isAvailable(on: ProcessInfo.processInfo.operatingSystemVersion)
+    }
+
+    /// The choices this machine can run, in the order the popover shows them.
+    ///
+    /// On the wire as `available`, so a client on macOS 15 is not offered
+    /// `apple` and then refused.
+    public static var available: [EngineChoice] { allCases.filter(\.isAvailable) }
+}
+
+/// Why `POST /engine` said no. Both are the client's to fix, so both are 400.
+public enum EngineError: Error, LocalizedError, Equatable {
+    /// Not one of the four slugs.
+    case unknown(String)
+    /// A real engine this machine cannot run — `apple` below macOS 26.
+    case unavailable(EngineChoice)
+
+    public var errorDescription: String? {
+        switch self {
+        case .unknown(let slug):
+            return "unknown engine '\(slug)' — one of "
+                + EngineChoice.allCases.map(\.slug).joined(separator: ", ")
+        case .unavailable(let choice):
+            return "engine '\(choice.slug)' is not available on this Mac"
+        }
+    }
+}
+
+/// The engine changed, on the stream — so no client has to poll `/status` to
+/// learn that another one switched it underneath them.
+///
+/// Frames have `type`; this has `event`. A consumer that only handles frames
+/// skips it the way it already skips the WebSocket auth answer.
+public struct EngineEvent: Encodable, Sendable {
+    public let event = "engine"
+    public let engine: String
+    public let label: String
+
+    public init(_ choice: EngineChoice) {
+        self.engine = choice.slug
+        self.label = choice.label
+    }
+
+    public var json: String? {
+        guard let data = try? JSONEncoder().encode(self) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
 }

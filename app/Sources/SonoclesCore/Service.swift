@@ -100,6 +100,11 @@ public final class Service: @unchecked Sendable {
     public var onFrame: (@Sendable (Hypothesis, Frame, UInt64) -> Void)?
     public var onLevel: (@Sendable (Double) -> Void)?
     public var onListeningChanged: (@Sendable (Bool) -> Void)?
+    /// The engine changed — from the popover or over `POST /engine`, the
+    /// same callback either way. What the `engine` event on the stream says,
+    /// delivered in-process so the popover's control follows a switch made
+    /// over HTTP.
+    public var onEngineChanged: (@Sendable (EngineChoice) -> Void)?
     /// Model download and compilation, reported before listening begins.
     public var onPreparation: (@Sendable (Preparation) -> Void)?
 
@@ -138,12 +143,19 @@ public final class Service: @unchecked Sendable {
                 status: { [weak self] in
                     self?.status()
                         ?? .init(
-                            state: "idle", listening: false, engine: "-", clients: 0, uptime: 0,
+                            state: "idle", listening: false, engine: "-",
+                            engineId: config.sidecar.engine.slug, clients: 0, uptime: 0,
                             levelDb: nil, preparing: nil, preparingFraction: nil)
                 },
                 rotateToken: { [weak self] in
                     guard let self else { throw CocoaError(.fileWriteUnknown) }
                     return try self.rotateToken()
+                },
+                engine: { [weak self] in
+                    self?.engine() ?? HTTPServer.Engine(config.sidecar.engine)
+                },
+                useEngine: { [weak self] slug in
+                    try self?.use(engineSlug: slug)
                 }
             )
             http = server
@@ -206,6 +218,15 @@ public final class Service: @unchecked Sendable {
         state.withLock { $0.sidecar?.engineName ?? $0.config.sidecar.engine.label }
     }
 
+    /// The engine as configured — what the next session will run, and what
+    /// the current one is running if there is one.
+    public var engineChoice: EngineChoice { state.withLock { $0.config.sidecar.engine } }
+
+    /// `GET /engine`.
+    public func engine() -> HTTPServer.Engine {
+        HTTPServer.Engine(engineChoice)
+    }
+
     public var hardwareFormat: AVAudioFormat? { state.withLock { $0.sidecar?.hardwareFormat } }
     public var engineFormat: AVAudioFormat? { state.withLock { $0.sidecar?.engineFormat } }
 
@@ -222,14 +243,15 @@ public final class Service: @unchecked Sendable {
     }
 
     public func status() -> HTTPServer.Status {
-        let (listening, starting, level, preparation) = state.withLock {
-            ($0.listening, $0.starting, $0.levelDb, $0.preparation)
+        let (listening, starting, level, preparation, engine) = state.withLock {
+            ($0.listening, $0.starting, $0.levelDb, $0.preparation, $0.config.sidecar.engine)
         }
 
         return HTTPServer.Status(
             state: listening ? "listening" : (starting ? "starting" : "idle"),
             listening: listening,
             engine: engineName,
+            engineId: engine.slug,
             clients: transports.reduce(0) { $0 + $1.clientCount },
             uptime: Date().timeIntervalSince(started),
             levelDb: listening ? level : nil,
@@ -238,13 +260,41 @@ public final class Service: @unchecked Sendable {
         )
     }
 
-    /// Reconfigure the next session. Restarts capture if it was running, since
-    /// a half-swapped pipeline would report numbers belonging to neither engine.
-    public func use(engine: EngineChoice) {
-        let wasListening = isListening
+    /// `POST /engine`: the slug off the wire, checked before anything moves.
+    public func use(engineSlug slug: String) throws {
+        guard let choice = EngineChoice(rawValue: slug) else { throw EngineError.unknown(slug) }
+        try use(engine: choice)
+    }
+
+    /// Switch engine. The one path for the popover, the CLI and the route.
+    ///
+    /// Restarts capture if it was running, since a half-swapped pipeline
+    /// would report numbers belonging to neither engine — so a switch while
+    /// listening is a stop and a start, and `starting` is visible between
+    /// them. Then the `engine` event goes out on both transports, so no
+    /// other client has to poll to learn the ground moved.
+    ///
+    /// Refuses an engine this Mac cannot run rather than accepting it and
+    /// failing at the next start, which would read as a microphone problem.
+    /// The same engine again is a no-op: nothing restarts and nothing is
+    /// announced.
+    public func use(engine: EngineChoice) throws {
+        guard engine.isAvailable else { throw EngineError.unavailable(engine) }
+
+        let (changed, wasListening) = state.withLock { state -> (Bool, Bool) in
+            (state.config.sidecar.engine != engine, state.listening || state.starting)
+        }
+        guard changed else { return }
+
         if wasListening { stopListening() }
         state.withLock { $0.config.sidecar.engine = engine }
         if wasListening { startListening() }
+
+        if let json = EngineEvent(engine).json {
+            for transport in transports { transport.broadcast(json) }
+        }
+        onEngineChanged?(engine)
+        note("engine · \(engine.label)")
     }
 
     public func startListening() {

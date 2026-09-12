@@ -57,6 +57,8 @@ do {
                   GET  /status        listening state, engine, client count, uptime
                   POST /start         begin capture
                   POST /stop          end capture
+                  GET  /engine        the engine as configured, and which ones this Mac can run
+                  POST /engine        {"engine": "<slug>"} — switch; a stop and a start if listening
                   POST /token/rotate  new token; the old one is dead after the reply
 
                 The token is at ~/Library/Application Support/Sonocles/token,

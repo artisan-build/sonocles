@@ -17,6 +17,7 @@ export const docsNav: NavEntry[] = [
 	{ id: 'engines', label: 'Engines and the measurement' },
 	{ id: 'auth', label: 'Authentication' },
 	{ id: 'control-api', label: 'The control API' },
+	{ id: 'engine-selection', label: 'Engine selection' },
 	{ id: 'api/reference', label: 'API reference' },
 	{ id: 'troubleshooting', label: 'Troubleshooting' },
 ];

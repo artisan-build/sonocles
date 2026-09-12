@@ -92,11 +92,13 @@ export const specTable: ApiSpec = {
 			id: 'control',
 			label: 'Control',
 			blurb:
-				'Start and stop capture without touching the popover. The answer to every one is the same Status object.',
+				'Start and stop capture, and choose the engine, without touching the popover. Start, stop and status answer the same Status object; the engine routes answer the Engine one.',
 			endpoints: [
 				{ method: 'GET', path: '/status', summary: 'What the sidecar is doing.' },
 				{ method: 'POST', path: '/start', summary: 'Begin capture.' },
 				{ method: 'POST', path: '/stop', summary: 'End capture.' },
+				{ method: 'GET', path: '/engine', summary: 'The engine, and which ones this Mac can run.' },
+				{ method: 'POST', path: '/engine', summary: 'Switch engine.' },
 			],
 		},
 		{
@@ -118,6 +120,11 @@ export const specTable: ApiSpec = {
 			type: 'final',
 			when: 'Settled text for one utterance.',
 			example: '{ "type": "final", "text": "the menu bar app is listening", "seq": 9, "audioEnd": 42.12 }',
+		},
+		{
+			type: 'engine',
+			when: 'The engine changed.',
+			example: '{ "event": "engine", "engine": "fluid320", "label": "Parakeet 320 ms" }',
 		},
 	],
 };
