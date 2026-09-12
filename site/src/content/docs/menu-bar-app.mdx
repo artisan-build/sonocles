@@ -40,8 +40,11 @@ would be a twitch, not an interface.
 spent a session insisting it was real-time while measuring nothing at all.
 
 **Engine.** Parakeet 160 ms (the default), 320 ms, 1280 ms, or Apple
-SpeechAnalyzer on macOS 26. Switching restarts capture: the models differ,
-and a half-swapped pipeline would report numbers belonging to neither.
+SpeechAnalyzer on macOS 26 — only the ones this Mac can run are offered.
+Switching restarts capture: the models differ, and a half-swapped pipeline
+would report numbers belonging to neither. The control is `POST /engine`
+with a click on it, and it follows the `engine` event, so a switch made
+over HTTP moves it too — [Engine selection](/docs/engine-selection).
 [Engines](/docs/engines) has the measurements that chose the default.
 
 **Endpoints.** `HTTP :7357` and `WS :7358`. Labels, not switches — the

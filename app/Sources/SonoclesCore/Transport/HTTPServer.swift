@@ -34,19 +34,28 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         /// Write a new token and make it the one every later request — on
         /// both transports — is compared against. Returns the new token.
         public var rotateToken: @Sendable () throws -> String
+        /// The engine as configured, and which ones this machine can run.
+        public var engine: @Sendable () -> Engine
+        /// Switch engine by slug. Throws `EngineError` for a slug that is not
+        /// one, or one this Mac cannot run; both answer 400.
+        public var useEngine: @Sendable (String) throws -> Void
 
         public init(
             discovery: @escaping @Sendable () -> Discovery,
             start: @escaping @Sendable () -> Void,
             stop: @escaping @Sendable () -> Void,
             status: @escaping @Sendable () -> Status,
-            rotateToken: @escaping @Sendable () throws -> String
+            rotateToken: @escaping @Sendable () throws -> String,
+            engine: @escaping @Sendable () -> Engine,
+            useEngine: @escaping @Sendable (String) throws -> Void
         ) {
             self.discovery = discovery
             self.start = start
             self.stop = stop
             self.status = status
             self.rotateToken = rotateToken
+            self.engine = engine
+            self.useEngine = useEngine
         }
     }
 
@@ -79,6 +88,24 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         }
     }
 
+    /// `GET /engine`, and the answer to `POST /engine`.
+    ///
+    /// The engine on the wire is the slug — what `sonocles-cli --engine`
+    /// takes — and the label is for humans. `available` is here because
+    /// `apple` is gated to macOS 26: a client on 15 should learn that from
+    /// the list, not from a 400.
+    public struct Engine: Codable, Sendable, Equatable {
+        public let engine: String
+        public let label: String
+        public let available: [String]
+
+        public init(_ choice: EngineChoice, available: [EngineChoice] = EngineChoice.available) {
+            self.engine = choice.slug
+            self.label = choice.label
+            self.available = available.map(\.slug)
+        }
+    }
+
     public struct Status: Encodable, Sendable {
         /// `idle` · `starting` · `listening`.
         ///
@@ -88,7 +115,12 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         /// reads as a failure. A caller polls until this says `listening`.
         public let state: String
         public let listening: Bool
+        /// The engine's own name once running, else the configured choice's
+        /// label. For a display; `engineId` is for a control.
         public let engine: String
+        /// The configured engine's slug, so a client polling `/status` knows
+        /// what it is looking at without a second call to `GET /engine`.
+        public let engineId: String
         public let clients: Int
         public let uptime: Double
         /// Peak input level in dBFS, or nil when not capturing.
@@ -108,12 +140,13 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         public let preparingFraction: Double?
 
         public init(
-            state: String, listening: Bool, engine: String, clients: Int, uptime: Double,
-            levelDb: Double?, preparing: String?, preparingFraction: Double?
+            state: String, listening: Bool, engine: String, engineId: String, clients: Int,
+            uptime: Double, levelDb: Double?, preparing: String?, preparingFraction: Double?
         ) {
             self.state = state
             self.listening = listening
             self.engine = engine
+            self.engineId = engineId
             self.clients = clients
             self.uptime = uptime
             self.levelDb = levelDb
@@ -208,15 +241,37 @@ public final class HTTPServer: Transport, @unchecked Sendable {
 
     private func accept(_ conn: NWConnection) {
         conn.start(queue: queue)
+        read(conn, buffered: Data())
+    }
 
+    /// Read until the head has ended and `Content-Length` bytes of body have
+    /// followed it. Until `POST /engine` nothing took a body and one receive
+    /// was enough; a client is free to send the head and the body in two
+    /// writes, and `URLSession` does.
+    private func read(_ conn: NWConnection, buffered: Data) {
         conn.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) {
-            [weak self] data, _, _, _ in
-            guard let self, let data, let request = Request(data) else {
+            [weak self] data, _, isComplete, _ in
+            guard let self, let data else {
                 conn.cancel()
                 return
             }
 
-            self.route(request, on: conn)
+            var buffer = buffered
+            buffer.append(data)
+
+            if let request = Request(buffer) {
+                if request.isComplete {
+                    self.route(request, on: conn)
+                } else if isComplete || buffer.count >= 64 * 1024 {
+                    conn.cancel()
+                } else {
+                    self.read(conn, buffered: buffer)
+                }
+            } else if !isComplete, buffer.count < 64 * 1024, !Request.hasHead(buffer) {
+                self.read(conn, buffered: buffer)
+            } else {
+                conn.cancel()
+            }
         }
     }
 
@@ -266,6 +321,26 @@ public final class HTTPServer: Transport, @unchecked Sendable {
                 respond(
                     conn, status: "500 Internal Server Error",
                     body: "{\"error\":\"could not write the token file\"}")
+            }
+
+        case ("GET", "/engine"):
+            respondJSON(conn, encodable: handlers?.engine())
+
+        case ("POST", "/engine"):
+            guard let handlers else {
+                respondJSON(conn, encodable: [String: String]?.none)
+                return
+            }
+            guard let slug = request.engineSlug else {
+                respondError(
+                    conn, status: "400 Bad Request", message: "expected {\"engine\": \"<slug>\"}")
+                return
+            }
+            do {
+                try handlers.useEngine(slug)
+                respondJSON(conn, encodable: handlers.engine())
+            } catch {
+                respondError(conn, status: "400 Bad Request", message: error.localizedDescription)
             }
 
         default:
@@ -325,6 +400,16 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         respond(conn, status: "200 OK", body: body)
     }
 
+    /// The error shape, with the message encoded rather than interpolated,
+    /// since a client's own slug is quoted back in it.
+    private func respondError(_ conn: NWConnection, status: String, message: String) {
+        let body =
+            (try? JSONEncoder().encode(["error": message]))
+            .flatMap { String(data: $0, encoding: .utf8) }
+            ?? "{\"error\":\"bad request\"}"
+        respond(conn, status: status, body: body)
+    }
+
     private func respond(_ conn: NWConnection, status: String, body: String?, extra: String = "") {
         let payload = body ?? ""
         let response = """
@@ -368,21 +453,44 @@ public final class HTTPServer: Transport, @unchecked Sendable {
         /// because `EventSource` has nowhere else to put it.
         let query: [String: String]
         let headers: [String: String]
+        /// What followed the head, up to `Content-Length`. Only `POST /engine`
+        /// reads it.
+        let body: Data
 
         init(
             method: String, path: String, query: [String: String] = [:],
-            headers: [String: String] = [:]
+            headers: [String: String] = [:], body: Data = Data()
         ) {
             self.method = method
             self.path = path
             self.query = query
             self.headers = headers
+            self.body = body
+        }
+
+        private static let headEnd = Data("\r\n\r\n".utf8)
+
+        /// Whether the bytes so far contain the end of a head — the point at
+        /// which a request that still does not parse is garbage rather than
+        /// merely short.
+        static func hasHead(_ data: Data) -> Bool { data.range(of: headEnd) != nil }
+
+        /// `Content-Length`, or zero: a request without one has no body.
+        var contentLength: Int { headers["content-length"].flatMap(Int.init) ?? 0 }
+
+        /// Every byte the head promised has arrived.
+        var isComplete: Bool { body.count >= contentLength }
+
+        /// The `engine` of a `{"engine": "<slug>"}` body, or nil for anything
+        /// else — including no body at all.
+        var engineSlug: String? {
+            struct Body: Decodable { var engine: String? }
+            return (try? JSONDecoder().decode(Body.self, from: body))?.engine
         }
 
         init?(_ data: Data) {
-            guard let text = String(data: data, encoding: .utf8),
-                let head = text.components(separatedBy: "\r\n\r\n").first
-            else { return nil }
+            let headBytes = data.range(of: Self.headEnd).map { data[..<$0.lowerBound] } ?? data
+            guard let head = String(data: headBytes, encoding: .utf8) else { return nil }
 
             var lines = head.components(separatedBy: "\r\n")
             guard !lines.isEmpty else { return nil }
@@ -416,6 +524,13 @@ public final class HTTPServer: Transport, @unchecked Sendable {
                 collected[key] = value
             }
             headers = collected
+
+            let length = collected["content-length"].flatMap(Int.init) ?? 0
+            if let range = data.range(of: Self.headEnd) {
+                body = Data(data[range.upperBound...].prefix(length))
+            } else {
+                body = Data()
+            }
         }
     }
 }

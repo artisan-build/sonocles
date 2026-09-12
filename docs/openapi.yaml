@@ -13,15 +13,15 @@ info:
   description: >
     On-device speech-to-text, streamed live. The microphone as a stream of
     JSON frames over server-sent events and WebSocket, about 180 ms behind the
-    speaker, and a small control API to start and stop it. Loopback only;
-    bearer token always.
+    speaker, and a small control API to start and stop it and choose the
+    engine. Loopback only; bearer token always.
 servers:
   - url: http://127.0.0.1:7357
 security:
   - bearer: []
-# The WebSocket transport (ws://127.0.0.1:7358) carries every frame GET /events
-# does, and nothing else: there are no commands over it yet. Not an OpenAPI
-# `path`; described here.
+# The WebSocket transport (ws://127.0.0.1:7358) carries everything GET /events
+# does — the frames and the engine event — and nothing else: there are no
+# commands over it yet. Not an OpenAPI `path`; described here.
 x-websocket:
   url: ws://127.0.0.1:7358
   auth:
@@ -34,14 +34,16 @@ x-websocket:
     response: { id: null, status: 200, body: { authenticated: true } }
   response:
     description: >
-      After the auth answer, every message is a Frame — the same bytes
-      GET /events delivers as `data:` lines. Frames have no `status`; the
-      auth answer does.
+      After the auth answer, every message is a Frame or the engine event —
+      the same bytes GET /events delivers as `data:` lines. Frames have
+      `type`; the engine event has `event`; the auth answer has `status`.
     example: { type: partial, text: the menu bar, ts: 1788569799791, seq: 3, audioStart: 40.28, audioEnd: 40.8, lagMs: 200 }
   events:
-    description: The Frame schema, one per message — the two kinds are under Frames below.
-# Frames, as delivered on GET /events (SSE `data:` lines) and to every
-# authenticated WebSocket client — the same bytes on both.
+    description: The Frame and EngineEvent schemas, one per message — the three kinds are under Frames below.
+# Everything delivered on GET /events (SSE `data:` lines) and to every
+# authenticated WebSocket client — the same bytes on both. Frames carry
+# `type`; the engine event carries `event`, so a consumer that only handles
+# frames skips it the way it already skips the WebSocket auth answer.
 x-events:
   - event: partial
     description: A volatile hypothesis, revised as you speak; about one word each, roughly every 200 ms. What should drive a scroll or fire a cue.
@@ -49,6 +51,9 @@ x-events:
   - event: final
     description: Settled text for one utterance, 1.6–3.1 s after it ended. The next partial starts empty. For the transcript, never for timing.
     example: { type: final, text: the menu bar app is listening, ts: 1788569802140, seq: 9, audioStart: 40.28, audioEnd: 42.12, lagMs: 1810 }
+  - event: engine
+    description: The engine changed, from the popover or over POST /engine. Has `event`, not `type`, so a frames-only consumer skips it. If capture was running it stopped and is starting again on the new engine.
+    example: { event: engine, engine: fluid320, label: Parakeet 320 ms }
 paths:
   /:
     get:
@@ -146,6 +151,57 @@ paths:
                 type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /engine:
+    get:
+      operationId: engine
+      summary: Which engine is configured, and which ones this Mac can run.
+      description: >
+        `engine` is the slug — what `sonocles-cli --engine` takes — and
+        `label` is for humans. `available` lists the slugs this machine can
+        run: `apple` needs macOS 26, and a client on 15 should learn that
+        here rather than from a 400.
+      responses:
+        '200':
+          description: The engine as configured.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Engine'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: useEngine
+      summary: Switch engine. If capture is running, it stops and starts again on the new one.
+      description: >
+        The one route that takes a body. A half-swapped pipeline would
+        report numbers belonging to neither engine, so a switch while
+        listening is a stop and a start — `starting` is visible on `/status`
+        in between, and a consumer on `/events` sees a gap in frames. The
+        `engine` event then goes out on both transports. The same engine
+        again changes nothing and announces nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EngineChoice'
+      responses:
+        '200':
+          description: The engine as configured, after the change.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Engine'
+        '400':
+          description: >
+            Not one of the four slugs, or one this Mac cannot run. Nothing
+            changed; `/status` says what it said before.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /token/rotate:
     post:
       operationId: rotateToken
@@ -229,9 +285,9 @@ components:
               description: Absent when the WebSocket transport was not started.
     Status:
       type: object
-      required: [state, listening, engine, clients, uptime]
+      required: [state, listening, engine, engineId, clients, uptime]
       additionalProperties: false
-      example: { state: listening, listening: true, engine: Parakeet EOU 120M (160 ms), clients: 1, uptime: 41.2, levelDb: -19.4 }
+      example: { state: listening, listening: true, engine: Parakeet EOU 120M (160 ms), engineId: fluid160, clients: 1, uptime: 41.2, levelDb: -19.4 }
       properties:
         state:
           type: string
@@ -240,8 +296,12 @@ components:
           type: boolean
         engine:
           type: string
-          description: The engine's own name once running, else the configured choice.
+          description: The engine's own name once running, else the configured choice's label. For a display; `engineId` is for a control.
           example: Parakeet EOU 120M (160 ms)
+        engineId:
+          type: string
+          enum: [fluid160, fluid320, fluid1280, apple]
+          description: The configured engine's slug — what `GET /engine` answers and `POST /engine` takes — so a client polling `/status` needs no second call.
         clients:
           type: integer
           description: Connections across both transports.
@@ -257,6 +317,55 @@ components:
         preparingFraction:
           type: number
           description: Fraction of the download complete, where one is knowable. Absent while compiling, which has no measurable progress and is not given an invented one.
+    EngineChoice:
+      type: object
+      required: [engine]
+      additionalProperties: false
+      example: { engine: fluid320 }
+      properties:
+        engine:
+          type: string
+          enum: [fluid160, fluid320, fluid1280, apple]
+          description: The slug. Anything else is 400.
+    Engine:
+      type: object
+      required: [engine, label, available]
+      additionalProperties: false
+      example: { engine: fluid160, label: Parakeet 160 ms, available: [fluid160, fluid320, fluid1280, apple] }
+      properties:
+        engine:
+          type: string
+          enum: [fluid160, fluid320, fluid1280, apple]
+          description: The configured engine's slug.
+        label:
+          type: string
+          description: The configured engine's name, for humans.
+        available:
+          type: array
+          description: The slugs this Mac can run, in the order the popover shows them. `apple` is absent below macOS 26.
+          items:
+            type: string
+            enum: [fluid160, fluid320, fluid1280, apple]
+    EngineEvent:
+      type: object
+      description: >
+        The engine changed. On the stream so no client polls to learn that
+        another one switched it. `event`, not `type`: a frames-only consumer
+        skips it.
+      required: [event, engine, label]
+      additionalProperties: false
+      example: { event: engine, engine: fluid320, label: Parakeet 320 ms }
+      properties:
+        event:
+          type: string
+          const: engine
+        engine:
+          type: string
+          enum: [fluid160, fluid320, fluid1280, apple]
+          description: The new engine's slug.
+        label:
+          type: string
+          description: The new engine's name, for humans.
     Token:
       type: object
       required: [token]

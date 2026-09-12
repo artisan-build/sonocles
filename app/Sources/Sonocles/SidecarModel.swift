@@ -79,6 +79,12 @@ final class SidecarModel {
             }
         }
 
+        // The segmented control follows the service, not the click: a switch
+        // made over POST /engine moves it too, which it did not before.
+        service.onEngineChanged = { [weak self] choice in
+            Task { @MainActor in self?.engine = choice }
+        }
+
         service.onFrame = { [weak self] hypothesis, frame, nanos in
             Task { @MainActor in
                 guard let self else { return }
@@ -116,13 +122,20 @@ final class SidecarModel {
         service = nil
     }
 
-    /// Switching engine restarts capture: models differ, and a half-swapped
-    /// pipeline would report numbers belonging to neither.
+    /// The same path as `POST /engine`. Switching engine restarts capture:
+    /// models differ, and a half-swapped pipeline would report numbers
+    /// belonging to neither. `engine` is set from the service's callback,
+    /// not here, so the control shows what the service has and nothing else.
     func use(_ choice: EngineChoice) {
-        guard choice != engine else { return }
-
-        engine = choice
-        service?.use(engine: choice)
+        guard let service else {
+            engine = choice
+            return
+        }
+        do {
+            try service.use(engine: choice)
+        } catch {
+            status = error.localizedDescription
+        }
     }
 
     /// Where the token lives, so the popover can say so.

@@ -40,7 +40,7 @@ const badges = (api.planned ?? 0) > 0;
 			<tr><td>HTTP + SSE</td><td><code>http://127.0.0.1:7357</code></td></tr>
 			<tr><td>WebSocket</td><td><code>ws://127.0.0.1:7358</code></td></tr>
 			<tr><td>Auth</td><td><code>Authorization: Bearer &lt;token&gt;</code> on every HTTP request; <code>?access_token=</code> also accepted on <code>GET /events</code>; on the WebSocket, a first frame of <code>{`{ "auth": "<token>" }`}</code></td></tr>
-			<tr><td>Bodies</td><td>JSON out; nothing takes a body in. <code>Content-Type: application/json</code></td></tr>
+			<tr><td>Bodies</td><td>JSON out; only <code>POST /engine</code> takes a body in. <code>Content-Type: application/json</code></td></tr>
 			<tr><td>Times</td><td><code>ts</code> is epoch milliseconds at emit; <code>audioStart</code> and <code>audioEnd</code> are seconds into the session's audio; <code>lagMs</code> is signed</td></tr>
 			<tr><td>Absence</td><td>an unmeasurable value is absent — never <code>0</code>. A missing <code>lagMs</code> is unknown; a missing <code>levelDb</code> means not capturing</td></tr>
 		</tbody>
@@ -54,6 +54,7 @@ const badges = (api.planned ?? 0) > 0;
 		<thead><tr><th>status</th><th>when</th></tr></thead>
 		<tbody>
 			<tr><td><code>401</code></td><td>no token, or the wrong one — on every route, before routing, so an unknown path without the token is <code>401</code> and not <code>404</code>. Carries <code>WWW-Authenticate: Bearer realm="Sonocles"</code></td></tr>
+			<tr><td><code>400</code></td><td>on <code>POST /engine</code>, a slug that is not one or that this Mac cannot run; nothing changed</td></tr>
 			<tr><td><code>404</code></td><td>no such route</td></tr>
 			<tr><td><code>500</code></td><td>the token file could not be written on rotate; the old token stays valid</td></tr>
 		</tbody>
@@ -94,7 +95,8 @@ const badges = (api.planned ?? 0) > 0;
 	<h2 id="frames">Frames</h2>
 	<p class="blurb">
 		Delivered on <code>GET /events</code> as <code>data:</code> lines, and on the WebSocket as
-		messages after the auth answer — the same bytes on both. <code>type</code> says which.
+		messages after the auth answer — the same bytes on both. <code>type</code> says which frame;
+		the one message that is not a frame has <code>event</code> instead.
 	</p>
 	<table class="events">
 		<thead><tr><th>type</th><th>when</th><th>example</th></tr></thead>

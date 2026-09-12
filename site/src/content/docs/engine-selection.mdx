@@ -1,0 +1,105 @@
+---
+title: Engine selection
+description: Two routes and one event. Read the engine as a slug, switch it from anywhere with the token, and learn from the stream when someone else did.
+---
+import Callout from '../../components/Callout.astro';
+
+The popover's engine control — 160 ms · 320 ms · 1280 ms · Apple — is a
+`POST /engine` with a click on it. Anything with the token can make the
+same choice, and anything on the stream hears about it. The rule this
+follows is the one the whole app is built to: if it can be clicked, it can
+be called.
+
+## The slug
+
+On the wire the engine is its **slug**, the same word `sonocles-cli
+--engine` takes. The label is for humans and stays a label.
+
+| slug | label | what it is |
+|---|---|---|
+| `fluid160` | Parakeet 160 ms | the default; [the measurement](/docs/engines) chose it |
+| `fluid320` | Parakeet 320 ms | the same model, a longer chunk |
+| `fluid1280` | Parakeet 1280 ms | the same model, the longest chunk |
+| `apple` | Apple SpeechAnalyzer | Apple's own engine; macOS 26 and up |
+
+## Reading it
+
+```json title="GET /engine"
+{ "engine": "fluid160", "label": "Parakeet 160 ms",
+  "available": ["fluid160", "fluid320", "fluid1280", "apple"] }
+```
+
+`available` is the reason this route exists on its own rather than as a
+field on `/status`. `apple` needs macOS 26; a client on 15 should not be
+offered it and then get a `400`, so the list says what this Mac can run
+and a control should offer exactly that. The popover does.
+
+`/status` carries the slug too, as `engineId`, next to the `engine` label
+it has always had — so a client already polling `/status` knows what it is
+looking at without a second call:
+
+```json title="GET /status"
+{ "state": "listening", "listening": true,
+  "engine": "Parakeet EOU 120M (160 ms)", "engineId": "fluid160",
+  "clients": 1, "uptime": 41.2, "levelDb": -19.4 }
+```
+
+`engine` is the engine's own name once it is running and the configured
+label until then. `engineId` is always the slug.
+
+## Switching it
+
+```json title="POST /engine"
+{ "engine": "fluid320" }
+```
+
+answers the same shape as `GET /engine`, after the change. It is the one
+route that takes a body. An unknown slug, or `apple` on a Mac that cannot
+run it, is `400` in the usual error shape and nothing changes. The same
+engine again changes nothing and announces nothing.
+
+<Callout kind="rule" title="Switching while listening is a stop and a start">
+The models differ, and a half-swapped pipeline would report numbers
+belonging to neither engine. So capture stops, the engine changes, and
+capture starts again on the new one. `/status` says `starting` in between
+— the models may have to load — and a consumer on `/events` sees a gap in
+frames. Switching while idle only changes what the next `start` runs.
+</Callout>
+
+## Hearing about it
+
+Both apps poll `/status` for state, and neither should have to poll to
+learn that the engine changed underneath it — a switch from one client is
+a surprise to the other. So the switch is on the stream, on both
+transports:
+
+```json
+{ "event": "engine", "engine": "fluid320", "label": "Parakeet 320 ms" }
+```
+
+Frames have `type`; this has `event`. A consumer that only handles frames
+skips it the way it already skips the WebSocket auth answer:
+
+```js
+es.onmessage = (e) => {
+  const m = JSON.parse(e.data)
+  if (m.event === 'engine') return picker.select(m.engine)
+  handle(m)   // a frame
+}
+```
+
+The popover's own control follows the same event, so a switch made over
+HTTP moves it. Before this route it did not, which is exactly the kind of
+control that looks like the API and is not.
+
+## From a shell
+
+```sh
+TOKEN="$(cat ~/Library/Application\ Support/Sonocles/token)"
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7357/engine
+curl -s -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+     -d '{"engine": "fluid320"}' http://127.0.0.1:7357/engine
+```
+
+Or `make engine` to ask and `make engine ENGINE=fluid320` to switch; the
+Makefile reads the token file.

@@ -167,12 +167,17 @@ struct ContractTests {
     }
 
     private func request(
-        _ service: Service, _ method: String, _ path: String, token: String?
+        _ service: Service, _ method: String, _ path: String, token: String?,
+        body: String? = nil
     ) async throws -> (Int, String, Data) {
         var request = URLRequest(
             url: URL(string: "http://127.0.0.1:\(service.config.httpPort)\(path)")!)
         request.httpMethod = method
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = Data(body.utf8)
+        }
         let (data, response) = try await URLSession.shared.data(for: request)
         let http = response as! HTTPURLResponse
         return (http.statusCode, http.value(forHTTPHeaderField: "Content-Type") ?? "", data)
@@ -207,10 +212,11 @@ struct ContractTests {
 
         var seen = Set<String>()
         func validate(
-            _ method: String, _ path: String, _ specPath: String, token: String?, expect: Int
+            _ method: String, _ path: String, _ specPath: String, token: String?, expect: Int,
+            body: String? = nil
         ) async throws {
             let (status, contentType, data) = try await request(
-                service, method, path, token: token)
+                service, method, path, token: token, body: body)
             if token != nil { seen.insert("\(method) \(specPath)") }
             #expect(status == expect, "\(method) \(specPath) answered \(status)")
             guard contentType.hasPrefix("application/json") else {
@@ -263,6 +269,35 @@ struct ContractTests {
         if let fail = validator.check(try #require(frame), against: frameSchema, path: "Frame") {
             Issue.record(Comment(rawValue: fail))
         }
+
+        // The engine routes, while listening: the switch is a stop and a
+        // start, and the engine event goes out on the stream a consumer is
+        // already holding. The restarted scripted session emits its frame
+        // too, in no fixed order with the event, so read until the event.
+        try await validate("GET", "/engine", "/engine", token: token, expect: 200)
+        try await validate(
+            "POST", "/engine", "/engine", token: token, expect: 200,
+            body: #"{"engine": "fluid320"}"#)
+        var event: Any?
+        for try await line in bytes.lines where line.hasPrefix("data: ") {
+            let json = try JSONSerialization.jsonObject(with: Data(line.dropFirst(6).utf8))
+            guard (json as? [String: Any])?["event"] != nil else { continue }
+            event = json
+            break
+        }
+        let eventSchema = try #require(
+            ((spec["components"] as? [String: Any])?["schemas"] as? [String: Any])?["EngineEvent"]
+                as? [String: Any])
+        if let fail = validator.check(
+            try #require(event), against: eventSchema, path: "EngineEvent")
+        {
+            Issue.record(Comment(rawValue: fail))
+        }
+        // The documented 400, in the error shape.
+        try await validate(
+            "POST", "/engine", "/engine", token: token, expect: 400,
+            body: #"{"engine": "whisper"}"#)
+        try await validate("GET", "/status", "/status", token: token, expect: 200)
 
         try await validate("POST", "/stop", "/stop", token: token, expect: 200)
         #expect(!service.isListening)

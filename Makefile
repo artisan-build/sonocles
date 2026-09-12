@@ -20,7 +20,7 @@ AUTH     := -H "Authorization: Bearer $(TOKEN)"
 
 .DEFAULT_GOAL := help
 .PHONY: help build test run baseline idle app launch install uninstall \
-        status discover rotate start stop events deploy clean fmt lint
+        status discover rotate start stop engine events deploy clean fmt lint
 
 help: ## Show this help
 	@echo "Sonocles — on-device speech sidecar"
@@ -31,6 +31,7 @@ help: ## Show this help
 	@echo "  CONFIG=debug        build unoptimised (default: release)"
 	@echo "  PORT=7357           control API port for status/start/stop"
 	@echo "  TOKEN=…             bearer token (default: read from the token file)"
+	@echo "  ENGINE=fluid320     with 'make engine': switch to that engine"
 
 build: ## Build everything
 	swift build -c $(CONFIG) --package-path $(APP)
@@ -78,6 +79,16 @@ start: ## Tell the running sidecar to begin listening
 
 stop: ## Tell the running sidecar to stop listening
 	@curl -s $(AUTH) -X POST http://127.0.0.1:$(PORT)/stop && echo
+
+# One target for both directions: bare, it asks; with ENGINE=<slug>, it
+# switches. Switching while listening is a stop and a start.
+engine: ## Ask which engine, or ENGINE=fluid320 to switch
+ifdef ENGINE
+	@curl -s $(AUTH) -H "Content-Type: application/json" \
+	  -d '{"engine": "$(ENGINE)"}' http://127.0.0.1:$(PORT)/engine && echo
+else
+	@curl -s $(AUTH) http://127.0.0.1:$(PORT)/engine && echo
+endif
 
 events: ## Tail the event stream (-N matters: without it curl buffers)
 	@curl -sN "http://127.0.0.1:$(PORT)/events?access_token=$(TOKEN)"

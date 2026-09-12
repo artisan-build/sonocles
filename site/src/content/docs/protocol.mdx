@@ -55,6 +55,12 @@ else is additive: a consumer reading only `text` is unaffected.
 On the wire, SSE delivers one frame per `data:` line; the WebSocket delivers
 one frame per message. Same bytes.
 
+One thing on the stream is not a frame: when the engine changes, both
+transports carry `{ "event": "engine", "engine": "fluid320", "label":
+"Parakeet 320 ms" }`. It has `event` where a frame has `type`, so a consumer
+that only handles frames skips it — the snippets below show the one-line
+check — and [Engine selection](/docs/engine-selection) says when it is sent.
+
 ### Partials drive things; finals are for the record
 
 A `partial` arrives roughly every 200 ms, about one word each, about 180 ms
@@ -121,6 +127,7 @@ const token = '…'  // the contents of ~/Library/Application Support/Sonocles/t
 const es = new EventSource(`http://127.0.0.1:7357/events?access_token=${token}`)
 es.onmessage = (e) => {
   const f = JSON.parse(e.data)
+  if (f.event === 'engine') return picker.select(f.engine)   // not a frame
   if (f.lagMs != null) { /* trust f.audioEnd for timing */ }
 }
 ```
@@ -131,6 +138,7 @@ ws.onopen = () => ws.send(JSON.stringify({ auth: token }))
 ws.onmessage = (e) => {
   const m = JSON.parse(e.data)
   if ('status' in m) return   // the auth answer; frames have no status
+  if (m.event === 'engine') return picker.select(m.engine)   // not a frame
   handle(m)
 }
 ```

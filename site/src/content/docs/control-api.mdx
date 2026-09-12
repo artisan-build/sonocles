@@ -1,11 +1,11 @@
 ---
 title: The control API
-description: Six routes on the HTTP port. Start and stop capture from anywhere with the token, ask what it is doing, and find out whether it can hear.
+description: Eight routes on the HTTP port. Start and stop capture from anywhere with the token, choose the engine, ask what it is doing, and find out whether it can hear.
 ---
 import Callout from '../../components/Callout.astro';
 
-On `http://127.0.0.1:7357`. JSON out; nothing takes a body in. Every route
-is behind the token — [Authentication](/docs/auth) — and the
+On `http://127.0.0.1:7357`. JSON out; only `POST /engine` takes a body in.
+Every route is behind the token — [Authentication](/docs/auth) — and the
 [reference](/docs/api/reference) has each one's exact shape, generated from
 the same file CI tests the service against.
 
@@ -16,6 +16,8 @@ the same file CI tests the service against.
 | `GET /status` | current state |
 | `POST /start` | begin capture |
 | `POST /stop` | end capture |
+| `GET /engine` | the engine, and which ones this Mac can run — [Engine selection](/docs/engine-selection) |
+| `POST /engine` | switch engine; a stop and a start if listening |
 | `POST /token/rotate` | new token; the old one is dead after the response |
 
 ## Discovery
@@ -39,8 +41,8 @@ reached rather than guessing from a 401.
 
 ```json
 { "state": "listening", "listening": true,
-  "engine": "Parakeet EOU 120M (160 ms)", "clients": 1, "uptime": 41.2,
-  "levelDb": -19.4 }
+  "engine": "Parakeet EOU 120M (160 ms)", "engineId": "fluid160",
+  "clients": 1, "uptime": 41.2, "levelDb": -19.4 }
 ```
 
 `state` is `idle` · `starting` · `listening`. Three states rather than a
@@ -57,6 +59,11 @@ entirely. Establishing that thirty seconds of piano at −9 dBFS peak produced
 zero words required starting a second sidecar purely to watch a meter,
 which is a silly thing to need.
 
+`engine` is the engine's own name once running, else the configured
+choice's label — for a display. `engineId` is the slug the control routes
+speak, so a client polling `/status` knows what it is looking at without a
+second call; [Engine selection](/docs/engine-selection) has the routes.
+
 `clients` counts connections across both transports. `uptime` is seconds
 since the sockets came up, not since capture started.
 
@@ -67,7 +74,7 @@ are fetched and compiled:
 
 ```json
 { "state": "starting", "listening": false, "engine": "Parakeet 160 ms",
-  "clients": 1, "uptime": 3.1,
+  "engineId": "fluid160", "clients": 1, "uptime": 3.1,
   "preparing": "Downloading model — 42% (file 2 of 5)", "preparingFraction": 0.42 }
 ```
 
@@ -102,8 +109,8 @@ curl -s -H "Authorization: Bearer $TOKEN" -X POST http://127.0.0.1:7357/stop
 ```
 
 Or, from the repository, `make discover`, `make start`, `make status`,
-`make stop`, `make rotate` and `make events`: the Makefile reads the token
-file. `PORT=` overrides the port for a CLI started with `--http`.
+`make stop`, `make engine`, `make rotate` and `make events`: the Makefile
+reads the token file. `PORT=` overrides the port for a CLI started with `--http`.
 
 ## From a browser page
 

@@ -80,6 +80,25 @@ on — it is on, always, and same-machine apps pair by reading it.
 `text` and `ts` are the original prompter-ears contract and have not moved.
 Everything else is additive: a consumer reading only `text` is unaffected.
 
+### The engine event
+
+One other thing travels on the stream, on both transports:
+
+```json
+{ "event": "engine", "engine": "fluid320", "label": "Parakeet 320 ms" }
+```
+
+Sent when the engine changes — from the popover or over `POST /engine` —
+so no client has to poll `/status` to learn that another one switched it
+underneath them. Frames have `type`; this has `event`. A consumer that only
+handles frames skips it the way it already skips the WebSocket auth answer,
+and the snippets under *Consuming it* show the one-line check.
+
+`engine` is the slug, `label` the name for humans. If capture was running
+when the switch happened it was stopped and is starting again on the new
+engine, so the event is followed by a gap in frames and `/status` says
+`starting` until the new engine is up.
+
 ### `text` is the current utterance, not the session
 
 Each `final` closes an utterance and the next `partial` starts empty. A consumer
@@ -134,6 +153,8 @@ On the HTTP port. JSON in, JSON out.
 | `GET /status` | current state |
 | `POST /start` | begin capture |
 | `POST /stop` | end capture |
+| `GET /engine` | the engine as configured, and which ones this Mac can run |
+| `POST /engine` | `{ "engine": "<slug>" }` → the same shape, after the change |
 | `POST /token/rotate` | `{}` → `{ "token" }` — new token, old one dead after the response |
 
 Every one of them is behind the token. `GET /` is the first call a client
@@ -156,9 +177,14 @@ the caller included.
 
 ```json
 { "state": "listening", "listening": true,
-  "engine": "Parakeet EOU 120M (160 ms)", "clients": 1, "uptime": 41.2,
-  "levelDb": -19.4 }
+  "engine": "Parakeet EOU 120M (160 ms)", "engineId": "fluid160",
+  "clients": 1, "uptime": 41.2, "levelDb": -19.4 }
 ```
+
+`engine` is the engine's own name once running, else the configured
+choice's label — for a display. `engineId` is the slug the control routes
+speak, so a client polling `/status` knows what it is looking at without a
+second call.
 
 `levelDb` is the peak input level in dBFS, and it is absent when not capturing —
 absent meaning unmeasured, never zero, as everywhere else here.
@@ -175,6 +201,37 @@ boolean because `POST /start` returns before capture is up — models load,
 macOS may ask for the microphone — and answering `listening: false` to a
 request that just succeeded reads as a failure. Poll until `listening`.
 
+### Engine selection
+
+The engine on the wire is the **slug**, which is what `sonocles-cli
+--engine` already takes: `fluid160` · `fluid320` · `fluid1280` · `apple`.
+The label is for humans and stays a label.
+
+```json
+GET  /engine
+→ { "engine": "fluid160", "label": "Parakeet 160 ms",
+    "available": ["fluid160", "fluid320", "fluid1280", "apple"] }
+
+POST /engine   { "engine": "fluid320" }
+→ { "engine": "fluid320", "label": "Parakeet 320 ms",
+    "available": ["fluid160", "fluid320", "fluid1280", "apple"] }
+```
+
+`available` is there because `apple` is gated to macOS 26: a client on 15
+is not offered it and does not have to find out from a 400. Offer exactly
+what `available` lists.
+
+`POST /engine` is the one route that takes a body. An unknown slug, or one
+this Mac cannot run, is `400` in the error shape and nothing changes. The
+same engine again changes nothing and announces nothing.
+
+**Switching while listening is a stop and a start.** A half-swapped
+pipeline would report numbers belonging to neither engine, so capture
+stops, the engine changes, and capture starts again — `/status` says
+`starting` in between, a consumer on `/events` sees a gap in frames, and
+the `engine` event goes out on both transports. Switching while idle only
+changes what the next `start` runs.
+
 ## Consuming it
 
 ```js
@@ -183,6 +240,7 @@ const token = '…'  // the contents of ~/Library/Application Support/Sonocles/t
 const es = new EventSource(`http://127.0.0.1:7357/events?access_token=${token}`)
 es.onmessage = (e) => {
   const f = JSON.parse(e.data)
+  if (f.event === 'engine') return picker.select(f.engine)   // not a frame
   if (f.lagMs != null) { /* trust f.audioEnd for timing */ }
 }
 ```
@@ -193,6 +251,7 @@ ws.onopen = () => ws.send(JSON.stringify({ auth: token }))
 ws.onmessage = (e) => {
   const m = JSON.parse(e.data)
   if ('status' in m) return   // the auth answer; frames have no status
+  if (m.event === 'engine') return picker.select(m.engine)   // not a frame
   handle(m)
 }
 ```
@@ -202,7 +261,10 @@ TOKEN="$(cat ~/Library/Application\ Support/Sonocles/token)"
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7357/
 curl -H "Authorization: Bearer $TOKEN" -X POST http://127.0.0.1:7357/start
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7357/status
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+     -d '{"engine": "fluid320"}' http://127.0.0.1:7357/engine
 curl -sN "http://127.0.0.1:7357/events?access_token=$TOKEN"
 ```
 
-Or `make start`, `make status`, `make events`: the Makefile reads the file.
+Or `make start`, `make status`, `make engine`, `make engine ENGINE=fluid320`,
+`make events`: the Makefile reads the file.
