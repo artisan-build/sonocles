@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Native\Desktop\Facades\ChildProcess;
 
@@ -16,11 +18,13 @@ use Native\Desktop\Facades\ChildProcess;
  *
  * Two things travel across that seam, and only two:
  *
- *   control   PHP calls /start, /stop and /status over loopback HTTP. Human
- *             speed. Latency here is invisible.
+ *   control   PHP calls /start, /stop and /status over loopback HTTP, with
+ *             the bearer token from the file the engine wrote. Human speed.
+ *             Latency here is invisible.
  *   frames    PHP never sees them. The renderer holds ws://127.0.0.1:7358
- *             itself, so recognised words go engine → socket → DOM without
- *             entering the PHP process at all.
+ *             itself and sends the same token as its first frame, so
+ *             recognised words go engine → socket → DOM without entering the
+ *             PHP process at all.
  *
  * That second point is the design. Putting PHP in the frame path would mean a
  * hop through the app's HTTP server every ~200 ms for text that is already 180
@@ -31,9 +35,20 @@ class Sidecar
 {
     public const ALIAS = 'sonocles-engine';
 
+    /** The documented ports. config/sonocles.php can move them; nothing else should. */
     public const HTTP_PORT = 7357;
 
     public const WS_PORT = 7358;
+
+    public static function httpPort(): int
+    {
+        return (int) (config('sonocles.http_port') ?: static::HTTP_PORT);
+    }
+
+    public static function wsPort(): int
+    {
+        return (int) (config('sonocles.ws_port') ?: static::WS_PORT);
+    }
 
     /**
      * Where the engine binary lives.
@@ -73,7 +88,10 @@ class Sidecar
         }
 
         ChildProcess::start(
-            cmd: [$binary, '--idle', '--plain', '--quiet'],
+            cmd: [
+                $binary, '--idle', '--plain', '--quiet',
+                '--http', (string) static::httpPort(), '--ws', (string) static::wsPort(),
+            ],
             alias: static::ALIAS,
             persistent: true,
         );
@@ -81,10 +99,19 @@ class Sidecar
         return 'spawned';
     }
 
-    /** Is anything serving the control API right now? */
+    /**
+     * Is anything serving the control API right now?
+     *
+     * A 401 counts as yes. An engine that refuses our token is still an engine
+     * holding the port, and the question here is whether to spawn one.
+     */
     public static function isAnswering(): bool
     {
-        return static::status() !== null;
+        try {
+            return static::status() !== null;
+        } catch (Unpaired) {
+            return true;
+        }
     }
 
     /**
@@ -93,17 +120,18 @@ class Sidecar
      * Short timeouts throughout: this is polled from a popover that has to feel
      * instant, and an engine that is slow to answer /status is one we would
      * rather render as "starting" than wait on.
+     *
+     * @throws Unpaired when it is up and the token is not the one it wants
      */
     public static function status(): ?array
     {
         try {
-            $response = Http::timeout(2)->connectTimeout(1)
-                ->get(static::url('/status'));
+            $response = static::request(2)->get(static::url('/status'));
         } catch (\Throwable) {
             return null;
         }
 
-        return $response->successful() ? $response->json() : null;
+        return static::answer($response);
     }
 
     public static function start(): ?array
@@ -119,10 +147,31 @@ class Sidecar
     protected static function post(string $path): ?array
     {
         try {
-            $response = Http::timeout(5)->connectTimeout(1)
-                ->post(static::url($path));
+            $response = static::request(5)->post(static::url($path));
         } catch (\Throwable) {
             return null;
+        }
+
+        return static::answer($response);
+    }
+
+    /**
+     * One request, with the token as the file has it right now. No token
+     * means no header, and the engine's 401 says so — which is more honest
+     * than not asking.
+     */
+    protected static function request(int $timeout): PendingRequest
+    {
+        $request = Http::acceptJson()->timeout($timeout)->connectTimeout(1);
+        $token = Token::read();
+
+        return $token === null ? $request : $request->withToken($token);
+    }
+
+    protected static function answer(Response $response): ?array
+    {
+        if ($response->status() === 401) {
+            throw new Unpaired;
         }
 
         return $response->successful() ? $response->json() : null;
@@ -130,11 +179,11 @@ class Sidecar
 
     public static function url(string $path = ''): string
     {
-        return 'http://127.0.0.1:'.static::HTTP_PORT.$path;
+        return 'http://127.0.0.1:'.static::httpPort().$path;
     }
 
     public static function websocket(): string
     {
-        return 'ws://127.0.0.1:'.static::WS_PORT;
+        return 'ws://127.0.0.1:'.static::wsPort();
     }
 }

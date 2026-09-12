@@ -174,7 +174,7 @@
   <div class="panel" id="panel-engine" hidden>
     <h2 id="engine-word">Starting the engine</h2>
     <div class="pulse" id="engine-pulse"><i></i><i></i><i></i></div>
-    <p id="engine-note">Nothing answered on :{{ \App\Support\Sidecar::HTTP_PORT }}, so the bundled sonocles-cli is being started.</p>
+    <p id="engine-note">Nothing answered on :{{ \App\Support\Sidecar::httpPort() }}, so the bundled sonocles-cli is being started.</p>
   </div>
 </main>
 <div class="rule"></div>
@@ -187,8 +187,8 @@
   </div>
   {{-- Endpoints, not switches. The sockets bind at launch and stay up. --}}
   <div class="row">
-    <span class="port"><span>HTTP</span><span>:{{ \App\Support\Sidecar::HTTP_PORT }}</span></span>
-    <span class="port"><span>WS</span><span>:{{ \App\Support\Sidecar::WS_PORT }}</span></span>
+    <span class="port"><span>HTTP</span><span>:{{ \App\Support\Sidecar::httpPort() }}</span></span>
+    <span class="port"><span>WS</span><span>:{{ \App\Support\Sidecar::wsPort() }}</span></span>
     <span class="port"><span>clients</span><span id="clients">··</span></span>
   </div>
   <div class="row">
@@ -208,8 +208,15 @@ for (let i = 0; i < 20; i++) el('cells').appendChild(document.createElement('i')
  * Frames arrive here from ws://127.0.0.1:7358 — the engine's own socket, not
  * anything Laravel serves. PHP is not in this path, which is the entire reason
  * a NativePHP front end can wear an engine tuned to 180 ms without spending it.
+ *
+ * The one thing PHP contributes to the socket is the token, fetched from
+ * /engine/token at each connect. The engine delivers nothing until the first
+ * frame is {"auth": token} (PROTOCOL § Authentication), and a browser
+ * WebSocket cannot carry a header, so the frame is the only way in.
  */
 const WS = @json($websocket)
+
+const HTTP_PORT = {{ \App\Support\Sidecar::httpPort() }}
 
 let lastArrival = null
 
@@ -283,11 +290,29 @@ function render(frame) {
   show('ui', uiCost(frame), ' ms')
 }
 
-function connect() {
+async function connect() {
+  const retry = ms => setTimeout(connect, ms)
+
+  // Re-read on every connect, so a rotated token is one reconnect away.
+  let token = null
+  try { token = (await (await fetch('/engine/token')).json()).token } catch (_) {}
+  if (!token) { retry(1000); return }
+
   let ws
-  try { ws = new WebSocket(WS) } catch (e) { setTimeout(connect, 1000); return }
-  ws.onmessage = e => { try { render(JSON.parse(e.data)) } catch (_) {} }
-  ws.onclose = () => setTimeout(connect, 1000)
+  try { ws = new WebSocket(WS) } catch (e) { retry(1000); return }
+  let refused = false
+  ws.onopen = () => ws.send(JSON.stringify({ auth: token }))
+  ws.onmessage = e => {
+    let m
+    try { m = JSON.parse(e.data) } catch (_) { return }
+    // The auth answer has a status; frames have a type; anything else is an
+    // event for a consumer that is not this one.
+    if ('status' in m) { if (m.status !== 200) { refused = true; ws.close() } return }
+    if (typeof m.type === 'string') render(m)
+  }
+  // A refusal is not a dropped socket: the file may not be the engine's yet,
+  // and asking again every second would only be noise in its log.
+  ws.onclose = () => retry(refused ? 3000 : 1000)
   ws.onerror = () => ws.close()
 }
 connect()
@@ -332,10 +357,22 @@ async function poll() {
       el('engine-word').textContent = j.binary ? 'Starting the engine' : 'No engine'
       el('engine-pulse').hidden = !j.binary
       el('engine-note').textContent = j.binary
-        ? 'Nothing answered on :7357, so the bundled sonocles-cli is being started.'
+        ? `Nothing answered on :${HTTP_PORT}, so the bundled sonocles-cli is being started.`
         : 'extras/sonocles-cli is missing — run bin/sync-sidecar.sh.'
       el('toggle').disabled = true
       el('toggle').textContent = j.binary ? 'Waiting for engine' : 'Engine not bundled'
+      el('toggle').className = ''
+      el('engine').textContent = '··'
+      el('clients').textContent = '··'
+    } else if (!j.paired) {
+      // Up, and refusing us. Not "starting": nothing is coming that will fix it
+      // except the file changing, which every poll re-reads.
+      state('down', 'Not paired')
+      el('engine-word').textContent = 'Not paired'
+      el('engine-pulse').hidden = true
+      el('engine-note').textContent = `The engine on :${HTTP_PORT} refused the token in ~/Library/Application Support/Sonocles/token.`
+      el('toggle').disabled = true
+      el('toggle').textContent = 'Not paired'
       el('toggle').className = ''
       el('engine').textContent = '··'
       el('clients').textContent = '··'
