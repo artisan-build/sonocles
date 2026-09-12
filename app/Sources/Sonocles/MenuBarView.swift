@@ -6,7 +6,7 @@ import SwiftUI
 /// Laid out around the one question someone opens it to ask: *is this hearing
 /// me, right now.* So the meter and the live hypothesis get the space, the
 /// numbers that qualify them sit directly underneath, and everything else —
-/// engine, endpoints, credentials — is settled once and then ignored.
+/// engine, endpoints, the pairing token — is settled once and then ignored.
 ///
 /// The centre panel has three states and shows exactly one. An idle meter
 /// pinned at silence looks broken, and a meter shown during a model download
@@ -187,8 +187,8 @@ struct MenuBarView: View {
                 Spacer()
             }
 
-            DisclosureGroup {
-                credentials
+            DisclosureGroup(isExpanded: $model.pairingOpen) {
+                pairing
             } label: {
                 Text("Control API")
                     .font(.system(size: 11))
@@ -215,35 +215,49 @@ struct MenuBarView: View {
         .padding(.vertical, 12)
     }
 
-    private var credentials: some View {
+    /// The bearer token, which every route on both sockets is behind. Shown
+    /// masked; copied in full for a client that cannot read the file itself.
+    private var pairing: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(
-                "Protects /start, /stop and /status. The event stream stays "
-                    + "open — EventSource cannot send an Authorization header, and "
-                    + "credentials in a URL would be worse than a loopback-only read."
+                "Every route is behind a bearer token, the event stream included. "
+                    + "Apps running as you read it from the file and are paired; "
+                    + "a web page cannot. Rotating cuts off every paired client."
             )
             .font(.system(size: 10))
             .foregroundStyle(Brand.script)
             .fixedSize(horizontal: false, vertical: true)
 
-            TextField("username", text: $model.username)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 11, design: .monospaced))
+            Text(model.tokenFile)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(Brand.ghost)
+                .lineLimit(1)
+                .truncationMode(.middle)
 
-            SecureField("password — blank leaves the API open", text: $model.password)
-                .textFieldStyle(.roundedBorder)
+            // The full token does not fit on one line at this width, so it
+            // wraps when shown; masked, it is one short line.
+            Text((model.tokenShown ? model.token : model.maskedToken) ?? "—")
                 .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(Brand.bright)
+                .lineLimit(model.tokenShown ? 2 : 1)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
 
-            HStack {
-                StatePill(
-                    label: model.authEnabled ? "Locked" : "Open",
-                    colour: model.authEnabled ? Brand.quote : Brand.stress
-                )
+            HStack(spacing: 8) {
+                Button(model.tokenShown ? "Hide" : "Show") { model.tokenShown.toggle() }
+                    .font(.system(size: 11))
+                    .disabled(model.token == nil)
+
+                Button("Copy") { model.copyToken() }
+                    .font(.system(size: 11))
+                    .disabled(model.token == nil)
 
                 Spacer()
 
-                Button("Save") { model.saveCredentials() }
+                Button(model.rotateArmed ? "Really rotate" : "Rotate") { model.rotateToken() }
                     .font(.system(size: 11))
+                    .tint(model.rotateArmed ? Brand.stress : nil)
+                    .disabled(model.token == nil)
             }
         }
         .padding(.top, 7)

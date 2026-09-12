@@ -89,6 +89,28 @@ enum Preview {
                         }))
             ),
             (
+                "pairing",
+                AnyView(
+                    MenuBarView(
+                        model: configured {
+                            $0.pairingOpen = true
+                            $0.token =
+                                "3f9a1c77e2b04d5f8a6c1e2d9b7f4a0c5d6e7f8091a2b3c4d5e6f70819a2b3c4"
+                        }))
+            ),
+            (
+                "pairing-rotate-armed",
+                AnyView(
+                    MenuBarView(
+                        model: configured {
+                            $0.pairingOpen = true
+                            $0.tokenShown = true
+                            $0.rotateArmed = true
+                            $0.token =
+                                "3f9a1c77e2b04d5f8a6c1e2d9b7f4a0c5d6e7f8091a2b3c4d5e6f70819a2b3c4"
+                        }))
+            ),
+            (
                 "preparing",
                 AnyView(
                     MenuBarView(

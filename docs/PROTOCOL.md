@@ -18,6 +18,42 @@ server that accepted connections and answered nothing.
 They are not alternatives. Run both; a browser reading over SSE and a tool
 holding a socket can want the same stream at the same time.
 
+## Authentication
+
+A bearer token, always, on every route and both transports. The sidecar
+writes it to `~/Library/Application Support/Sonocles/token` (mode 0600) the
+first time the sockets come up; any app running as the same user reads the
+file and is paired. It is 64 hex characters on one line. Rotating the token —
+from the popover, or over `POST /token/rotate` — invalidates the old one on
+the next request.
+
+- **HTTP:** `Authorization: Bearer <token>` on every request, including
+  `GET /`. Missing or wrong → `401` with `{ "error": "authentication required" }`
+  and `WWW-Authenticate: Bearer realm="Sonocles"`. The check runs before
+  routing, so an unknown path is `401` without the token and `404` with it.
+  `OPTIONS` preflight is the one unauthenticated answer, because a browser
+  sends it before it will attach the header.
+- **SSE:** `EventSource` cannot set headers, so
+  `GET /events?access_token=<token>` is accepted as well (RFC 6750 §2.3).
+  Loopback only, so the URL form exposes nothing a local page could not read
+  from the header form.
+- **WebSocket:** the first frame must be `{"auth": "<token>"}`, answered
+  `{"id": null, "status": 200, "body": {"authenticated": true}}`. Until then
+  every other frame is answered `{"id": …, "status": 401, "body": {"error":
+  "authentication required"}}` and no event is delivered. A header on the
+  upgrade would be the HTTP-shaped way, but a browser `WebSocket` cannot set
+  one, so the frame is the one way that works everywhere and it is the only
+  way. An `id` in the frame, of any JSON type, is echoed in the answer.
+
+This replaces an earlier scheme: optional HTTP Basic on the control routes,
+with `/events` left open because `EventSource` had no way to carry a
+credential. Two things were wrong with it. The lock was off by default, so a
+fresh install let any page in the user's browser switch on the microphone;
+and the transcript of everything said near that microphone was readable by
+the same page regardless. The token in the query string is what makes closing
+the stream possible, and the file is what makes the lock cost nothing to turn
+on — it is on, always, and same-machine apps pair by reading it.
+
 ## Frames
 
 ```json
@@ -93,10 +129,30 @@ On the HTTP port. JSON in, JSON out.
 
 | route | does |
 |---|---|
+| `GET /` | discovery: name, version, auth scheme, ports |
 | `GET /events` | the SSE stream |
 | `GET /status` | current state |
 | `POST /start` | begin capture |
 | `POST /stop` | end capture |
+| `POST /token/rotate` | `{}` → `{ "token" }` — new token, old one dead after the response |
+
+Every one of them is behind the token. `GET /` is the first call a client
+makes:
+
+```json
+{ "name": "Sonocles", "version": "0.1.2", "auth": "bearer",
+  "ports": { "http": 7357, "ws": 7358 } }
+```
+
+`version` is what the bundle was stamped with, or `dev` from the CLI, which
+has no bundle. `ws` is absent when the WebSocket transport was not started.
+
+`POST /token/rotate` takes no body and answers `{ "token": "<64 hex>" }`. If
+the file cannot be written it answers `500` with the error shape and the old
+token stays valid — a rotation that half-happened would lock everyone out,
+the caller included.
+
+`GET /status`, and the answer to `POST /start` and `POST /stop`:
 
 ```json
 { "state": "listening", "listening": true,
@@ -119,21 +175,12 @@ boolean because `POST /start` returns before capture is up — models load,
 macOS may ask for the microphone — and answering `listening: false` to a
 request that just succeeded reads as a failure. Poll until `listening`.
 
-### Authentication
-
-HTTP Basic on `/status`, `/start` and `/stop`, configured in the app's popover
-and stored in the Keychain. The control API can switch on a microphone, so its
-credential is a real secret and does not belong in a plist.
-
-`/events` is deliberately left open. `EventSource` cannot set an `Authorization`
-header, so locking the stream would mean credentials in a URL — worse than a
-loopback-only read endpoint. The control routes are the ones that change state
-and the ones a hostile local page could reach, so those carry the lock.
-
 ## Consuming it
 
 ```js
-const es = new EventSource('http://127.0.0.1:7357/events')
+const token = '…'  // the contents of ~/Library/Application Support/Sonocles/token
+
+const es = new EventSource(`http://127.0.0.1:7357/events?access_token=${token}`)
 es.onmessage = (e) => {
   const f = JSON.parse(e.data)
   if (f.lagMs != null) { /* trust f.audioEnd for timing */ }
@@ -142,10 +189,20 @@ es.onmessage = (e) => {
 
 ```js
 const ws = new WebSocket('ws://127.0.0.1:7358')
-ws.onmessage = (e) => handle(JSON.parse(e.data))
+ws.onopen = () => ws.send(JSON.stringify({ auth: token }))
+ws.onmessage = (e) => {
+  const m = JSON.parse(e.data)
+  if ('status' in m) return   // the auth answer; frames have no status
+  handle(m)
+}
 ```
 
 ```bash
-curl -u user:pass -X POST http://127.0.0.1:7357/start
-curl -u user:pass http://127.0.0.1:7357/status
+TOKEN="$(cat ~/Library/Application\ Support/Sonocles/token)"
+curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7357/
+curl -H "Authorization: Bearer $TOKEN" -X POST http://127.0.0.1:7357/start
+curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7357/status
+curl -sN "http://127.0.0.1:7357/events?access_token=$TOKEN"
 ```
+
+Or `make start`, `make status`, `make events`: the Makefile reads the file.
