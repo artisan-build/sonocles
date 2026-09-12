@@ -182,21 +182,24 @@ struct MenuBarView: View {
 
     private var controls: some View {
         VStack(alignment: .leading, spacing: 11) {
-            HStack {
-                Text("Engine")
-                    .font(Type.body(11))
-                    .foregroundStyle(Brand.inkFaint)
-
-                Spacer()
-
-                Picker("", selection: Binding(get: { model.engine }, set: { model.use($0) })) {
-                    ForEach(EngineChoice.allCases, id: \.self) { choice in
-                        Text(choice.label).tag(choice)
-                    }
+            // The engine, as a segmented control drawn from shapes. A menu
+            // `Picker` is AppKit-backed and `ImageRenderer` cannot rasterise
+            // it, so every design review of this popover had a yellow box
+            // where the picker was. The full name sits beside the label
+            // because four full names do not fit in 316 pt.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Engine")
+                        .font(Type.body(11))
+                        .foregroundStyle(Brand.inkFaint)
+                    Spacer()
+                    Text(model.engineLabel)
+                        .font(Type.mono(9.5))
+                        .foregroundStyle(Brand.script)
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .frame(width: 182)
+                Segmented(
+                    options: EngineChoice.allCases.map { ($0, Self.short($0)) },
+                    selection: Binding(get: { model.engine }, set: { model.use($0) }))
             }
 
             // Endpoints, not switches. The sockets bind at launch and stay up
@@ -305,6 +308,16 @@ struct MenuBarView: View {
             }
         }
         .padding(.top, 7)
+    }
+
+    /// Segment labels: what distinguishes the engines, and nothing else.
+    private static func short(_ choice: EngineChoice) -> String {
+        switch choice {
+        case .fluid160: "160 ms"
+        case .fluid320: "320 ms"
+        case .fluid1280: "1280 ms"
+        case .apple: "Apple"
+        }
     }
 
     private func endpoint(_ label: String, _ port: String) -> some View {
@@ -454,6 +467,33 @@ struct PillButton: View {
                 .overlay(Capsule().strokeBorder(colour, lineWidth: filled ? 0 : 1.2))
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// A choice drawn from shapes: the site's pill, split into equal segments.
+struct Segmented<Value: Hashable>: View {
+    let options: [(Value, String)]
+    @Binding var selection: Value
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(options, id: \.0) { value, label in
+                let on = value == selection
+                Button {
+                    selection = value
+                } label: {
+                    Text(label)
+                        .font(Type.body(11, .semibold))
+                        .foregroundStyle(on ? Brand.ground : Brand.terracottaInk)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(on ? Brand.terracottaDeep : .clear)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(Brand.terracottaInk, lineWidth: 1.2))
     }
 }
 
