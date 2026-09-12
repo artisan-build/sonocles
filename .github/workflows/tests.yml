@@ -1,11 +1,14 @@
 name: tests
 
+# docs/openapi.yaml is in the paths because the contract test reads it: a
+# change to the spec alone must run the suite, or the reference the site
+# generates from it could say something the daemon does not do.
 on:
   push:
     branches: [main]
-    paths: ['app/**', '.github/workflows/tests.yml']
+    paths: ['app/**', 'docs/openapi.yaml', '.github/workflows/tests.yml']
   pull_request:
-    paths: ['app/**', '.github/workflows/tests.yml']
+    paths: ['app/**', 'docs/openapi.yaml', '.github/workflows/tests.yml']
 
 concurrency:
   group: tests-${{ github.ref }}

@@ -1,0 +1,142 @@
+---
+title: Engines and the measurement
+description: Why it is Parakeet on the Neural Engine and not Apple's Speech framework, with the numbers, how they were taken, and what the choice costs.
+---
+import Callout from '../../components/Callout.astro';
+
+Sonocles exists because Apple's Speech framework cannot follow a reader.
+This is the evidence, and it can be re-run: `make baseline` runs the same
+instrument on Apple's engine for exactly that reason.
+
+## The measurement
+
+One instrument (`sonocles-cli`), one audio source, one sentence. Driven by
+`say` at 160 wpm — synthetic speech is unnaturally clean, which is the point:
+it isolates *delivery cadence* from recognition difficulty. This is not
+measuring how well a model hears. It is measuring when it tells you.
+
+The trace reports, per arrival:
+
+- **gap** — milliseconds since the previous arrival, stamped inside the
+  results loop before any rendering, so the number is the engine's and not
+  the terminal's.
+- **Δ** — words this arrival added.
+- **lag** — the live audio edge minus the end of the audio this text
+  describes.
+
+## The result
+
+| engine | arrival gap (median) | behind live | words per arrival |
+|---|---|---|---|
+| Apple SpeechAnalyzer | 3747 ms | 0 ms, four times | 8.8 |
+| Parakeet EOU 320 ms | 302 ms | 540 ms | 2.3 |
+| **Parakeet EOU 160 ms** | **206 ms** | **180 ms** | **1.5** |
+
+**Arrival gap** is how often you learn anything. **Behind live** is how stale
+the text is when you do. **Words per arrival** is how much changed at once —
+a prompter wants that number near one, because a scroll that jumps eight
+words is a scroll you have to chase.
+
+## What Apple actually does
+
+It accumulates roughly 3.8 seconds of audio, then delivers the entire
+volatile evolution of the phrase at once — a dozen results at ~1 ms
+intervals — each with its range pinned to the live audio edge:
+
+```
+[ 5.127s] burst → audio 0.00– 4.05
+[ 8.817s] burst → audio 0.00– 7.76     gap 3689ms, audio advanced 3.71s
+[12.720s] burst → audio 0.00–11.64     gap 3876ms, audio advanced 3.88s
+[16.525s] burst → audio 0.00–15.43     gap 3747ms, audio advanced 3.79s
+```
+
+The wall gap and the audio advance are the same number every time.
+
+This is why "0 ms behind live" for Apple is true and useless in isolation.
+The text is never stale — each burst describes audio right to the edge. You
+simply only *learn* where the reader is four times in a sixteen-second
+sentence, and a presenter covers ten words in that window.
+
+### It is not our pipeline
+
+| configuration | burst period | audio advance |
+|---|---|---|
+| tap 4096 (85 ms) | mean 3771 ms | 3.71 / 3.88 / 3.79 s |
+| tap 1024 (21 ms) | mean 3778 ms | 3.71 / 3.88 / 3.79 s |
+| `.high` + `.processLifetime` | 3860 / 3752 ms | 3.88 / 3.79 s |
+
+Cutting 64 ms out of the microphone tap moved the delivery cadence by 7 ms.
+The audio advance is identical to the centisecond across runs. Neither
+`SpeechAnalyzer.Options(priority:)` nor `modelRetention` touches it. The
+window is Apple's and no exposed knob changes it.
+
+Apple's documented "0.3–0.5 s to first volatile result" describes a *warm
+start*, not the steady-state cadence. Both numbers are true; only one of
+them is about following speech.
+
+## Why this tier of Parakeet
+
+FluidAudio ships four streaming families. Only the end-of-utterance
+manager reports token timestamps as "elapsed time from the start of the
+conversation" — the same clock our audio counter runs on. The other tiers
+stream too, but hand back text with no timing, which would leave cue
+placement guessing.
+
+So this is the only path that answers both of the project's questions at
+once: where is the reader now, and when was that word actually said.
+
+160 ms wins over 320 ms on both axes — finer *and* less laggy, because a
+shorter chunk reaches the decoder sooner. The cost is accuracy.
+
+<Callout kind="note" title="What it mishears">
+The 120M model misheard "spoken" as "spoke" and "arrives and" as "around" in
+the measurement runs, and "dad" as "debt" in daily use. Acceptable when a
+fuzzy matcher consumes the text and pace is the thing that matters; not
+acceptable if you are after a clean transcript, and that is not what this
+is for. If dictation is what you want, use [Sonari](https://www.sonari.audio/).
+</Callout>
+
+## Known: the startup lag transient
+
+`lagMs` opens high and decays (1660 → 1460 → 1380 → 1260 ms observed) before
+settling near 180 ms. The buffer feeding the engine is unbounded, so silence
+captured before you start speaking accumulates a backlog the engine then has
+to chew through. It converges, and starting Sonocles before you start
+reading hides it entirely — but it is a real transient and not yet fixed.
+
+## Known: finals lag by the end-of-utterance debounce
+
+A `final` arrives 1.6–3.1 s after the speech it describes: the engine waits
+out 1280 ms of silence before deciding an utterance ended, and then still
+has to finish decoding. Partials arrive every ~200 ms at ~180 ms behind live
+and are what should drive a scroll or fire a cue. Finals are for the
+transcript.
+
+## Non-speech does not produce text
+
+Thirty seconds of piano, peaking at −9 dBFS with a median of −32 dBFS,
+produced **zero** frames. In a separate forty-second window the only output
+was one genuinely spoken sentence, at a normal 140–220 ms lag.
+
+That is a measurement, not a promise. A streaming model can emit a spurious
+token, and some models will confidently transcribe music into sentences,
+which is a genuine hazard when the output drives a scroll — a hallucinated
+phrase fuzzy-matches somewhere in the script and yanks it. This one stayed
+quiet, and the claim is only as strong as that.
+
+Worth noting how it was established, because "it produced no text" is
+meaningless on its own. The level meter is driven from the audio thread,
+independent of the model, so it separates "heard nothing" from "heard
+something and correctly said nothing about it". The second is the result
+worth having.
+
+## Re-running it
+
+```sh
+make run        # Parakeet 160 ms, the default
+make baseline   # the same trace on Apple's engine (macOS 26)
+```
+
+Same instrument, same sentence, your microphone. The Apple engine needs
+macOS 26 and an Xcode 26 toolchain to compile; on an older system the
+choice is refused rather than silently swapped.

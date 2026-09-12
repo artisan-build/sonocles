@@ -2,6 +2,29 @@
 import Foundation
 import os
 
+/// A capture session as `Service` drives it.
+///
+/// `Sidecar` is the real one. The contract test substitutes a session that
+/// never opens the microphone, so `POST /start` can be exercised on a CI
+/// runner that has no grant and no way to ask for one — and so nothing in the
+/// test suite can raise a permission dialog on a developer's machine.
+public protocol CaptureSession: AnyObject, Sendable {
+    var engineName: String { get }
+    var hardwareFormat: AVAudioFormat? { get }
+    var engineFormat: AVAudioFormat? { get }
+    var onFrame: (@Sendable (Hypothesis, Frame, UInt64) -> Void)? { get set }
+    var onPreparation: (@Sendable (Preparation) -> Void)? { get set }
+    var onLevel: (@Sendable (Double) -> Void)? { get set }
+    func start() async throws
+    func stop()
+}
+
+extension Sidecar: CaptureSession {}
+
+/// Builds a session from the sidecar configuration and the note sink.
+public typealias SessionFactory =
+    @Sendable (Sidecar.Config, @escaping @Sendable (String) -> Void) throws -> any CaptureSession
+
 /// The long-lived process: sockets up, capture optional.
 ///
 /// The split between this and `Sidecar` is the lesson from a real bug. When
@@ -23,6 +46,10 @@ public final class Service: @unchecked Sendable {
         /// Where the bearer token lives. The default is the file every paired
         /// client reads; tests point it at a temporary directory.
         public var tokenStore: TokenStore
+        /// How a capture session is made when `start` is asked for. The
+        /// default builds a real `Sidecar`; the contract test supplies one
+        /// that never touches the microphone.
+        public var makeSession: SessionFactory
 
         public init(
             sidecar: Sidecar.Config = .init(),
@@ -30,7 +57,8 @@ public final class Service: @unchecked Sendable {
             websocket: Bool = true,
             httpPort: UInt16 = 7357,
             wsPort: UInt16 = 7358,
-            tokenStore: TokenStore = .standard
+            tokenStore: TokenStore = .standard,
+            makeSession: @escaping SessionFactory = { try Sidecar(config: $0, note: $1) }
         ) {
             self.sidecar = sidecar
             self.http = http
@@ -38,6 +66,7 @@ public final class Service: @unchecked Sendable {
             self.httpPort = httpPort
             self.wsPort = wsPort
             self.tokenStore = tokenStore
+            self.makeSession = makeSession
         }
     }
 
@@ -55,7 +84,7 @@ public final class Service: @unchecked Sendable {
 
     private struct State {
         var config = Config()
-        var sidecar: Sidecar?
+        var sidecar: (any CaptureSession)?
         var listening = false
         var starting = false
         var levelDb: Double?
@@ -227,10 +256,10 @@ public final class Service: @unchecked Sendable {
 
         guard !alreadyBusy else { return }
 
-        let config = state.withLock { $0.config.sidecar }
+        let (config, makeSession) = state.withLock { ($0.config.sidecar, $0.config.makeSession) }
 
         do {
-            let sidecar = try Sidecar(config: config, note: note)
+            let sidecar = try makeSession(config, note)
 
             sidecar.onPreparation = { [weak self] preparation in
                 guard let self else { return }
@@ -294,7 +323,7 @@ public final class Service: @unchecked Sendable {
     }
 
     public func stopListening() {
-        let sidecar = state.withLock { state -> Sidecar? in
+        let sidecar = state.withLock { state -> (any CaptureSession)? in
             defer {
                 state.sidecar = nil
                 state.listening = false

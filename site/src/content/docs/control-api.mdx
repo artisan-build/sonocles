@@ -1,0 +1,115 @@
+---
+title: The control API
+description: Six routes on the HTTP port. Start and stop capture from anywhere with the token, ask what it is doing, and find out whether it can hear.
+---
+import Callout from '../../components/Callout.astro';
+
+On `http://127.0.0.1:7357`. JSON out; nothing takes a body in. Every route
+is behind the token — [Authentication](/docs/auth) — and the
+[reference](/docs/api/reference) has each one's exact shape, generated from
+the same file CI tests the service against.
+
+| route | does |
+|---|---|
+| `GET /` | discovery: name, version, auth scheme, ports |
+| `GET /events` | the stream — [The protocol](/docs/protocol) |
+| `GET /status` | current state |
+| `POST /start` | begin capture |
+| `POST /stop` | end capture |
+| `POST /token/rotate` | new token; the old one is dead after the response |
+
+## Discovery
+
+`GET /` is the first call a client makes.
+
+```json
+{ "name": "Sonocles", "version": "0.1.3", "auth": "bearer",
+  "ports": { "http": 7357, "ws": 7358 } }
+```
+
+`version` is what the bundle was stamped with, or `dev` from the CLI, which
+has no bundle. `ws` is absent when the WebSocket transport was not started —
+absent, not `0`, as everywhere else here. `auth` is always `bearer`; it is
+there so a client written against a future scheme can tell which one it has
+reached rather than guessing from a 401.
+
+## Status
+
+`GET /status`, and the answer to `POST /start` and `POST /stop`:
+
+```json
+{ "state": "listening", "listening": true,
+  "engine": "Parakeet EOU 120M (160 ms)", "clients": 1, "uptime": 41.2,
+  "levelDb": -19.4 }
+```
+
+`state` is `idle` · `starting` · `listening`. Three states rather than a
+boolean because `POST /start` returns before capture is up — models load,
+macOS may ask for the microphone — and answering `listening: false` to a
+request that just succeeded reads as a failure. Poll until `listening`.
+
+`levelDb` is the peak input level in dBFS, and it is absent when not
+capturing — absent meaning unmeasured, never zero. It exists because "is it
+hearing anything" is otherwise unanswerable from outside the process.
+Signal with no text is a working microphone in a quiet room, or a room with
+something in it that is not speech; no signal at all is a different problem
+entirely. Establishing that thirty seconds of piano at −9 dBFS peak produced
+zero words required starting a second sidecar purely to watch a meter,
+which is a silly thing to need.
+
+`clients` counts connections across both transports. `uptime` is seconds
+since the sockets came up, not since capture started.
+
+### While preparing
+
+On the first start, and only then, two more fields appear while the models
+are fetched and compiled:
+
+```json
+{ "state": "starting", "listening": false, "engine": "Parakeet 160 ms",
+  "clients": 1, "uptime": 3.1,
+  "preparing": "Downloading model — 42% (file 2 of 5)", "preparingFraction": 0.42 }
+```
+
+`preparing` is a line fit for a status field. `preparingFraction` is
+present while downloading and absent while compiling, which has no
+measurable progress and is not given an invented one. Both vanish once the
+models are resident.
+
+## Start and stop
+
+`POST /start` and `POST /stop` answer at once with the state after the
+request. Both are idempotent: `start` while starting or listening changes
+nothing, `stop` on an idle sidecar answers `idle` and does nothing. The
+sockets are untouched by either; a consumer attached to `/events` across a
+stop and a start sees a gap in frames and nothing else.
+
+<Callout kind="trap" title="Stuck on starting">
+`state: "starting"` that never becomes `listening` is macOS waiting for
+someone to answer the microphone dialog. A `start` that falls back to `idle`
+was refused. Capture cannot claim to be listening without the grant — see
+[Troubleshooting](/docs/troubleshooting#it-runs-and-hears-nothing).
+</Callout>
+
+## From a shell
+
+```sh
+TOKEN="$(cat ~/Library/Application\ Support/Sonocles/token)"
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7357/
+curl -s -H "Authorization: Bearer $TOKEN" -X POST http://127.0.0.1:7357/start
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7357/status
+curl -s -H "Authorization: Bearer $TOKEN" -X POST http://127.0.0.1:7357/stop
+```
+
+Or, from the repository, `make discover`, `make start`, `make status`,
+`make stop`, `make rotate` and `make events`: the Makefile reads the token
+file. `PORT=` overrides the port for a CLI started with `--http`.
+
+## From a browser page
+
+The responses carry `Access-Control-Allow-Origin: *` and the preflight is
+answered without the token, so a page on any origin can drive the control
+API — provided it has the token, which a page cannot read from disk. Paste
+it from the popover's Copy button into the page's settings, and the page is
+paired the same as an app. That is how Pteroprompter, which is a page,
+reaches `/events`.

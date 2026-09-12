@@ -17,6 +17,9 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      # The API reference page reads docs/openapi.yaml at build time, so a
+      # change to the spec alone is a change to the site.
+      - 'docs/openapi.yaml'
       - '.github/workflows/deploy-site.yml'
   workflow_dispatch:
 

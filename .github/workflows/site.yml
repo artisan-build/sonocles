@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - 'site/**'
+      - 'docs/openapi.yaml'
       - '.github/workflows/site.yml'
 
 concurrency:

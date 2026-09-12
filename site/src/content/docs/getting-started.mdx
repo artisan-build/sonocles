@@ -1,0 +1,143 @@
+---
+title: Getting started
+description: Install it, let it fetch its models once, grant the microphone, find the token, and read one frame from a shell.
+---
+import Callout from '../../components/Callout.astro';
+import Cards from '../../components/Cards.astro';
+import Card from '../../components/Card.astro';
+
+Sonocles is a menu bar app. It has no window and no Dock icon; it lives
+under a small mark in the menu bar and opens as a popover. The moment it
+launches, two sockets come up on loopback — `7357` for HTTP and server-sent
+events, `7358` for WebSocket — and stay up until it quits. Listening is a
+separate thing that you, or anything with the token, switch on.
+
+## Install
+
+```sh title="Homebrew"
+brew install --cask artisan-build/tap/sonocles
+```
+
+Or the disk image: [sonocles.com/download](/download) always points at the
+current release. The app and the disk image are Developer ID signed and
+notarized, so Gatekeeper opens it without a right-click.
+
+**Requirements.** Apple Silicon, macOS 14 Sonoma or later. The floor is
+Sonoma because that is what Parakeet on Core ML needs, and Apple Silicon
+because the models run on the Neural Engine and nowhere else — the cask
+refuses an Intel Mac rather than letting the failure arrive as a crash.
+
+## The first launch
+
+Click the mark and press **Start listening**. The first time, two things
+happen before anything is heard.
+
+**macOS asks for the microphone.** Sonocles asks at the first start, not at
+launch, and before it does anything else — it refuses to report `listening`
+until the grant exists. If the prompt is refused it falls back to idle and
+says so. It never claims to be listening while hearing nothing, because an
+earlier build did exactly that and it was the worst bug this project has had.
+
+**The models download.** About 219 MB from Hugging Face, then compiled for
+the Neural Engine, which is tens of seconds of a progress bar and then a
+pulse. It is once: the models cache in
+`~/Library/Application Support/FluidAudio` (about 428 MB compiled) and every
+later launch skips this entirely. Downloading has a fraction; compiling does
+not, and the popover does not invent one.
+
+Then the level meter moves, and about 180 ms after you say a word, it is on
+the socket.
+
+<Callout kind="trap" title="If it runs and hears nothing">
+Check the meter before anything else. A moving meter with no text means
+capture is fine and the engine is late or the room is quiet; a dead meter
+means no audio is arriving. System Settings → Privacy & Security →
+Microphone is the next place to look, and [Troubleshooting](/docs/troubleshooting#it-runs-and-hears-nothing)
+is the page.
+</Callout>
+
+## The token
+
+Every request, on both sockets, needs a bearer token. You do not have to go
+and get it. The app writes it to
+
+```
+~/Library/Application Support/Sonocles/token
+```
+
+with mode `0600` the first time the sockets come up, so any app running as
+you can read the file and is paired with zero clicks. Anything that cannot
+read a file — a page in a browser, which is what Pteroprompter is — gets
+the same token from the popover, under **Control API**, with a Copy button,
+and pastes it once.
+
+```sh
+TOKEN="$(cat ~/Library/Application\ Support/Sonocles/token)"
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:7357/
+```
+
+```json title="GET / — discovery"
+{ "name": "Sonocles", "version": "0.1.3", "auth": "bearer",
+  "ports": { "http": 7357, "ws": 7358 } }
+```
+
+The whole scheme is on [Authentication](/docs/auth), including why a token
+on loopback is not overkill.
+
+## The first frame, from a shell
+
+Attach to the stream first, then start capture from a second terminal, and
+say something.
+
+```sh title="terminal one — the stream"
+TOKEN="$(cat ~/Library/Application\ Support/Sonocles/token)"
+curl -sN "http://127.0.0.1:7357/events?access_token=$TOKEN"
+```
+
+```sh title="terminal two — the cue"
+curl -s -H "Authorization: Bearer $TOKEN" -X POST http://127.0.0.1:7357/start
+```
+
+```
+: connected
+data: {"type":"partial","text":"the","ts":1788569799612,"seq":1,"audioStart":40.28,"audioEnd":40.44,"lagMs":120}
+data: {"type":"partial","text":"the menu","ts":1788569799791,"seq":2,"audioStart":40.28,"audioEnd":40.62,"lagMs":180}
+data: {"type":"partial","text":"the menu bar","ts":1788569800003,"seq":3,"audioStart":40.28,"audioEnd":40.8,"lagMs":200}
+```
+
+`-N` matters: without it curl buffers, and a stream that arrives in one lump
+thirty seconds late looks exactly like a broken one. The Makefile in the
+repository has `make events`, `make start`, `make stop` and `make status`,
+which read the token file for you.
+
+## Or the CLI
+
+The same service, in a terminal, with a trace: `sonocles-cli` is the
+instrument every latency figure on this site came out of. It is not in the
+cask; build it from the repository with `make run`. It inherits its
+terminal's microphone grant, which is worth knowing when a signed app hears
+nothing and the CLI hears everything.
+
+```
+[  9.320s] part   +294ms  Δ +1  lag   +200ms audio    4.24–   8.00  …spoke without pausing so that we can watch
+```
+
+Each arrival with the gap since the last one, the words it added, and how far
+behind the live audio edge it was. `make baseline` runs the same trace on
+Apple's engine, so the comparison on [Engines](/docs/engines) can be re-run
+rather than believed.
+
+<Cards>
+	<Card title="The protocol" href="/docs/protocol">
+		What a frame carries, and which field to trust for timing.
+	</Card>
+	<Card title="The menu bar app" href="/docs/menu-bar-app" tone="olive">
+		The mark, the meter, the engine picker, and the token.
+	</Card>
+	<Card title="The control API" href="/docs/control-api">
+		Start, stop and status, and the three states.
+	</Card>
+	<Card title="Engines and the measurement" href="/docs/engines" tone="olive">
+		Why Parakeet, why 160 ms, and what it costs.
+	</Card>
+</Cards>

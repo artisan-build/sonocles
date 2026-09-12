@@ -2,6 +2,8 @@
 title: Overview
 description: Sonocles turns your Mac's microphone into a live stream of text — over WebSocket or server-sent events, word by word, about 180 milliseconds behind you. These pages are how to point something at it.
 ---
+import Cards from '../../components/Cards.astro';
+import Card from '../../components/Card.astro';
 
 Sonocles is a menu bar app and a small HTTP API. Launch it and two sockets
 come up on loopback — server-sent events on `7357`, WebSocket on `7358` —
@@ -37,3 +39,30 @@ different from a dictation app are **The protocol** — what a frame carries
 and what each field is for — and **Engines and the measurement** — why it
 is Parakeet on the Neural Engine and not Apple's Speech framework, with the
 numbers.
+
+<Cards>
+	<Card title="Getting started" href="/docs/getting-started">
+		Install, the first launch, the token, and one frame from a shell.
+	</Card>
+	<Card title="The menu bar app" href="/docs/menu-bar-app" tone="olive">
+		The mark, the meter, the two numbers, the engine picker.
+	</Card>
+	<Card title="The protocol" href="/docs/protocol">
+		Two transports, one frame, and which field to trust for timing.
+	</Card>
+	<Card title="Engines and the measurement" href="/docs/engines" tone="olive">
+		Why Parakeet, why 160 ms, what it mishears.
+	</Card>
+	<Card title="Authentication" href="/docs/auth">
+		A bearer token in a file. Why a lock on loopback.
+	</Card>
+	<Card title="The control API" href="/docs/control-api" tone="olive">
+		Start, stop, status, and the three states.
+	</Card>
+	<Card title="API reference" href="/docs/api/reference">
+		Every route and every frame, generated from the file CI tests against.
+	</Card>
+	<Card title="Troubleshooting" href="/docs/troubleshooting" tone="olive">
+		It hears nothing, and the other things macOS declines to say.
+	</Card>
+</Cards>

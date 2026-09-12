@@ -1,0 +1,148 @@
+---
+// The API reference, generated. Source: docs/openapi.yaml, which CI validates
+// the running service against. See src/lib/openapi.ts.
+import { getCollection } from 'astro:content';
+import { Code } from 'astro-expressive-code/components';
+import Docs from '../../../layouts/Docs.astro';
+import Endpoint from '../../../components/Endpoint.astro';
+import Callout from '../../../components/Callout.astro';
+import { loadApi } from '../../../lib/openapi';
+
+const api = loadApi();
+const existing = new Set((await getCollection('docs')).map((e) => e.id));
+const headings = [
+	{ depth: 2, slug: 'conventions', text: 'Conventions' },
+	...api.groups.map((g) => ({ depth: 2, slug: g.id, text: g.label })),
+	{ depth: 2, slug: 'frames', text: 'Frames' },
+];
+const draft = api.source !== 'openapi';
+const badges = (api.planned ?? 0) > 0;
+---
+
+<Docs
+	id="api/reference"
+	title="API reference"
+	description={
+		api.source === 'openapi'
+			? `Generated from docs/openapi.yaml, version ${api.version ?? ''}. CI binds the real service and validates it against the same file.`
+			: api.source === 'merged'
+				? `Every route, on both transports. ${api.pinned} generated from docs/openapi.yaml ${api.version ? `(${api.version})` : ''}; ${api.planned} still only in the table, marked planned.`
+				: 'Every route, on both transports. Built from the hand-typed table until docs/openapi.yaml lands; then generated from it.'
+	}
+	draft={draft}
+	existing={existing}
+	headings={headings}
+	wide
+>
+	<h2 id="conventions">Conventions</h2>
+	<table>
+		<tbody>
+			<tr><td>HTTP + SSE</td><td><code>http://127.0.0.1:7357</code></td></tr>
+			<tr><td>WebSocket</td><td><code>ws://127.0.0.1:7358</code></td></tr>
+			<tr><td>Auth</td><td><code>Authorization: Bearer &lt;token&gt;</code> on every HTTP request; <code>?access_token=</code> also accepted on <code>GET /events</code>; on the WebSocket, a first frame of <code>{`{ "auth": "<token>" }`}</code></td></tr>
+			<tr><td>Bodies</td><td>JSON out; nothing takes a body in. <code>Content-Type: application/json</code></td></tr>
+			<tr><td>Times</td><td><code>ts</code> is epoch milliseconds at emit; <code>audioStart</code> and <code>audioEnd</code> are seconds into the session's audio; <code>lagMs</code> is signed</td></tr>
+			<tr><td>Absence</td><td>an unmeasurable value is absent — never <code>0</code>. A missing <code>lagMs</code> is unknown; a missing <code>levelDb</code> means not capturing</td></tr>
+		</tbody>
+	</table>
+	<Code
+		code={`{ "error": "authentication required" }`}
+		lang="json"
+		title="the error shape"
+	/>
+	<table>
+		<thead><tr><th>status</th><th>when</th></tr></thead>
+		<tbody>
+			<tr><td><code>401</code></td><td>no token, or the wrong one — on every route, before routing, so an unknown path without the token is <code>401</code> and not <code>404</code>. Carries <code>WWW-Authenticate: Bearer realm="Sonocles"</code></td></tr>
+			<tr><td><code>404</code></td><td>no such route</td></tr>
+			<tr><td><code>500</code></td><td>the token file could not be written on rotate; the old token stays valid</td></tr>
+		</tbody>
+	</table>
+	{
+		api.source === 'openapi' && (
+			<Callout kind="note" title="Where this comes from">
+				Every route and every frame on this page is generated from <code>docs/openapi.yaml</code>
+				at build time, and CI binds the real service — sockets up, capture never started — and
+				validates every path against that same file. Nothing here is hand-copied; where the YAML
+				changes, this page changes with the next deploy, and where the code drifts, the build
+				goes red.
+			</Callout>
+		)
+	}
+	{
+		draft && (
+			<Callout kind="note" title="Where this comes from">
+				Routes marked <b>pinned</b> are generated from <code>docs/openapi.yaml</code>, which CI
+				validates against the running service. Routes marked <b>planned</b> are from the
+				hand-typed table and change here before they change in the code.
+			</Callout>
+		)
+	}
+
+	{
+		api.groups.map((g) => (
+			<>
+				<h2 id={g.id}>{g.label}</h2>
+				{g.blurb && <p class="blurb">{g.blurb}</p>}
+				{g.endpoints.map((e) => (
+					<Endpoint endpoint={e} badges={badges} />
+				))}
+			</>
+		))
+	}
+
+	<h2 id="frames">Frames</h2>
+	<p class="blurb">
+		Delivered on <code>GET /events</code> as <code>data:</code> lines, and on the WebSocket as
+		messages after the auth answer — the same bytes on both. <code>type</code> says which.
+	</p>
+	<table class="events">
+		<thead><tr><th>type</th><th>when</th><th>example</th></tr></thead>
+		<tbody>
+			{
+				api.events.map((ev) => (
+					<tr>
+						<td><code>{ev.type}</code>{badges && ev.pinned && <span class="badge badge--pinned">pinned</span>}{badges && ev.planned && <span class="badge badge--planned">planned</span>}</td>
+						<td>{ev.when}</td>
+						<td><code class="ex">{ev.example}</code></td>
+					</tr>
+				))
+			}
+		</tbody>
+	</table>
+</Docs>
+
+<style>
+	.blurb {
+		color: var(--ink-soft);
+		margin-bottom: 0.6rem;
+	}
+	.badge {
+		display: inline-block;
+		font-family: var(--mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		padding: 0.15em 0.5em;
+		border-radius: 999px;
+		margin-left: 0.5rem;
+		vertical-align: middle;
+	}
+	.badge--pinned {
+		color: var(--olive);
+		border: 1px solid var(--olive);
+	}
+	.badge--planned {
+		color: var(--script);
+		border: 1px solid var(--stone-line);
+	}
+	.events td:nth-child(2) {
+		width: 30%;
+	}
+	code.ex {
+		font-size: 0.74em;
+		white-space: pre-wrap;
+		background: transparent;
+		padding: 0;
+	}
+</style>
