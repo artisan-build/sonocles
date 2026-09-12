@@ -136,19 +136,19 @@ enum Preview {
                 ForEach([17, 19, 34, 64], id: \.self) { size in
                     VStack(spacing: 8) {
                         SonoclesMark(lineWidth: size <= 20 ? 1.35 : 2.4)
-                            .foregroundStyle(Brand.stress)
+                            .foregroundStyle(Brand.terracotta)
                             .frame(width: CGFloat(size), height: CGFloat(size))
                         SonoclesMark(progress: 0.34, lineWidth: size <= 20 ? 1.35 : 2.4)
-                            .foregroundStyle(Brand.ghost)
+                            .foregroundStyle(Brand.script)
                             .frame(width: CGFloat(size), height: CGFloat(size))
                         Text("\(size)")
-                            .font(.system(size: 8))
+                            .font(Type.mono(8))
                             .foregroundStyle(Brand.script)
                     }
                 }
             }
             .padding(22)
-            .background(Brand.panel)
+            .background(Brand.ground)
         )
     }
 

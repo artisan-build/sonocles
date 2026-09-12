@@ -32,7 +32,9 @@ let package = Package(
             dependencies: [.product(name: "FluidAudio", package: "FluidAudio")]
         ),
         .executableTarget(name: "sonocles-cli", dependencies: ["SonoclesCore"]),
-        .executableTarget(name: "Sonocles", dependencies: ["SonoclesCore"]),
+        // Fonts/ is excluded from compilation, not from the app: bundle.sh copies
+        // it into Contents/Resources and Brand.swift registers it at launch.
+        .executableTarget(name: "Sonocles", dependencies: ["SonoclesCore"], exclude: ["Fonts"]),
         .testTarget(name: "SonoclesCoreTests", dependencies: ["SonoclesCore"]),
     ]
 )

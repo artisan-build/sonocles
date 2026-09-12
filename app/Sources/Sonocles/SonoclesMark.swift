@@ -59,13 +59,11 @@ struct StatePill: View {
                 .fill(colour)
                 .frame(width: 6, height: 6)
             Text(label)
-                .font(.system(size: 10.5, weight: .medium))
+                .font(Type.body(10.5, .medium))
                 .foregroundStyle(colour)
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 3)
-        .background(
-            Capsule().fill(colour.opacity(0.11))
-        )
+        .background(Capsule().fill(colour.opacity(0.12)))
     }
 }
