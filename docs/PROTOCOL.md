@@ -147,6 +147,11 @@ makes:
 `version` is what the bundle was stamped with, or `dev` from the CLI, which
 has no bundle. `ws` is absent when the WebSocket transport was not started.
 
+`POST /token/rotate` takes no body and answers `{ "token": "<64 hex>" }`. If
+the file cannot be written it answers `500` with the error shape and the old
+token stays valid — a rotation that half-happened would lock everyone out,
+the caller included.
+
 `GET /status`, and the answer to `POST /start` and `POST /stop`:
 
 ```json
