@@ -18,9 +18,9 @@ use Native\Desktop\Facades\ChildProcess;
  *
  * Two things travel across that seam, and only two:
  *
- *   control   PHP calls /start, /stop and /status over loopback HTTP, with
- *             the bearer token from the file the engine wrote. Human speed.
- *             Latency here is invisible.
+ *   control   PHP calls /start, /stop, /status and /engine over loopback
+ *             HTTP, with the bearer token from the file the engine wrote.
+ *             Human speed. Latency here is invisible.
  *   frames    PHP never sees them. The renderer holds ws://127.0.0.1:7358
  *             itself and sends the same token as its first frame, so
  *             recognised words go engine → socket → DOM without entering the
@@ -144,10 +144,37 @@ class Sidecar
         return static::post('/stop');
     }
 
-    protected static function post(string $path): ?array
+    /**
+     * `GET /engine` — the engine as configured, and which ones this Mac can
+     * run. The popover offers exactly what `available` lists.
+     */
+    public static function engine(): ?array
     {
         try {
-            $response = static::request(5)->post(static::url($path));
+            $response = static::request(2)->get(static::url('/engine'));
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return static::answer($response);
+    }
+
+    /**
+     * `POST /engine { engine }` — switch, by slug. Switching while listening
+     * is a stop and a start on the engine's side, so the answer can come
+     * back `starting`; the popover polls through it as it does after /start.
+     *
+     * @throws Rejected for a slug the engine does not know or cannot run
+     */
+    public static function use(string $engine): ?array
+    {
+        return static::post('/engine', ['engine' => $engine]);
+    }
+
+    protected static function post(string $path, array $body = []): ?array
+    {
+        try {
+            $response = static::request(5)->post(static::url($path), $body);
         } catch (\Throwable) {
             return null;
         }
@@ -172,6 +199,10 @@ class Sidecar
     {
         if ($response->status() === 401) {
             throw new Unpaired;
+        }
+        if ($response->clientError()) {
+            $body = $response->json();
+            throw new Rejected($response->status(), is_array($body) ? $body : ['error' => $response->body()]);
         }
 
         return $response->successful() ? $response->json() : null;

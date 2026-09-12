@@ -116,6 +116,19 @@
   .row .port { display:flex; gap:4px; font:10px/1 var(--mono); }
   .row .port span:first-child { color:var(--script); }
   .row .port span:last-child { color:var(--ink-faint); }
+  /* The engine control: the site's pill, split into equal segments, as the
+     Swift popover draws it. Built from what GET /engine lists as available,
+     so on a Mac that cannot run Apple's engine there is no Apple segment. */
+  .engine { display:flex; flex-direction:column; gap:6px; }
+  .segmented { display:flex; border:1.2px solid var(--terracotta-ink); border-radius:999px; overflow:hidden; }
+  .segmented button {
+    flex:1; border:0; border-radius:0; padding:5px 0; font:600 11px/1 var(--body);
+    color:var(--terracotta-ink); background:transparent;
+  }
+  .segmented button[aria-checked="true"] { background:var(--terracotta-deep); color:var(--stone); }
+  .segmented button:disabled { opacity:.6; }
+  .segmented:empty { border-color:var(--script); opacity:.6; min-height:23px; }
+
   /* The site's pill button. */
   button {
     font:600 11px/1 var(--body); padding:7px 12px; border-radius:999px; cursor:default;
@@ -180,10 +193,13 @@
 <div class="rule"></div>
 
 <footer>
-  {{-- The engine is chosen when sonocles-cli is spawned; the control API has no route to change it, so this reports rather than offers. --}}
-  <div class="row">
-    <span class="label">Engine</span>
-    <span class="name" id="engine">··</span>
+  {{-- The engine: four short labels to choose from, the full name in script beside. Choosing posts to /engine/use; /status's engineId keeps it true and the engine event moves it when another client switches. --}}
+  <div class="engine">
+    <div class="row">
+      <span class="label">Engine</span>
+      <span class="name" id="engine">··</span>
+    </div>
+    <div class="segmented" id="segmented" role="radiogroup" aria-label="Engine"></div>
   </div>
   {{-- Endpoints, not switches. The sockets bind at launch and stay up. --}}
   <div class="row">
@@ -305,9 +321,9 @@ async function connect() {
   ws.onmessage = e => {
     let m
     try { m = JSON.parse(e.data) } catch (_) { return }
-    // The auth answer has a status; frames have a type; anything else is an
-    // event for a consumer that is not this one.
+    // The auth answer has a status; frames have a type; events have an event.
     if ('status' in m) { if (m.status !== 200) { refused = true; ws.close() } return }
+    if (m.event === 'engine') { select(m.engine); el('engine').textContent = m.label ?? el('engine').textContent; return }
     if (typeof m.type === 'string') render(m)
   }
   // A refusal is not a dropped socket: the file may not be the engine's yet,
@@ -343,6 +359,62 @@ function state(s, label) {
   el('panel-engine').hidden = s !== 'down'
 }
 
+/*
+ * The engine control.
+ *
+ * Segments are built once from GET /engine's `available` — via /engine/choices
+ * — and selected from /status's `engineId` on every poll, so the control shows
+ * what the engine is running and not what was last clicked here. A click
+ * selects at once and posts; if the engine refuses, the next poll puts the
+ * selection back where the engine says it is. The `engine` event on the
+ * socket does the same for a switch made from the Swift popover or curl.
+ */
+const SHORT = { fluid160: '160 ms', fluid320: '320 ms', fluid1280: '1280 ms', apple: 'Apple' }
+let engineId = null
+
+function select(id) {
+  engineId = id
+  for (const b of el('segmented').children) b.setAttribute('aria-checked', b.dataset.engine === id)
+}
+
+function setSegmentsDisabled(off) {
+  for (const b of el('segmented').children) b.disabled = off
+}
+
+async function choices() {
+  if (el('segmented').children.length) return
+  let j
+  try {
+    const r = await fetch('/engine/choices')
+    if (!r.ok) return
+    j = await r.json()
+  } catch (_) { return }
+  for (const id of j.available ?? []) {
+    const b = document.createElement('button')
+    b.type = 'button'; b.setAttribute('role', 'radio')
+    b.dataset.engine = id
+    b.textContent = SHORT[id] ?? id
+    b.onclick = () => use(id)
+    el('segmented').appendChild(b)
+  }
+  select(j.engine ?? engineId)
+}
+
+async function use(id) {
+  if (id === engineId) return
+  select(id)
+  setSegmentsDisabled(true)
+  try {
+    await fetch('/engine/use', {
+      method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ engine: id }),
+    })
+  } catch (_) {}
+  // Poll rather than trust the answer: a switch while listening is a stop and
+  // a start, and /status says `starting` in between.
+  poll()
+}
+
 /* Control is PHP's job, and it happens at human speed. */
 let listening = false
 
@@ -364,6 +436,7 @@ async function poll() {
       el('toggle').className = ''
       el('engine').textContent = '··'
       el('clients').textContent = '··'
+      setSegmentsDisabled(true)
     } else if (!j.paired) {
       // Up, and refusing us. Not "starting": nothing is coming that will fix it
       // except the file changing, which every poll re-reads.
@@ -376,6 +449,7 @@ async function poll() {
       el('toggle').className = ''
       el('engine').textContent = '··'
       el('clients').textContent = '··'
+      setSegmentsDisabled(true)
     } else {
       listening = !!s.listening
       state(s.state, { idle: 'Idle', starting: 'Starting', listening: 'Listening' }[s.state] ?? s.state)
@@ -384,6 +458,11 @@ async function poll() {
       el('toggle').className = listening ? 'stop' : 'go'
       el('engine').textContent = s.engine ?? '··'
       el('clients').textContent = typeof s.clients === 'number' ? s.clients : '··'
+      await choices()
+      if (typeof s.engineId === 'string') select(s.engineId)
+      // Not while a switch or a start is in flight: the engine is between two
+      // pipelines and a second click would race the first.
+      setSegmentsDisabled(s.state === 'starting')
 
       meter(s.levelDb)
       if (!listening) { show('lag', null); show('gap', null); show('ui', null); lastArrival = null }
