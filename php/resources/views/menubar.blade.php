@@ -6,96 +6,143 @@
 <title>Sonocles</title>
 <style>
   /*
-   * Palette from docs/BRAND.md. Fraunces and Instrument Sans are not bundled —
-   * shipping two webfonts into a menu bar popover to set nine words of chrome is
-   * not a trade worth making — so this falls back to the system stack and keeps
-   * the colours, which are the part that carries the identity.
+   * The popover, styled as sonocles.com is (docs/BRAND.md): limestone
+   * ground, ink, the terracotta signature, and a 4 px terracotta rule along
+   * the top — the foot of the site's colonnade — so the popover and the site
+   * open the same way. Dark is for the stream only, the way the site's stream
+   * of frames is dark on the limestone page: it is the one thing here that is
+   * data rather than chrome. The Swift popover (app/Sources/Sonocles/
+   * MenuBarView.swift) is the reference rendering.
+   *
+   * The three faces the site loads from Google ship in public/fonts under
+   * the OFL, licences beside them. An earlier version of this file argued
+   * that two webfonts were too much to spend on nine words of chrome; the
+   * Swift app bundles them now, and the two popovers should not disagree
+   * about what the wordmark looks like.
+   *
+   * Views name the role, not the pigment, so a palette change stays here.
    */
+  @font-face { font-family:"Fraunces"; src:url("{{ asset('fonts/Fraunces[SOFT,WONK,opsz,wght].ttf') }}") format("truetype"); font-weight:100 900; }
+  @font-face { font-family:"Instrument Sans"; src:url("{{ asset('fonts/InstrumentSans[wdth,wght].ttf') }}") format("truetype"); font-weight:100 900; }
+  @font-face { font-family:"IBM Plex Mono"; src:url("{{ asset('fonts/IBMPlexMono-Regular.ttf') }}") format("truetype"); font-weight:400; }
+  @font-face { font-family:"IBM Plex Mono"; src:url("{{ asset('fonts/IBMPlexMono-Medium.ttf') }}") format("truetype"); font-weight:500; }
+
   :root {
-    --slip:#100C0A; --panel:#1C1611; --raised:#241C16; --field:#2B211A;
-    --bone:#EFE3D0; --body:#CDBBA3; --faint:#9A8874;
-    --script:#6B5C4B;              /* the colour of an absent value */
-    --terracotta:#C86F45; --verdigris:#7FA88C; --oxide:#B4453A; --ochre:#D9A441;
-    --mono: ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, monospace;
+    /* ground — the plaster */
+    --stone:#FAF2E4; --stone-deep:#EFE5D2; --stone-sink:#E0D4BE; --stone-line:#DED0B8;
+    /* ink */
+    --ink:#2A211A; --ink-soft:#4E4034; --ink-faint:#6B5C4C;
+    /* the signature: fills and marks; -ink for small text; -deep under white */
+    --terracotta:#C4552E; --terracotta-ink:#A8431F; --terracotta-deep:#B2461F; --brick:#94331E;
+    /* states — a small language the icon and the popover both speak */
+    --olive:#6E7A52; --oxide:#B4453A;
+    --script:#7A6A59;              /* the colour of an absent value */
+    /* the dark block — the stream, nowhere else */
+    --code-ground:#2A211A; --code-text:#EDE4D6; --code-dim:#9E8F7C; --terracotta-soft:#DD7A4E;
+
+    --wordmark:"Fraunces", ui-serif, Georgia, serif;
+    --body:"Instrument Sans", system-ui, -apple-system, sans-serif;
+    --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   }
   * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; }
   body {
-    margin:0; padding:16px; background:var(--panel); color:var(--body);
-    font:13px/1.45 system-ui, -apple-system, "Instrument Sans", sans-serif;
-    -webkit-font-smoothing:antialiased; user-select:none;
-    display:flex; flex-direction:column; height:100vh;
+    background:var(--stone); color:var(--ink);
+    font:12px/1.45 var(--body); -webkit-font-smoothing:antialiased; user-select:none;
+    display:flex; flex-direction:column; overflow:hidden;
   }
-  header { display:flex; align-items:center; gap:9px; margin-bottom:14px; }
-  .mark { width:20px; height:20px; flex:none; }
-  h1 { font:600 15px/1 ui-serif, Georgia, serif; color:var(--bone); margin:0; letter-spacing:.01em; }
-  .state { margin-left:auto; font:11px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--script); }
-  .state[data-s="listening"] { color:var(--verdigris); }
-  .state[data-s="starting"]  { color:var(--ochre); }
-  .state[data-s="down"]      { color:var(--oxide); }
+  .top-rule { height:4px; background:var(--terracotta); flex:none; }
+  .rule { height:1px; background:var(--stone-line); flex:none; }
 
-  .meter { height:4px; background:var(--field); border-radius:2px; overflow:hidden; margin-bottom:12px; }
+  header { display:flex; align-items:center; gap:9px; padding:11px 14px; flex:none; }
+  .mark { width:19px; height:19px; flex:none; color:var(--script); }
+  .mark[data-s="listening"] { color:var(--terracotta); }
+  h1 { font:700 15px/1 var(--wordmark); font-variation-settings:"SOFT" 30,"WONK" 1,"opsz" 24; color:var(--ink); margin:0; }
+  .say { font:9px/1 var(--mono); color:var(--ink-faint); margin-left:-2px; }
+  .state {
+    margin-left:auto; display:inline-flex; align-items:center; gap:5px; padding:3px 7px;
+    border-radius:999px; font:500 10.5px/1.2 var(--body); text-transform:capitalize;
+    color:var(--script); background:rgba(122,106,89,.12);
+  }
+  .state::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .state[data-s="listening"] { color:var(--olive); background:rgba(110,122,82,.12); }
+  .state[data-s="starting"]  { color:var(--terracotta-ink); background:rgba(168,67,31,.12); }
+  .state[data-s="down"]      { color:var(--oxide); background:rgba(180,69,58,.12); }
+
+  /* The centre: meter, stream and the numbers that qualify it, on the inset
+     like the site's cards, with the stream itself on ink like the site's. */
+  main { flex:1; min-height:0; display:flex; flex-direction:column; padding:13px 14px; background:var(--stone-deep); }
+  .meter { height:5px; background:var(--stone-sink); border-radius:999px; overflow:hidden; margin-bottom:11px; flex:none; }
   .meter i { display:block; height:100%; width:0; background:var(--terracotta); transition:width .08s linear; }
 
   .stream {
-    flex:1; min-height:0; overflow-y:auto; background:var(--slip); border-radius:7px;
-    padding:11px 12px; font:13px/1.6 var(--mono); color:var(--body);
+    flex:1; min-height:0; overflow-y:auto; background:var(--code-ground); border-radius:7px;
+    padding:11px 12px; font:12px/1.6 var(--mono); color:var(--code-text);
     display:flex; flex-direction:column; gap:7px; scrollbar-width:thin;
   }
-  .stream .empty { color:var(--script); font-style:italic; }
+  .stream .empty { color:var(--script); }
   .f { display:block; }
-  .f.partial { color:var(--faint); }
-  .f.final   { color:var(--bone); }
-  .f b { font-weight:400; color:var(--terracotta); }
+  .f.partial { color:var(--code-dim); }
+  .f.final   { color:var(--code-text); }
+  .f b { font-weight:400; color:var(--terracotta-soft); }
 
-  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 10px; }
-  .stat { background:var(--raised); border-radius:6px; padding:7px 9px; }
-  .stat span { display:block; font:9px/1 var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--script); margin-bottom:4px; }
-  .stat b { font:600 14px/1 var(--mono); color:var(--bone); }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:11px 0 0; flex:none; }
+  .stat { background:var(--stone); border:1px solid var(--stone-line); border-radius:6px; padding:7px 9px; }
+  .stat span { display:block; font:500 9px/1 var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--terracotta-ink); margin-bottom:4px; }
+  .stat b { font:500 14px/1 var(--mono); color:var(--ink); }
   /* An absent measurement is rendered in the colour of absence, never as 0. */
   .stat b.absent { color:var(--script); font-weight:400; }
 
-  footer { display:flex; gap:8px; align-items:center; }
+  footer { display:flex; gap:8px; align-items:center; padding:12px 14px; flex:none; }
+  /* The site's pill button. */
   button {
-    flex:1; font:500 12px/1 inherit; padding:8px 10px; border-radius:6px; border:0;
-    background:var(--field); color:var(--bone); cursor:pointer;
+    font:600 11px/1 var(--body); padding:7px 12px; border-radius:999px; cursor:default;
+    background:transparent; color:var(--terracotta-ink); border:1.2px solid var(--terracotta-ink);
   }
-  button:hover:not(:disabled) { background:#352920; }
-  button:disabled { opacity:.4; cursor:default; }
-  button.go { background:var(--terracotta); color:var(--slip); }
-  button.stop { background:var(--oxide); color:#fff; }
-  .note { font:10px/1.4 var(--mono); color:var(--script); margin-top:9px; }
+  button:disabled { color:var(--script); border-color:var(--script); opacity:.6; }
+  button.go { background:var(--terracotta-deep); border-color:var(--terracotta-deep); color:#fff; }
+  button.go:hover:not(:disabled) { background:var(--brick); border-color:var(--brick); }
+  button.stop { background:var(--oxide); border-color:var(--oxide); color:#fff; }
+  .note { margin-left:auto; font:10px/1.4 var(--mono); color:var(--script); text-align:right; }
 </style>
 </head>
 <body>
 
+<div class="top-rule"></div>
+
 <header>
-  <svg class="mark" viewBox="0 0 100 100" fill="none" aria-hidden="true">
-    <circle cx="30" cy="50" r="8.5" fill="#C86F45"/>
-    <g stroke="#C86F45" stroke-width="7" stroke-linecap="round" fill="none">
-      <path d="M44 36 A24 24 0 0 1 44 64"/>
-      <path d="M52 27 A40 40 0 0 1 52 73"/>
-      <path d="M60 18 A56 56 0 0 1 60 82"/>
+  {{-- The mark: arcs struck from one dot. The site's SVG geometry, in currentColor so the state can tint it. --}}
+  <svg class="mark" id="mark" viewBox="0 0 32 32" aria-hidden="true">
+    <circle cx="7" cy="16" r="3" fill="currentColor"/>
+    <g stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round">
+      <path d="M12 9.5a10 10 0 0 1 0 13"/>
+      <path d="M17.5 6.5a16 16 0 0 1 0 19" opacity=".72"/>
+      <path d="M23 3.5a22 22 0 0 1 0 25" opacity=".45"/>
     </g>
   </svg>
   <h1>Sonocles</h1>
+  <span class="say">so-NOK-leez</span>
   <div class="state" id="state" data-s="idle">starting</div>
 </header>
+<div class="rule"></div>
 
-<div class="meter"><i id="meter"></i></div>
+<main>
+  <div class="meter"><i id="meter"></i></div>
 
-<div class="stream" id="stream"><div class="empty" id="empty">nothing yet</div></div>
+  <div class="stream" id="stream"><div class="empty" id="empty">nothing yet</div></div>
 
-<div class="stats">
-  <div class="stat"><span>lag</span><b class="absent" id="lag">—</b></div>
-  <div class="stat"><span>gap</span><b class="absent" id="gap">—</b></div>
-  <div class="stat"><span>ui&nbsp;cost</span><b class="absent" id="ui">—</b></div>
-</div>
+  <div class="stats">
+    <div class="stat"><span>lag</span><b class="absent" id="lag">··</b></div>
+    <div class="stat"><span>gap</span><b class="absent" id="gap">··</b></div>
+    <div class="stat"><span>ui&nbsp;cost</span><b class="absent" id="ui">··</b></div>
+  </div>
+</main>
+<div class="rule"></div>
 
 <footer>
   <button id="toggle" disabled>…</button>
+  <div class="note" id="note"></div>
 </footer>
-
-<div class="note" id="note"></div>
 
 <script>
 const csrf = document.querySelector('meta[name=csrf-token]').content
@@ -132,7 +179,7 @@ function uiCost(frame) {
 function show(id, value, unit) {
   const node = el(id)
   if (value === null || value === undefined) {
-    node.textContent = '—'; node.classList.add('absent'); return
+    node.textContent = '··'; node.classList.add('absent'); return
   }
   node.textContent = (value >= 0 ? '' : '') + value + unit
   node.classList.remove('absent')
@@ -196,6 +243,7 @@ async function poll() {
 
     if (!j.up) {
       el('state').dataset.s = 'down'
+      el('mark').dataset.s = 'down'
       el('state').textContent = j.binary ? 'starting' : 'no engine'
       el('toggle').disabled = true
       el('toggle').textContent = j.binary ? 'waiting for engine' : 'engine not bundled'
@@ -203,6 +251,7 @@ async function poll() {
     } else {
       listening = !!s.listening
       el('state').dataset.s = s.state
+      el('mark').dataset.s = s.state
       el('state').textContent = s.state
       el('toggle').disabled = false
       el('toggle').textContent = listening ? 'Stop listening' : 'Start listening'
@@ -217,6 +266,7 @@ async function poll() {
     }
   } catch (e) {
     el('state').dataset.s = 'down'
+    el('mark').dataset.s = 'down'
     el('state').textContent = 'down'
   }
 }
