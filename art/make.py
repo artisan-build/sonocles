@@ -38,6 +38,10 @@ ROOT = Path(__file__).resolve().parent.parent
 # The flat set lands here as hero.png, contention.png … (the "flat-" prefix
 # is the prompt's name, not the file's), and sticker.py reads it from here.
 OUT = ROOT / "site" / "art" / "originals"
+# The museum set keeps its own files, under its own names, where it already
+# lives; `--only hero --force` redoes the museum krater there and never the
+# flat hero the site uses.
+MUSEUM = ROOT / "art" / "plates"
 
 # The shared grammar. Every prompt inherits it so the set reads as one hand.
 STYLE = """
@@ -324,17 +328,23 @@ PLATES = {
 }
 
 # Retired. The prompts stay for reproducibility; the names come out of the
-# default run, because OUT is site/art/originals and none of these files are
-# there — the museum set lives in art/plates and flat-column was deleted as
-# unused.
-# A bare `make.py` would therefore have treated all nine as missing and paid
-# to generate them, into the wrong directory. Still reachable deliberately:
-#   python3 art/make.py --only sherd
+# default run so a bare `make.py` only ever looks at the five the site uses.
+# Still reachable deliberately, each to its own file (target() below):
+#   python3 art/make.py --only sherd            # -> art/plates/sherd.png
+#   python3 art/make.py --only flat-column      # -> site/art/originals/column.png
 RETIRED = frozenset({
     "flat-column",
     "hero", "chorus", "theatre", "listener", "anachronism", "contention",
     "banner", "sherd",
 })
+
+
+def target(name: str) -> Path:
+    """Where a plate's file goes: the flat set to OUT without its prefix, the
+    museum set to MUSEUM under its own name."""
+    if name.startswith("flat-"):
+        return OUT / f"{name.removeprefix('flat-')}.png"
+    return MUSEUM / f"{name}.png"
 
 
 def load_env(path: Path) -> None:
@@ -397,8 +407,6 @@ def main() -> int:
         return 0
 
     wanted = args.only or [n for n in PLATES if n not in RETIRED]
-    OUT.mkdir(parents=True, exist_ok=True)
-
     if not args.dry_run:
         load_env(Path(args.env))
         key = os.environ.get("OPENAI_API_KEY")
@@ -414,9 +422,9 @@ def main() -> int:
             continue
 
         size, body, style = PLATES[name]
-        target = OUT / f"{name.removeprefix('flat-')}.png"
+        out = target(name)
 
-        if target.exists() and not args.force:
+        if out.exists() and not args.force:
             print(f"{name:14} exists, skipping (--force to redo)")
             continue
 
@@ -428,8 +436,9 @@ def main() -> int:
 
         print(f"{name:14} generating {size} {args.quality}…", flush=True)
         try:
-            target.write_bytes(generate(size, body, args.quality, key, style))
-            print(f"{name:14} -> {target.relative_to(ROOT)}")
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(generate(size, body, args.quality, key, style))
+            print(f"{name:14} -> {out.relative_to(ROOT)}")
         except urllib.error.HTTPError as error:
             print(f"{name:14} FAILED {error.code}: {error.read()[:400]!r}", file=sys.stderr)
         except Exception as error:  # noqa: BLE001

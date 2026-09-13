@@ -29,6 +29,8 @@ it goes in SKIP and ships on its rectangle, `boxed` in Plate.astro, rather
 than as half a sticker.
 """
 
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -114,6 +116,22 @@ def sticker(name: str, tolerance: int) -> tuple[int, int, int, int]:
     return left, top, right, bottom
 
 
+def shrink(path: Path) -> str:
+    """Quantise to a palette (pngquant) and repack (oxipng), in place. The
+    drawings are flat fills, so 256 colours plus alpha reproduce them to the
+    eye; checked on the page at 1× before this was switched on."""
+    tools = [tool for tool in ("pngquant", "oxipng") if shutil.which(tool)]
+    if "pngquant" in tools:
+        subprocess.run(
+            ["pngquant", "--quality", "85-100", "--speed", "1", "--strip", "--force", "--output", path, path],
+            check=True,
+        )
+    if "oxipng" in tools:
+        subprocess.run(["oxipng", "-q", "-o", "4", "--strip", "safe", path], check=True)
+    size = f"{path.stat().st_size / 1024:.0f} KB"
+    return f"{size} ({'+'.join(tools)})" if tools else f"{size} (no pngquant/oxipng on PATH; full PNG)"
+
+
 def main(argv: list[str]) -> int:
     names = argv or sorted(p.stem for p in ORIGINALS.glob("*.png"))
     OUT.mkdir(parents=True, exist_ok=True)
@@ -128,7 +146,8 @@ def main(argv: list[str]) -> int:
             continue
         tolerance = TOLERANCES.get(name, TOLERANCE)
         left, top, right, bottom = sticker(name, tolerance)
-        print(f"{name:8} tolerance {tolerance:3}  cut to {right - left}×{bottom - top} at ({left}, {top})")
+        size = shrink(OUT / f"{name}.png")
+        print(f"{name:8} tolerance {tolerance:3}  cut to {right - left}×{bottom - top} at ({left}, {top})  {size}")
     return 0
 
 

@@ -42,4 +42,6 @@ stickers by `art/sticker.py` — the generated cream flood-filled to alpha from
 the edges, so the drawing sits on the page's `--stone` instead of on its own
 slightly-off rectangle — into `src/assets/plates/`, which is what the page
 imports. Idempotent from the originals; needs Pillow, numpy and scipy in a
-throwaway venv.
+throwaway venv, and quantises each sticker to a palette when pngquant and
+oxipng are on the PATH (`brew install pngquant oxipng`), about a quarter of
+the size with nothing visible lost.
