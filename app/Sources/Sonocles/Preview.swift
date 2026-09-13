@@ -65,6 +65,10 @@ enum Preview {
         [
             ("idle", AnyView(MenuBarView(model: configured { _ in }))),
             (
+                "idle-1280",
+                AnyView(MenuBarView(model: configured { $0.engine = .fluid1280 }))
+            ),
+            (
                 "listening",
                 AnyView(
                     MenuBarView(

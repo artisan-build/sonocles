@@ -240,6 +240,13 @@ struct MenuBarView: View {
                 Segmented(
                     options: EngineChoice.available.map { ($0, Self.short($0)) },
                     selection: Binding(get: { model.engine }, set: { model.use($0) }))
+
+                // When to choose it, in one line that follows the selection.
+                Text(Self.guidance(model.engine))
+                    .font(Type.body(10.5))
+                    .foregroundStyle(Brand.inkFaint)
+                    .lineLimit(1)
+                    .padding(.top, 1)
             }
 
             // Endpoints, not switches. The sockets bind at launch and stay up
@@ -348,6 +355,21 @@ struct MenuBarView: View {
             }
         }
         .padding(.top, 7)
+    }
+
+    /// What each engine is for, from the numbers in docs/ENGINES.md and the
+    /// library's own notes on its chunk sizes: 160 ms arrives ~180 ms behind
+    /// live; 320 ms is ~540 ms behind with a longer chunk that hears more
+    /// context per pass (fewer misheard words, by the library's word-error
+    /// figures); 1280 ms is the longest chunk; Apple delivers in ~3.8 s
+    /// bursts. Nothing here that was not measured or documented.
+    static func guidance(_ choice: EngineChoice) -> String {
+        switch choice {
+        case .fluid160: "About 180 ms behind you. The default — for cues and prompting."
+        case .fluid320: "More context, fewer misheard words; half a second behind."
+        case .fluid1280: "The most context, over a second behind — captions, not cues."
+        case .apple: "Apple's on-device recogniser. Words arrive in bursts, ~4 s apart."
+        }
     }
 
     /// Segment labels: what distinguishes the engines, and nothing else.
