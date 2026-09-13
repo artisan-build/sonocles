@@ -1,77 +1,75 @@
 <!doctype html>
 <!--
-  Source for site/public/img/og.png — the social card, composed rather than
-  cropped. Not part of the Astro build; it is opened from disk, once, when the
-  card changes.
-
-  The hero illustration is 3:2 and social cards are 1.91:1, so scaling it to fit
-  would either letterbox or cut the scribe out of frame, and the scribe is the
-  half that makes the joke. This lays out the same elements at the right shape
-  instead. Regenerate with the renderer (Playwright's Chromium, a throwaway
-  profile and a mock keychain — never the installed Chrome, which opens the
-  real profile and asks the keychain for Safe Storage):
+  Source for public/img/og.png — the social card, composed rather than
+  cropped. Not part of the Astro build; render it when the card changes:
 
       cd site && node art/og.mjs og.html public/img/og.png
 
-  Three things here are load-bearing and were each a defect once:
+  The composition is rheocles.com's, in this palette (Len, 13 Sep 2026,
+  "v3"): the colonnade band across the top, brand row, the two-line
+  headline with "still saying them." in terracotta, the what-it-is line and
+  the streaming line, the muted platform line; the pill in the bottom-left
+  corner; the real popover on the right — the app's own --render-preview,
+  its "listening" state (a live line, the engine picker) — bleeding off the
+  right and the bottom with the transcript and picker whole; the philosopher
+  and the scribe as a sticker (art/sticker.py → art/stickers/hero.png) in
+  the left column below the copy, 460px wide, his feet just off the bottom,
+  the sound arcs reaching the popover's edge. Text never overlays the art.
 
-  1. The text column is capped (--col) and the art is sized so that the two
-     never share horizontal space. Previously the subtitle ran full width and
-     the philosopher's sandal landed on the word "you", which is a poor place
-     to put a foot.
-  2. The art sits flush to the bottom edge, not past it. It used to hang
-     18px below, which sliced the legs off the scribe's stool.
-  3. The ground is --card-ground, not --stone. The hero plate is opaque and its
-     own ground is #FCF3E3, two levels off the site's #FAF2E4 — enough to draw
-     a visible vertical seam down the card at the image's left edge. Matching
-     the card to the art makes the rectangle disappear. Keep them equal; if the
-     illustration is ever regenerated, re-measure it.
+  To re-shoot the popover (never launch the built app itself; the live one
+  holds 7357/7358):
 
-  The subtitle carries the category because the headline deliberately does not.
-  A card is read at about 500px wide in a chat timeline, so nothing here is set
-  below 21px — at that width it renders around 9px.
+      cd app && swift build -c release --product Sonocles
+      .build/release/Sonocles --render-preview /tmp/sonocles-previews
+      cp /tmp/sonocles-previews/listening.png ../site/src/assets/popover.png
+
+  Nothing is set below 18px: a card is read at about 500px wide in a chat
+  timeline.
 -->
 <html lang="en"><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,500;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --stone:#FAF2E4; --card-ground:#FCF3E3;
+    --stone:#FAF2E4; --stone-deep:#EFE5D2; --stone-sink:#E0D4BE;
     --ink:#2A211A; --ink-soft:#4E4034; --script:#7A6A59;
     --terracotta:#C4552E; --terracotta-deep:#B2461F;
-    --col:580px;
   }
   * { box-sizing:border-box; margin:0; }
-  body { width:1200px; height:630px; background:var(--card-ground); overflow:hidden;
+  body { width:1200px; height:630px; background:var(--stone); overflow:hidden;
     font-family:'Instrument Sans',system-ui,sans-serif; position:relative; }
-  .colonnade { position:absolute; top:0; left:0; right:0; height:16px; z-index:3;
-    background:repeating-linear-gradient(90deg,#EFE5D2 0 5px,#E0D4BE 5px 6px,#EFE5D2 6px 11px,transparent 11px 30px); }
-  .colonnade::after { content:''; position:absolute; left:0; right:0; bottom:0; height:5px; background:var(--terracotta); }
-  .pad { padding:52px 58px; height:100%; display:flex; flex-direction:column; justify-content:space-between; position:relative; z-index:2; }
+  /* The colonnade every page wears at its head: fluting over the terracotta floor. */
+  .colonnade { position:absolute; top:0; left:0; right:0; height:34px; z-index:4; }
+  .colonnade::before { content:''; position:absolute; inset:0 0 6px 0;
+    background:repeating-linear-gradient(90deg, var(--stone-deep) 0 5px, var(--stone-sink) 5px 6px, var(--stone-deep) 6px 11px, transparent 11px 30px); }
+  .colonnade::after { content:''; position:absolute; left:0; right:0; bottom:0; height:6px; background:var(--terracotta); opacity:.85; }
+  .pad { padding:66px 58px 44px 58px; height:100%; display:flex; flex-direction:column; position:relative; z-index:3; }
   .brand { display:flex; align-items:center; gap:12px; }
   .brand .name { font-family:'Fraunces',serif; font-weight:700; font-size:30px; color:var(--ink);
     font-variation-settings:'SOFT' 40,'WONK' 1; }
   .brand .say { font-family:'IBM Plex Mono',monospace; font-size:15px; color:var(--script); }
-  /* Pushed to the top right, where the art has not started yet. It used to sit
-     in the footer competing for width with the line that does the real work. */
-  .pill { margin-left:auto; background:var(--terracotta-deep); color:#fff; font-size:14px; font-weight:600;
-    letter-spacing:.08em; text-transform:uppercase; padding:7px 16px; border-radius:999px; }
-  h1 { font-family:'Fraunces',serif; font-weight:600; font-size:64px; line-height:1.06;
-    color:var(--ink); letter-spacing:-.022em; font-variation-settings:'SOFT' 30,'WONK' 1; max-width:14ch; }
+  h1 { font-family:'Fraunces',serif; font-weight:600; font-size:58px; line-height:1.06; margin-top:44px;
+    color:var(--ink); letter-spacing:-.022em; font-variation-settings:'SOFT' 30,'WONK' 1; white-space:nowrap; }
   h1 em { font-style:normal; color:var(--terracotta); }
-  .foot { max-width:var(--col); }
-  .cat { font-size:32px; font-weight:600; color:var(--ink); letter-spacing:-.012em; line-height:1.15; }
-  .meta { color:var(--ink-soft); font-size:21px; margin-top:7px; }
+  .foot { margin-top:30px; }
+  .cat { font-size:26px; font-weight:600; color:var(--ink); letter-spacing:-.012em; line-height:1.2; }
+  .meta { color:var(--ink-soft); font-size:21px; margin-top:8px; }
   .meta b { font-weight:600; color:var(--ink); }
-  /* 620 wide on a 3:2 source is 413 tall, so the top edge lands at y=217. The
-     illustration carries its own margin, so the leftmost drawn pixel is at
-     x=641 rather than at the box edge — that is the number that has to clear
-     the text, not the box. Verified by scanning the render, not by trusting
-     this comment. */
-  .art { position:absolute; right:-16px; bottom:0; width:620px; z-index:1; display:block; }
+  .foot .meta.platform { font-size:18px; color:var(--ink); opacity:.6; margin-top:20px; }
+  .pill { position:absolute; left:58px; bottom:36px; margin:0; background:var(--terracotta-deep); color:#fff; font-size:14px; font-weight:600;
+    letter-spacing:.08em; text-transform:uppercase; padding:7px 16px; border-radius:999px; line-height:1.2; }
+  /* The popover (--render-preview, the listening state: a live line, the
+     engine picker), bleeding off the right and the bottom. */
+  .popover { position:absolute; left:715px; top:166px; width:500px; z-index:1; display:block; border-radius:12px;
+    box-shadow:0 2px 4px rgba(42,33,26,.14), 0 18px 48px -12px rgba(42,33,26,.35); }
+  /* The philosopher and the scribe in front, over the popover's lower-left,
+     with a halo of the ground so the transcript does not read through the
+     gaps between them. */
+  .art { position:absolute; left:300px; bottom:-48px; width:460px; z-index:2; display:block; }
 </style></head>
 <body>
   <div class="colonnade"></div>
-  <img class="art" src="src/assets/plates/hero.png" alt="">
+  <img class="popover" src="src/assets/popover.png" alt="">
+  <img class="art" src="art/stickers/hero.png" alt="">
   <div class="pad">
     <div class="brand">
       <svg width="34" height="34" viewBox="0 0 32 32">
@@ -82,12 +80,13 @@
       </svg>
       <span class="name">Sonocles</span>
       <span class="say">so-NOK-leez</span>
-      <span class="pill">Free · Open source</span>
     </div>
-    <h1>Words, while you're <em>still saying them.</em></h1>
+    <h1>Words, while you're<br><em>still saying them.</em></h1>
     <div class="foot">
       <p class="cat">Live speech-to-text for the Mac.</p>
-      <p class="meta"><b>WebSocket</b> or <b>SSE</b>, word by word, ~180&nbsp;ms behind you.</p>
+      <p class="meta">Streamed over WebSocket or SSE, in real time.</p>
+      <p class="meta platform">Built for Mac · macOS 14 or later</p>
     </div>
+    <span class="pill">Free · Open source · MIT</span>
   </div>
 </body></html>
