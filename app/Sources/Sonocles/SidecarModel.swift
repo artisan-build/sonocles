@@ -57,6 +57,9 @@ final class SidecarModel {
     /// client polling `/status` cannot disagree. Nil until the sockets bind.
     var clients: Int?
     var uptime: TimeInterval?
+    /// The version stamped into the bundle, or `dev` for a bare executable —
+    /// what `GET /` answers. A variable so a preview can be stamped.
+    var version = Service.version
 
     private var service: Service?
     private var lastArrival: UInt64?

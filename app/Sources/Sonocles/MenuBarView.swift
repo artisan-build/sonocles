@@ -29,6 +29,7 @@ struct MenuBarView: View {
             centre
             rule
             controls
+            strip
         }
         .frame(width: 344)
         .background(Brand.ground)
@@ -297,6 +298,45 @@ struct MenuBarView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+    }
+
+    /// The process, in one dark line under everything: which build this
+    /// is, which engine it is set to, and how long the sockets have been up
+    /// — what `GET /` and `/status` would say, so a screenshot of the
+    /// popover is a bug report. The dot is lit while the sockets are bound.
+    private var strip: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(model.uptime == nil ? Brand.script : Brand.Block.terracotta)
+                .frame(width: 5, height: 5)
+            Text("sonocles \(model.version)")
+                .foregroundStyle(Brand.Block.text)
+            Text("·")
+            Text(model.engine.label)
+            Text("·")
+            Text(model.uptime.map { "up \(Self.uptime($0))" } ?? "up ··")
+                .foregroundStyle(model.uptime == nil ? Brand.script : Brand.Block.dim)
+        }
+        .lineLimit(1)
+        .font(Type.mono(9.5))
+        .foregroundStyle(Brand.Block.dim)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(Brand.Block.panel)
+    }
+
+    /// `41s`, `12m`, `1h 12m`, `2d 3h`: the two largest units that are not
+    /// zero, the way a person says it.
+    static func uptime(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds.rounded(.down))
+        let days = total / 86400
+        let hours = total % 86400 / 3600
+        let minutes = total % 3600 / 60
+        if days > 0 { return "\(days)d \(hours)h" }
+        if hours > 0 { return "\(hours)h \(minutes)m" }
+        if minutes > 0 { return "\(minutes)m" }
+        return "\(total % 60)s"
     }
 
     /// The bearer token, which every route on both sockets is behind. Shown

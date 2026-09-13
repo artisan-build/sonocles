@@ -121,7 +121,7 @@ enum Preview {
             ),
             // No token at all: the sockets did not bind. Every field reads
             // in the colour of absence and the buttons are disabled.
-            ("unbound", AnyView(MenuBarView(model: configured { _ in }))),
+            ("unbound", AnyView(MenuBarView(model: configured { $0.uptime = nil }))),
             (
                 "pairing-rotate-armed",
                 AnyView(
@@ -175,10 +175,22 @@ enum Preview {
         )
     }
 
+    /// Every bound state has an uptime; the previews get a plausible one so
+    /// the strip is judged with a real value in it.
     private static func configured(_ change: (SidecarModel) -> Void) -> SidecarModel {
         let model = SidecarModel()
+        model.version = version
+        model.uptime = 4_335
         change(model)
         return model
+    }
+
+    /// A bare executable has no Info.plist and reports `dev`, which is true
+    /// and useless on a site. SONOCLES_VERSION stamps the previews the way
+    /// VERSION stamps the bundle in Scripts/bundle.sh; the site's og.html
+    /// says how to set it.
+    private static var version: String {
+        ProcessInfo.processInfo.environment["SONOCLES_VERSION"] ?? Service.version
     }
 
     private static func write(_ view: some View, to url: URL) {
