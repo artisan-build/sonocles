@@ -1,0 +1,33 @@
+<!doctype html>
+<!--
+  The family strip astro-og-canvas places at the top of every generated docs
+  card (src/pages/og/[...slug].ts): the mark, the wordmark, the pronunciation
+  — the same row og.html opens with — so a docs card says "Sonocles" as a
+  wordmark, not a glyph. The library takes one logo image; this is it.
+  Transparent, 320×44:
+
+      cd site && node art/og.mjs og-strip.html src/assets/og-strip.png --size 320x44 --transparent
+-->
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,700&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing:border-box; margin:0; }
+  body { width:320px; height:44px; background:transparent; overflow:hidden; }
+  .brand { display:flex; align-items:center; gap:12px; height:44px; }
+  .brand svg { flex:none; }
+  .name { font-family:'Fraunces',serif; font-weight:700; font-size:30px; color:#2A211A;
+    font-variation-settings:'SOFT' 40,'WONK' 1; line-height:1; }
+  .say { font-family:'IBM Plex Mono',monospace; font-size:15px; color:#7A6A59; line-height:1; padding-top:4px; }
+</style></head>
+<body>
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 32 32">
+      <circle cx="7" cy="16" r="3" fill="#C4552E"/>
+      <path d="M12 9.5a10 10 0 0 1 0 13" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <path d="M17.5 6.5a16 16 0 0 1 0 19" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".72"/>
+      <path d="M23 3.5a22 22 0 0 1 0 25" stroke="#C4552E" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".45"/>
+    </svg>
+    <span class="name">Sonocles</span>
+    <span class="say">so-NOK-leez</span>
+  </div>
+</body></html>

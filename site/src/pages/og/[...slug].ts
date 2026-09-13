@@ -1,6 +1,13 @@
 // One social card per docs page, generated at build: limestone ground, the
-// mark, a terracotta bar on the leading edge, Fraunces title, Instrument Sans
-// line. Slugs match page paths: /og/docs/protocol.png, /og/404.png.
+// family strip (mark, wordmark, pronunciation) and the pill, a terracotta bar
+// on the leading edge, Fraunces title, Instrument Sans line. Slugs match page
+// paths: /og/docs/protocol.png, /og/404.png.
+//
+// astro-og-canvas takes one logo and no second text block, so the strip is
+// the logo (src/assets/og-strip.png, from ../../../og-strip.html) and the
+// pill is a transparent full-size background layer (src/assets/og-pill.png,
+// from ../../../og-pill.html) composed under it — the same two layers
+// rheocles.com's cards use. Both are rendered by art/og.mjs.
 //
 // The landing page is not here on purpose. Its card is composed by hand
 // (public/img/og.png, source in ../../og.html) because the philosopher and
@@ -31,7 +38,8 @@ export const { getStaticPaths, GET } = await OGImageRoute({
 	getImageOptions: (_id, page) => ({
 		title: page.title,
 		description: page.description,
-		logo: { path: './src/assets/og-mark.png', size: [84] },
+		logo: { path: './src/assets/og-strip.png', size: [320, 44] },
+		bgImage: { path: './src/assets/og-pill.png', fit: 'none', position: 'center' },
 		bgGradient: [[250, 242, 228]],
 		border: { color: [196, 85, 46], width: 18, side: 'inline-start' },
 		padding: 72,
