@@ -297,10 +297,8 @@ make baseline</pre>
 		font-family: var(--mono);
 		text-decoration-color: color-mix(in oklab, var(--script) 40%, transparent);
 	}
-	/* The second install route: BrewChip, a button that copies the command.
-	   The chip is a flex item and therefore blockified, so on a narrow screen
-	   it wraps at the space before the tap path rather than breaking mid-token
-	   or scrolling behind an edge. */
+	/* The second install route: BrewChip, the command in a chip with a Copy
+	   button beside it. */
 	.brew {
 		display: flex;
 		align-items: center;
@@ -309,6 +307,12 @@ make baseline</pre>
 		margin: 16px 0 0;
 		font-size: 14px;
 		color: var(--ink-faint);
+	}
+	/* The chip-and-button may shrink to the column; the "or" wraps above it
+	   on a phone rather than the button under the chip. */
+	.brew > :global(.homebrew) {
+		flex: 0 1 auto;
+		min-width: 0;
 	}
 	.hero h1 {
 		font-size: clamp(40px, 7.6vw, 80px);
