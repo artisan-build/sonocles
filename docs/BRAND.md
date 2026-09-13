@@ -228,11 +228,15 @@ A tiny free utility should not present itself as an exhibit. Those prompts are
 still in `art/make.py` under `STYLE`, because the work was good even though the
 direction was not.
 
-`art/make.py` generates both sets. Two working notes, learned the expensive way.
-**No lettering, ever** — the model cannot spell Greek and gibberish reads as
-carelessness. And **specify clothing explicitly**: classical nudity is authentic
+`art/make.py` generates both sets. Three working notes, learned the expensive
+way. **No lettering, ever** — the model cannot spell Greek and gibberish reads
+as carelessness. **Specify clothing explicitly**: classical nudity is authentic
 to the source and will get a generation refused by content moderation, which
-costs a retry and teaches nothing.
+costs a retry and teaches nothing. And **everything fully inside the frame,
+nothing touching the edges**: a plate is cut to a sticker afterwards
+(`site/art/sticker.py` lifts the drawing off the generated cream, which is
+never quite the page's `--stone`), and a drawing that runs off the edge cannot
+be cut without a straight side — it ships boxed until it is regenerated.
 
 ## Copy
 

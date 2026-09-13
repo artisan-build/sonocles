@@ -1,8 +1,14 @@
 ---
 // An illustration. The plates were generated once by art/make.py from the
-// prompts in docs/BRAND.md § The plates and live in src/assets/plates; Astro
-// serves them resized and as WebP so the hero is no longer 1.5 MB of PNG.
-// The drawing is unchanged.
+// prompts in docs/BRAND.md § The plates into art/originals, cut to stickers
+// by art/sticker.py — the generated cream removed, the drawing sat straight
+// on the page's --stone — and committed under src/assets/plates; Astro serves
+// them resized and as WebP so the hero is no longer 1.5 MB of PNG. The
+// drawing is unchanged.
+//
+// A sticker has no box, so the image has no corners; `boxed` gives it some
+// for a plate still shipping on its own rectangle (one whose drawing touches
+// the frame, so the cut would show a straight edge; sticker.py's SKIP).
 //
 // `size` is the landing page's three figure widths: full measure, `mid`
 // (square plates at full measure swamp the text they illustrate) and `sm`.
@@ -15,14 +21,24 @@ interface Props {
 	size?: 'full' | 'mid' | 'sm';
 	class?: string;
 	loading?: 'lazy' | 'eager';
+	boxed?: boolean;
 }
-const { src, alt, caption, size = 'full', class: cls, loading = 'lazy' } = Astro.props;
+const { src, alt, caption, size = 'full', class: cls, loading = 'lazy', boxed = false } = Astro.props;
 const sizes = { full: '(max-width: 1000px) 92vw, 920px', mid: '(max-width: 620px) 92vw, 560px', sm: '(max-width: 620px) 92vw, 330px' }[size];
 const widths = { full: [480, 760, 920, 1536], mid: [480, 560, 1024], sm: [330, 660] }[size];
 ---
 
 <figure class:list={['plate', `plate--${size}`, cls]}>
-	<Image src={src} alt={alt} widths={widths} sizes={sizes} format="webp" loading={loading} decoding="async" />
+	<Image
+		class:list={{ 'plate__img--boxed': boxed }}
+		src={src}
+		alt={alt}
+		widths={widths}
+		sizes={sizes}
+		format="webp"
+		loading={loading}
+		decoding="async"
+	/>
 	{caption && <figcaption set:html={caption} />}
 </figure>
 
@@ -34,6 +50,9 @@ const widths = { full: [480, 760, 920, 1536], mid: [480, 560, 1024], sm: [330, 6
 		width: 100%;
 		height: auto;
 		display: block;
+	}
+	.plate img.plate__img--boxed {
+		border-radius: 12px;
 	}
 	.plate--mid {
 		max-width: 560px;

@@ -29,12 +29,17 @@ Brand: `../docs/BRAND.md`. Docs tree: `src/lib/docs-nav.ts`.
   landing page keeps its composed card, `public/img/og.png`, whose source is
   `og.html`: the popover (`src/assets/popover.png`, the app's own
   `--render-preview`, never a desktop capture) on the right, the philosopher
-  and the scribe as a sticker (`art/sticker.py` → `art/stickers/`, from the
-  untouched plate in `art/originals/`) in front. `node art/og.mjs og.html
+  and the scribe as a sticker (the same `src/assets/plates/hero.png` the
+  page uses) in front. `node art/og.mjs og.html
   public/img/og.png` renders it; the comment at the top of `og.html` says
   how to re-shoot the popover.
 - `sitemap-index.xml`, `robots.txt`, `404.html`, `_redirects`, the favicon
   set (`public/`, rasterised once from the mark).
 
-Plates: `src/assets/plates/`, generated once by `../art/make.py`. Every run
-costs money; do not run it to reproduce what is already there.
+Plates: generated once by `../art/make.py` into `art/originals/` (every run
+costs money; do not run it to reproduce what is already there), then cut to
+stickers by `art/sticker.py` — the generated cream flood-filled to alpha from
+the edges, so the drawing sits on the page's `--stone` instead of on its own
+slightly-off rectangle — into `src/assets/plates/`, which is what the page
+imports. Idempotent from the originals; needs Pillow, numpy and scipy in a
+throwaway venv.

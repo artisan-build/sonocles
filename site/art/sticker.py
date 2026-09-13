@@ -1,28 +1,32 @@
 #!/usr/bin/env python3
 """
 The sticker cut, ported from rheocles/site/art/sticker.py. A generated plate
-arrives on its own flat cream, never quite the site's --stone; this lifts
-the drawing off it: flood-fill the background to transparency from the four
-edges, soften the one-pixel edge, trim to the drawing plus a constant
-margin, and write the result with alpha.
-
-On sonocles.com the plates stay on their cream rectangles — Len likes the
-hero as it is — so the stickers are for the social card only and land in
-art/stickers/, not src/assets/plates/. The originals in art/originals/ are
-the plates as make.py wrote them (the repo-root art/plates/ is the retired
-museum set); the script is idempotent from them.
+arrives on its own flat cream, never quite the site's --stone, so on the
+page each one reads as a slightly-off rectangle. This lifts the drawing off
+that cream so it sits directly on the page: flood-fill the background to
+transparency from the four edges, soften the one-pixel edge, trim to the
+drawing plus a constant margin, and write the result with alpha to
+src/assets/plates/, where index.astro imports it.
 
     python3 site/art/sticker.py             # every plate in art/originals
-    python3 site/art/sticker.py hero        # just that one
+    python3 site/art/sticker.py hero mic    # just those
 
-Needs Pillow, numpy and scipy — a throwaway venv, or `python3 -m pip
-install --user pillow numpy scipy`; not the site's dependencies.
+Post-processing, not regeneration: art/originals/ holds the plates as
+art/make.py wrote them (the repo-root art/plates/ is the retired museum set,
+not these), and this runs after it. It is idempotent from the originals, so
+running it twice is the same as running it once. Needs Pillow, numpy and
+scipy — a throwaway venv, or `python3 -m pip install --user pillow numpy
+scipy`; they are not the site's dependencies and do not belong in
+package.json.
 
 The fill only follows the background inward from the edges, so a cream area
-enclosed by an outline is left alone. A gap in an outline lets the fill leak
-into such an area and leaves a hole; the fix is a tighter TOLERANCE for that
-plate, below. A drawing that touches the frame cannot be helped here — it
-needs regenerating with everything inside the frame — so it goes in SKIP.
+enclosed by an outline (a tablet, a tunic, the theatre's rings) is left
+alone. A gap in an outline lets the fill leak into such an area and leaves a
+hole; the fix is a tighter TOLERANCE for that plate, below. A drawing that
+touches the frame cannot be helped here — it needs regenerating with
+everything inside the frame (art/make.py's style block asks for that) — so
+it goes in SKIP and ships on its rectangle, `boxed` in Plate.astro, rather
+than as half a sticker.
 """
 
 import sys
@@ -33,10 +37,8 @@ from PIL import Image
 from scipy import ndimage
 
 HERE = Path(__file__).resolve().parent
-# The plates as make.py generated them (the repo-root art/plates/ is the
-# retired museum set, not these). Copied here untouched; the source.
 ORIGINALS = HERE / "originals"
-OUT = HERE / "stickers"
+OUT = HERE.parent / "src" / "assets" / "plates"
 
 # How far a pixel may sit from the background colour (max channel difference,
 # 0–255) and still be background. The plates' cream is flat, so this is
@@ -55,7 +57,8 @@ OPAQUE_AT = 110
 MARGIN = 24
 
 # Plates that touch the frame: the cut would show as a hard straight edge.
-# Copied through unchanged until they are regenerated (site/ART.md).
+# Copied through unchanged, and given `boxed` in index.astro, until they are
+# regenerated. None of the five, as of 13 Sep 2026.
 SKIP: set[str] = set()
 
 

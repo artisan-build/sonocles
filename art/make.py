@@ -8,9 +8,11 @@ Image assets for the Sonocles site, via OpenAI's gpt-image-2.
     python3 art/make.py --dry-run      # print prompts, spend nothing
 
 Every call costs money, so nothing regenerates unless asked: a plate that
-already exists in site/img is skipped unless --force. The talks repo learned
-this the expensive way — a pose library one `rm -rf` from gone — so the outputs
-here are committed, not scratch.
+already exists in site/art/originals is skipped unless --force. The talks repo
+learned this the expensive way — a pose library one `rm -rf` from gone — so the
+outputs here are committed, not scratch. The originals are not what the page
+shows: site/art/sticker.py cuts each one to a sticker (the generated cream
+lifted to alpha) into site/src/assets/plates; run it after any regeneration.
 
 THE DIRECTION
 Attic red-figure pottery, played straight and then subverted exactly once. The
@@ -33,7 +35,9 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "site" / "img"
+# The flat set lands here as hero.png, contention.png … (the "flat-" prefix
+# is the prompt's name, not the file's), and sticker.py reads it from here.
+OUT = ROOT / "site" / "art" / "originals"
 
 # The shared grammar. Every prompt inherits it so the set reads as one hand.
 STYLE = """
@@ -80,7 +84,10 @@ Palette strictly: warm terracotta orange, deep brick red, pale limestone cream,
 soft olive green, and a dark warm charcoal for outlines. Nothing else.
 
 Set on a plain flat pale limestone-cream background with generous empty space
-around the subject. No vase, no pottery, no crazing, no chips, no museum
+around the subject. The whole scene sits inside the picture: everything fully
+inside the frame, nothing touching the edges — the drawing is later cut out of
+its background as a sticker, and anything that runs off the edge would be cut
+with a straight side. No vase, no pottery, no crazing, no chips, no museum
 lighting, no plinth, no frame, no photographic background. Pure flat graphic
 illustration, as though screen printed.
 
@@ -317,8 +324,9 @@ PLATES = {
 }
 
 # Retired. The prompts stay for reproducibility; the names come out of the
-# default run, because OUT is site/img and none of these files are there —
-# the museum set lives in art/plates and flat-column was deleted as unused.
+# default run, because OUT is site/art/originals and none of these files are
+# there — the museum set lives in art/plates and flat-column was deleted as
+# unused.
 # A bare `make.py` would therefore have treated all nine as missing and paid
 # to generate them, into the wrong directory. Still reachable deliberately:
 #   python3 art/make.py --only sherd
@@ -406,7 +414,7 @@ def main() -> int:
             continue
 
         size, body, style = PLATES[name]
-        target = OUT / f"{name}.png"
+        target = OUT / f"{name.removeprefix('flat-')}.png"
 
         if target.exists() and not args.force:
             print(f"{name:14} exists, skipping (--force to redo)")
