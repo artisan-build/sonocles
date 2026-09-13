@@ -312,10 +312,16 @@ struct MenuBarView: View {
             Text("sonocles \(model.version)")
                 .foregroundStyle(Brand.Block.text)
             Text("·")
-            Text(model.engine.label)
-            Text("·")
-            Text(model.uptime.map { "up \(Self.uptime($0))" } ?? "up ··")
-                .foregroundStyle(model.uptime == nil ? Brand.script : Brand.Block.dim)
+            if let uptime = model.uptime {
+                Text(model.engine.label)
+                Text("·")
+                Text("up \(Self.uptime(uptime))")
+            } else {
+                // No uptime means no sockets: nothing to name an engine or
+                // a duration for, so say that rather than a row of ··.
+                Text("engine not running")
+                    .foregroundStyle(Brand.script)
+            }
         }
         .lineLimit(1)
         .font(Type.mono(9.5))

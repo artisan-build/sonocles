@@ -36,7 +36,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
             // not resizable, so a taller state would clip — every centre
             // state is 112 pt on purpose.
             ->width(344)
-            ->height(494)
+            ->height(489)
             ->resizable(false)
             ->url(url('/'));
     }

@@ -269,9 +269,10 @@
   <i></i>
   <span class="name" id="strip-name">sonocles ··</span>
   <span>·</span>
-  <span id="strip-engine">··</span>
-  <span>·</span>
-  <span class="absent" id="strip-up">up ··</span>
+  <span id="strip-engine" hidden>··</span>
+  <span id="strip-dot" hidden>·</span>
+  <span class="absent" id="strip-up" hidden>up ··</span>
+  <span class="absent" id="strip-down">engine not running</span>
 </div>
 
 <script>
@@ -323,6 +324,21 @@ function show(id, value, unit) {
   }
   node.textContent = value + unit
   node.classList.remove('absent')
+}
+
+/*
+ * Back to empty, with the hint: what the Swift popover's clearLive() does
+ * when capture stops, so Stop then Start begins a fresh transcript rather
+ * than showing the last four lines of the old one.
+ */
+function clearStream() {
+  const stream = el('stream')
+  if (!stream.querySelector('.f') && el('empty')) return
+  stream.replaceChildren()
+  const hint = document.createElement('span')
+  hint.className = 'empty'; hint.id = 'empty'
+  hint.textContent = 'Words appear here as you say them.'
+  stream.appendChild(hint)
 }
 
 function render(frame) {
@@ -548,9 +564,14 @@ function uptime(seconds) {
 
 function strip(up, s) {
   el('strip').dataset.up = up ? 'yes' : 'no'
+  // Down: nothing to name an engine or a duration for, so say that rather
+  // than a row of ··. The version stays: the bundled engine's cannot change.
+  el('strip-engine').hidden = el('strip-dot').hidden = el('strip-up').hidden = !up
+  el('strip-down').hidden = up
+  if (!up) return
   const upNode = el('strip-up')
-  upNode.textContent = up && typeof s?.uptime === 'number' ? 'up ' + uptime(s.uptime) : 'up ··'
-  upNode.classList.toggle('absent', !(up && typeof s?.uptime === 'number'))
+  upNode.textContent = typeof s?.uptime === 'number' ? 'up ' + uptime(s.uptime) : 'up ··'
+  upNode.classList.toggle('absent', typeof s?.uptime !== 'number')
 }
 
 /*
@@ -598,8 +619,6 @@ async function poll() {
       clients(null)
       pairing(null)
       strip(false)
-      version = null
-      el('strip-name').textContent = 'sonocles ··'
       setSegmentsDisabled(true)
     } else if (!j.paired) {
       // Up, and refusing us. Not "starting": nothing is coming that will fix it
@@ -634,7 +653,7 @@ async function poll() {
       setSegmentsDisabled(s.state === 'starting')
 
       meter(s.levelDb)
-      if (!listening) { show('lag', null); show('gap', null); show('ui', null); lastArrival = null }
+      if (!listening) { show('lag', null); show('gap', null); show('ui', null); lastArrival = null; clearStream() }
     }
   } catch (e) {
     state('down', 'Down')

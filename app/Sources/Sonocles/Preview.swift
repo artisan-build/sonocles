@@ -181,6 +181,9 @@ enum Preview {
         let model = SidecarModel()
         model.version = version
         model.uptime = 4_335
+        // Never the real path: these PNGs go on the site and the social
+        // card, and the real one names whoever rendered them.
+        model.tokenFile = "~/Library/Application Support/Sonocles/token"
         change(model)
         return model
     }

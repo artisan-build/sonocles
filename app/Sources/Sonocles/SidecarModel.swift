@@ -177,8 +177,10 @@ final class SidecarModel {
         }
     }
 
-    /// Where the token lives, so the popover can say so.
-    var tokenFile: String { TokenStore.standard.fileURL.path }
+    /// Where the token lives, so the popover can say so. The real path in
+    /// the app; a preview substitutes a neutral one, since the rendered
+    /// popover goes on the public site and the path carries a login.
+    var tokenFile = TokenStore.standard.fileURL.path
 
     /// The token, masked to its ends: enough to compare, not enough to use.
     var maskedToken: String? {
