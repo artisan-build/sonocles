@@ -8,7 +8,10 @@
 // is supersampled, and written at the given size — the dimensions the
 // og:image:width/height tags state. `--transparent` keeps the page's alpha
 // (for the strip and the pill that astro-og-canvas composes onto the
-// generated cards). `--keep-scale` writes the 2× pixels as they are.
+// generated cards). `--keep-scale` writes the 2× pixels as they are. The
+// PNG is quantised to a palette — flat colour and type, nothing visible
+// lost — so the landing card stays under 100 KB; Slack unfurls a heavy one
+// badly.
 //
 // Never the installed Chrome: it opens the real profile and asks the
 // keychain for Safe Storage. Playwright's own Chromium, a throwaway profile,
@@ -76,7 +79,7 @@ try {
 	const raw = await page.screenshot({ omitBackground: transparent, clip: { x: 0, y: 0, width, height } });
 	const image = sharp(raw);
 	if (!keepScale) image.resize(width, height, { kernel: 'lanczos3' });
-	await image.png().toFile(out);
+	await image.png({ palette: true, quality: 90, effort: 10 }).toFile(out);
 	console.log(`${out} ${keepScale ? `${width * 2}×${height * 2}` : `${width}×${height}`}`);
 } finally {
 	await context.close();
