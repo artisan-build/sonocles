@@ -45,8 +45,6 @@ final class SidecarModel {
     /// The bearer token every route is behind, for the popover to show and
     /// copy. Read from the service once the sockets are bound; nil until then.
     var token: String?
-    /// The Control API section open in the popover.
-    var pairingOpen = false
     /// The token shown in full, or masked to its ends.
     var tokenShown = false
     /// Rotate is two clicks: the first arms it, the second does it. A

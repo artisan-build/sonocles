@@ -61,12 +61,22 @@ enum Preview {
         return true
     }
 
+    /// A token of the real shape, so the masked and the shown forms are
+    /// judged at their real widths.
+    private static let token =
+        "3f9a1c77e2b04d5f8a6c1e2d9b7f4a0c5d6e7f8091a2b3c4d5e6f70819a2b3c4"
+
     private static func states() -> [(String, AnyView)] {
         [
-            ("idle", AnyView(MenuBarView(model: configured { _ in }))),
+            ("idle", AnyView(MenuBarView(model: configured { $0.token = token }))),
             (
                 "idle-1280",
-                AnyView(MenuBarView(model: configured { $0.engine = .fluid1280 }))
+                AnyView(
+                    MenuBarView(
+                        model: configured {
+                            $0.engine = .fluid1280
+                            $0.token = token
+                        }))
             ),
             (
                 "listening",
@@ -74,6 +84,7 @@ enum Preview {
                     MenuBarView(
                         model: configured {
                             $0.running = true
+                            $0.token = token
                             $0.levelDb = -21.4
                             $0.heldDb = -21.4
                             $0.transcript = [
@@ -92,30 +103,22 @@ enum Preview {
                     MenuBarView(
                         model: configured {
                             $0.running = true
+                            $0.token = token
                             $0.levelDb = -54
                             $0.heldDb = -54
                         }))
             ),
-            (
-                "pairing",
-                AnyView(
-                    MenuBarView(
-                        model: configured {
-                            $0.pairingOpen = true
-                            $0.token =
-                                "3f9a1c77e2b04d5f8a6c1e2d9b7f4a0c5d6e7f8091a2b3c4d5e6f70819a2b3c4"
-                        }))
-            ),
+            // No token at all: the sockets did not bind. Every field reads
+            // in the colour of absence and the buttons are disabled.
+            ("unbound", AnyView(MenuBarView(model: configured { _ in }))),
             (
                 "pairing-rotate-armed",
                 AnyView(
                     MenuBarView(
                         model: configured {
-                            $0.pairingOpen = true
                             $0.tokenShown = true
                             $0.rotateArmed = true
-                            $0.token =
-                                "3f9a1c77e2b04d5f8a6c1e2d9b7f4a0c5d6e7f8091a2b3c4d5e6f70819a2b3c4"
+                            $0.token = token
                         }))
             ),
             (

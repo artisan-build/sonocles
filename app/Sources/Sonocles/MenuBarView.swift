@@ -258,12 +258,14 @@ struct MenuBarView: View {
                 Spacer()
             }
 
-            DisclosureGroup(isExpanded: $model.pairingOpen) {
-                pairing
-            } label: {
+            // Always open. The token is the one thing a new client needs
+            // from this popover, and a disclosure hid it behind a click that
+            // nobody knew to make.
+            VStack(alignment: .leading, spacing: 7) {
                 Text("Control API")
                     .font(Type.body(11))
                     .foregroundStyle(Brand.inkFaint)
+                pairing
             }
 
             HStack(spacing: 8) {
@@ -296,9 +298,8 @@ struct MenuBarView: View {
     private var pairing: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(
-                "Every route is behind a bearer token, the event stream included. "
-                    + "Apps running as you read it from the file and are paired; "
-                    + "a web page cannot. Rotating cuts off every paired client."
+                "Every route is behind this token, the event stream included. Apps "
+                    + "running as you read the file; rotating cuts every paired client off."
             )
             .font(Type.body(10))
             .foregroundStyle(Brand.inkFaint)
@@ -354,7 +355,6 @@ struct MenuBarView: View {
                 .disabled(model.token == nil)
             }
         }
-        .padding(.top, 7)
     }
 
     /// What each engine is for, from the numbers in docs/ENGINES.md and the
