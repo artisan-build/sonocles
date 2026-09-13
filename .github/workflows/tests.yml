@@ -58,7 +58,7 @@ jobs:
           BASE: ${{ github.base_ref }}
         run: |
           CHANGED="$(git diff --name-only "origin/$BASE...HEAD")"
-          AREAS="$(echo "$CHANGED" | grep -E '^(app/|php/|docs/openapi\.yaml$)' | sed -E 's#^(app/|php/).*#\1#' | sort -u | paste -sd ' ' -)"
+          AREAS="$(echo "$CHANGED" | { grep -E '^(app/|php/|docs/openapi\.yaml$)' || true; } | sed -E 's#^(app/|php/).*#\1#' | sort -u | paste -sd ' ' -)"
           if [ -n "$AREAS" ] && ! echo "$CHANGED" | grep -qx 'CHANGELOG.md'; then
             echo "::error title=No changelog entry::This PR changes $AREAS but not CHANGELOG.md — add a line under ## [Unreleased], or label the PR skip-changelog"
             exit 1
