@@ -3,6 +3,7 @@
 // coloured code blocks are the ones the single-file site shipped; only the
 // scaffolding around them moved when the site moved to Astro. Where the old
 // file said something in a CSS comment, the comment came with it.
+import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import Section from '../components/Section.astro';
 import Plate from '../components/Plate.astro';
@@ -11,6 +12,9 @@ import contention from '../assets/plates/contention.png';
 import theatre from '../assets/plates/theatre.png';
 import listener from '../assets/plates/listener.png';
 import mic from '../assets/plates/mic.png';
+// The real popover, rendered by the app itself (--render-preview, the
+// listening state) — the same shot the social card uses.
+import popover from '../assets/popover.png';
 import { version, releaseUrl } from '../lib/version';
 ---
 
@@ -31,6 +35,15 @@ import { version, releaseUrl } from '../lib/version';
 			<span class="free">Free · Open source · MIT</span>
 			<h1>Words, while you're <br /><em>still saying them.</em></h1>
 			<p class="lede">Sonocles turns your Mac's microphone into a live stream of text — over <b>WebSocket</b> or <b>server-sent events</b>, word by word, about 180&nbsp;milliseconds behind you.</p>
+			<Image
+				class="hero-popover"
+				src={popover}
+				width={344}
+				densities={[1, 2]}
+				format="png"
+				loading="eager"
+				alt="The Sonocles menu bar popover, listening: a level meter, a live line of text — and this week we are looking at the two proposals that landed — with its lag, and the engine picker on Parakeet 160 ms."
+			/>
 			<p class="lede2"><b>What listens is up to you.</b> A teleprompter that keeps your pace, a cue that fires on the word, live captions, a bot that answers to its own name. It streams; you decide.</p>
 			<p class="sub">Runs on the Neural Engine. Nothing leaves the machine.</p>
 
@@ -195,6 +208,64 @@ make baseline</pre>
 	.hero {
 		padding: 56px 0 20px;
 	}
+	/* Not a Plate: no caption, no box. A window floating over the page, so a
+	   shadow and its own corners are all it gets. */
+	.hero :global(.hero-popover) {
+		display: block;
+		width: 100%;
+		max-width: 344px;
+		height: auto;
+		border-radius: 12px;
+		box-shadow:
+			0 1px 2px rgba(42, 33, 26, 0.12),
+			0 12px 32px -8px rgba(42, 33, 26, 0.28);
+	}
+	/* Wide: copy left, the popover right, spanning the copy's rows; the plate
+	   and the frames stay below, full width. Every hero child is a sibling so
+	   the phone order (below) can move the popover under the first paragraph. */
+	@media (min-width: 761px) {
+		.hero {
+			display: grid;
+			grid-template-columns: minmax(0, 11fr) minmax(0, 9fr);
+			grid-template-rows: repeat(6, auto) 1fr auto auto;
+			column-gap: 2.5rem;
+			align-items: start;
+		}
+		.hero > * {
+			grid-column: 1;
+		}
+		.hero > .free {
+			justify-self: start;
+		}
+		.hero > :global(.hero-popover) {
+			grid-column: 2;
+			grid-row: 1 / span 7;
+			justify-self: end;
+			margin-top: 0.4rem;
+		}
+		.hero > :global(.hero-plate),
+		.hero > .stream {
+			grid-column: 1 / -1;
+		}
+		/* The headline in a column: two authored lines, sized to fit them
+		   (`:first-of-type` only to outrank the page-wide rule further down). */
+		.hero > h1:first-of-type {
+			font-size: 40px;
+		}
+	}
+	/* At the page's full measure the popover takes a fixed 320px against the
+	   column's right edge — level with the header's GitHub link. */
+	@media (min-width: 1000px) {
+		.hero {
+			grid-template-columns: minmax(0, 1fr) 320px;
+		}
+		.hero > :global(.hero-popover) {
+			max-width: 320px;
+		}
+		.hero > h1:first-of-type {
+			font-size: 56px;
+		}
+	}
 	.free {
 		display: inline-block;
 		margin: 0 0 20px;
@@ -313,6 +384,8 @@ make baseline</pre>
 		}
 		.hero .free {
 			order: 1;
+			/* A flex item now, so it must not stretch to the column. */
+			align-self: flex-start;
 		}
 		.hero h1 {
 			order: 2;
@@ -321,11 +394,12 @@ make baseline</pre>
 		.hero .lede {
 			order: 3;
 		}
-		/* The plates are a child component, so the parent's scope does not
-		   reach them; :global does. */
-		.hero :global(.hero-plate) {
+		/* The popover is a child component, so the parent's scope does not
+		   reach it; :global does. It takes the place the plate had, under
+		   the first paragraph; the plate follows the copy, as on wide screens. */
+		.hero :global(.hero-popover) {
 			order: 4;
-			margin: 22px 0 4px;
+			margin: 22px auto 4px;
 		}
 		.hero .lede2 {
 			order: 5;
@@ -341,8 +415,12 @@ make baseline</pre>
 			order: 8;
 			align-items: flex-start;
 		}
-		.hero .stream {
+		.hero :global(.hero-plate) {
 			order: 9;
+			margin: 30px 0 4px;
+		}
+		.hero .stream {
+			order: 10;
 		}
 	}
 
