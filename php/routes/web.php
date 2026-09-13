@@ -42,6 +42,10 @@ Route::get('/engine/status', function () {
         'engine' => $status,
         'binary' => Sidecar::binary(),
         'ports' => ['http' => Sidecar::httpPort(), 'ws' => Sidecar::wsPort()],
+        // The token as the file has it right now, for the popover's Control
+        // API block — re-read on every poll, so a rotation made anywhere
+        // shows within a second. Same footing as /engine/token below.
+        'token' => Token::read(),
     ]);
 });
 
@@ -70,6 +74,16 @@ $forward = function (Closure $call) {
 
 Route::post('/engine/start', fn () => $forward(Sidecar::start(...)));
 Route::post('/engine/stop', fn () => $forward(Sidecar::stop(...)));
+
+// `GET /` on the engine: name, version, ports. The popover's strip shows the
+// version — asked once when the engine comes up, since it cannot change
+// while it is running.
+Route::get('/engine/about', fn () => $forward(Sidecar::discover(...)));
+
+// The popover's Rotate: the engine rewrites its file and every other paired
+// client has to read it again — including this app, which does so on its
+// next poll. The answer is the engine's, token included, as the route gives it.
+Route::post('/engine/token/rotate', fn () => $forward(Sidecar::rotateToken(...)));
 
 // The engine control. GET /engine/choices is what the segmented control is
 // built from — the engine's `available`, which is the list this Mac can run,

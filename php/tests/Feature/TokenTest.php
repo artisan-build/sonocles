@@ -100,4 +100,41 @@ class TokenTest extends TestCase
         file_put_contents($this->file, str_repeat('e', 64));
         $this->getJson('/engine/token')->assertOk()->assertJson(['token' => str_repeat('e', 64)]);
     }
+
+    public function test_the_popover_gets_the_token_as_the_file_has_it_on_every_poll(): void
+    {
+        Http::fake([Sidecar::url('/*') => Http::response(['state' => 'idle', 'listening' => false, 'clients' => 0])]);
+
+        file_put_contents($this->file, str_repeat('g', 64));
+        $this->getJson('/engine/status')->assertOk()->assertJson(['paired' => true, 'token' => str_repeat('g', 64)]);
+
+        // Rotated underneath us: the next poll shows the new one, no relaunch.
+        file_put_contents($this->file, str_repeat('h', 64));
+        $this->getJson('/engine/status')->assertOk()->assertJson(['token' => str_repeat('h', 64)]);
+
+        unlink($this->file);
+        $this->getJson('/engine/status')->assertOk()->assertJson(['token' => null]);
+    }
+
+    public function test_rotate_is_forwarded_to_the_engine_and_its_answer_comes_back_verbatim(): void
+    {
+        file_put_contents($this->file, str_repeat('i', 64));
+        $answer = ['token' => str_repeat('j', 64)];
+        Http::fake([Sidecar::url('/token/rotate') => Http::response($answer)]);
+
+        $this->postJson('/engine/token/rotate')->assertOk()->assertExactJson($answer);
+
+        // With the token the file had: rotation is itself behind the token.
+        Http::assertSent(fn (Request $r) => $r->method() === 'POST'
+            && $r->url() === Sidecar::url('/token/rotate')
+            && $r->hasHeader('Authorization', 'Bearer '.str_repeat('i', 64)));
+    }
+
+    public function test_rotate_against_a_refusing_engine_is_a_401_not_a_new_token(): void
+    {
+        file_put_contents($this->file, str_repeat('k', 64));
+        Http::fake([Sidecar::url('/token/rotate') => Http::response(['error' => 'authentication required'], 401)]);
+
+        $this->postJson('/engine/token/rotate')->assertStatus(401)->assertJson(['error' => 'not paired']);
+    }
 }

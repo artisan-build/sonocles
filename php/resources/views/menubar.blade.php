@@ -74,7 +74,8 @@
      dark block; the other states are prose and sit on the inset. */
   main { flex:none; padding:13px 14px; background:var(--stone-deep); }
   main[data-s="listening"], main[data-s="starting"] { background:var(--code-ground); }
-  .panel { height:92px; display:flex; flex-direction:column; justify-content:center; gap:6px; }
+  /* Every centre state is the same height, so switching never moves the controls. */
+  .panel { height:112px; display:flex; flex-direction:column; justify-content:center; gap:6px; }
   .panel h2 { margin:0; font:500 12px/1.3 var(--body); color:var(--ink); }
   .panel p { margin:0; font:10.5px/1.4 var(--body); color:var(--ink-faint); }
   .panel .word { font:11px/1 var(--mono); color:var(--oxide); }
@@ -83,7 +84,7 @@
   .pulse i:nth-child(2) { animation-delay:.16s; } .pulse i:nth-child(3) { animation-delay:.32s; }
   @keyframes pulse { 0%,100% { opacity:.25; } 50% { opacity:.95; } }
 
-  .live { height:92px; display:flex; flex-direction:column; gap:11px; }
+  .live { height:112px; display:flex; flex-direction:column; gap:11px; }
   .live > * { flex:none; }
   /* Twenty cells over the useful range, -60 dBFS to clipping; the number
      carries the detail the bar throws away. */
@@ -95,14 +96,18 @@
   .db { width:24px; text-align:right; font:10px/1 var(--mono); color:var(--code-text); }
   .db.absent { color:var(--script); }
   .dbu { font:9px/1 var(--mono); color:var(--code-dim); }
-  /* Three lines, reserved, so an arriving word never shoves the rest of the
-     popover down. Scrolled to the end, so what shows is the newest — the
-     head-truncation the Swift popover gets from lineLimit. */
-  .stream { height:45px; overflow:hidden; font:12px/15px var(--mono); color:var(--code-text); }
+  /* Four lines, a fixed window over the running transcript, so an arriving
+     word never shoves the rest of the popover down. Scrolled to the end, so
+     what shows is the newest, and faded off the top rather than cut. The
+     live line is bright; what has settled sits dim above it, as in the
+     Swift popover. Empty, it says what will happen rather than looking broken. */
+  .stream { height:60px; overflow:hidden; font:12px/15px var(--mono); color:var(--code-text);
+    display:flex; flex-direction:column; justify-content:flex-end;
+    -webkit-mask-image:linear-gradient(to bottom, transparent, black 14%); mask-image:linear-gradient(to bottom, transparent, black 14%); }
   .stream .empty { color:var(--script); }
-  .f { display:block; }
-  .f.partial { color:var(--code-dim); }
-  .f.final   { color:var(--code-text); }
+  .f { display:block; flex:none; }
+  .f.partial { color:var(--code-text); }
+  .f.final   { color:var(--code-dim); }
   .stats { display:flex; gap:16px; font:10px/1 var(--mono); color:var(--code-dim); }
   .stats b { font:400 11px/1 var(--mono); color:var(--terracotta-soft); margin-left:5px; }
   /* An absent measurement is rendered in the colour of absence, never as 0. */
@@ -113,9 +118,36 @@
   .row { display:flex; align-items:center; gap:15px; }
   .row .label { font:11px/1 var(--body); color:var(--ink-faint); }
   .row .name { font:9.5px/1 var(--mono); color:var(--script); margin-left:auto; }
-  .row .port { display:flex; gap:4px; font:10px/1 var(--mono); }
+  .row.ports { gap:8px; font:10px/1 var(--mono); color:var(--ink-faint); }
+  .row .port { display:flex; gap:4px; }
   .row .port span:first-child { color:var(--script); }
-  .row .port span:last-child { color:var(--ink-faint); }
+  .row .dot { color:var(--script); }
+  .row .clients.absent { color:var(--script); }
+  /* When to choose the selected engine — one muted line, follows the selection. */
+  .guidance { margin:0; font:10.5px/1.3 var(--body); color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-top:1px; }
+  /* The Control API block, always open: the token, masked, with Show, Copy
+     and Rotate, and the file it lives in. */
+  .pairing { display:flex; flex-direction:column; gap:7px; }
+  .pairing > .label { font:11px/1 var(--body); color:var(--ink-faint); }
+  .pairing p { margin:0; font:10px/1.35 var(--body); color:var(--ink-faint); }
+  .pairing .file { font:10px/1 var(--mono); color:var(--script); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pairing .token {
+    align-self:flex-start; max-width:100%; font:11px/1.35 var(--mono); color:var(--ink); user-select:text;
+    padding:5px 9px; border:1px solid var(--stone-line); border-radius:6px; background:var(--stone);
+    overflow-wrap:anywhere;
+  }
+  .pairing .token.absent { color:var(--script); }
+  .pairing .row { gap:8px; }
+  button.compact { font-size:9.5px; padding:4px 8px; }
+  button.armed { background:var(--oxide); border-color:var(--oxide); color:#fff; }
+  /* The process, in one dark line under everything: which build, which
+     engine, how long the sockets have been up. */
+  .strip { display:flex; align-items:center; gap:6px; padding:9px 14px; background:var(--code-ground);
+    font:9.5px/1 var(--mono); color:var(--code-dim); white-space:nowrap; overflow:hidden; flex:none; }
+  .strip i { width:5px; height:5px; border-radius:50%; background:var(--script); flex:none; }
+  .strip[data-up="yes"] i { background:var(--terracotta-soft); }
+  .strip .name { color:var(--code-text); }
+  .strip .absent { color:var(--script); }
   /* The engine control: the site's pill, split into equal segments, as the
      Swift popover draws it. Built from what GET /engine lists as available,
      so on a Mac that cannot run Apple's engine there is no Apple segment. */
@@ -169,7 +201,7 @@
       <span class="db absent" id="db">––</span>
       <span class="dbu">dB</span>
     </div>
-    <div class="stream" id="stream"><span class="empty" id="empty">Listening…</span></div>
+    <div class="stream" id="stream"><span class="empty" id="empty">Words appear here as you say them.</span></div>
     <div class="stats">
       <span>lag<b class="absent" id="lag">··</b></span>
       <span>every<b class="absent" id="gap">··</b></span>
@@ -200,12 +232,30 @@
       <span class="name" id="engine">··</span>
     </div>
     <div class="segmented" id="segmented" role="radiogroup" aria-label="Engine"></div>
+    <p class="guidance" id="guidance">&nbsp;</p>
   </div>
-  {{-- Endpoints, not switches. The sockets bind at launch and stay up. --}}
-  <div class="row">
+  {{-- Endpoints, not switches. The sockets bind at launch and stay up. Who is on them is /status's `clients`. --}}
+  <div class="row ports">
     <span class="port"><span>HTTP</span><span>:{{ \App\Support\Sidecar::httpPort() }}</span></span>
+    <span class="dot">·</span>
     <span class="port"><span>WS</span><span>:{{ \App\Support\Sidecar::wsPort() }}</span></span>
-    <span class="port"><span>clients</span><span id="clients">··</span></span>
+    <span class="dot">·</span>
+    <span class="clients absent" id="clients">·· clients</span>
+  </div>
+  {{-- The bearer token every route is behind, as the engine's file has it right now. Always open: it is the one thing a new client needs from here. --}}
+  <div class="pairing">
+    <span class="label">Control API</span>
+    <p>Every route is behind this token, the event stream included. Apps running as you read the file; rotating cuts every paired client off.</p>
+    {{-- Truncated in the middle, as the Swift popover does, so the file name survives. --}}
+    @php($file = \App\Support\Token::path())
+    <span class="file" title="{{ $file }}">{{ mb_strlen($file) > 50 ? mb_substr($file, 0, 22).'…'.mb_substr($file, -27) : $file }}</span>
+    <span class="token absent" id="token">··</span>
+    <div class="row">
+      <button class="compact" id="show" disabled>Show</button>
+      <button class="compact" id="copy" disabled>Copy</button>
+      <span class="spacer"></span>
+      <button class="compact" id="rotate" disabled>Rotate</button>
+    </div>
   </div>
   <div class="row">
     <button id="toggle" disabled>…</button>
@@ -213,6 +263,16 @@
     <button id="quit">Quit</button>
   </div>
 </footer>
+
+{{-- What GET / and /status say about the process: the engine's version, the engine it is set to, and its uptime. --}}
+<div class="strip" id="strip" data-up="no">
+  <i></i>
+  <span class="name" id="strip-name">sonocles ··</span>
+  <span>·</span>
+  <span id="strip-engine">··</span>
+  <span>·</span>
+  <span class="absent" id="strip-up">up ··</span>
+</div>
 
 <script>
 const csrf = document.querySelector('meta[name=csrf-token]').content
@@ -370,11 +430,22 @@ function state(s, label) {
  * socket does the same for a switch made from the Swift popover or curl.
  */
 const SHORT = { fluid160: '160 ms', fluid320: '320 ms', fluid1280: '1280 ms', apple: 'Apple' }
+const LABEL = { fluid160: 'Parakeet 160 ms', fluid320: 'Parakeet 320 ms', fluid1280: 'Parakeet 1280 ms', apple: 'Apple SpeechAnalyzer' }
+// When to choose it — the Swift popover's lines (MenuBarView.guidance),
+// which are the measured and documented numbers and nothing else.
+const GUIDANCE = {
+  fluid160: 'About 180 ms behind you. The default — for cues and prompting.',
+  fluid320: 'More context, fewer misheard words; half a second behind.',
+  fluid1280: 'The most context, over a second behind — captions, not cues.',
+  apple: "Apple's on-device recogniser. Words arrive in bursts, ~4 s apart.",
+}
 let engineId = null
 
 function select(id) {
   engineId = id
   for (const b of el('segmented').children) b.setAttribute('aria-checked', b.dataset.engine === id)
+  el('guidance').textContent = GUIDANCE[id] ?? '\u00a0'
+  el('strip-engine').textContent = LABEL[id] ?? id ?? '··'
 }
 
 function setSegmentsDisabled(off) {
@@ -415,8 +486,97 @@ async function use(id) {
   poll()
 }
 
+/*
+ * The token, as /engine/status carries it on every poll — so a rotation from
+ * the Swift popover or curl shows here within a second. Masked to its ends
+ * unless shown; copied in full. Rotate is two clicks: the first arms it for
+ * six seconds, the second does it, because a rotation cuts off every other
+ * paired client and should not be one slip.
+ */
+let token = null
+let tokenShown = false
+let rotateArmed = false
+let disarm = null
+
+function masked(t) {
+  return t.length > 12 ? t.slice(0, 6) + '…' + t.slice(-6) : t
+}
+
+function pairing(t) {
+  token = t ?? null
+  const node = el('token')
+  node.textContent = token === null ? '··' : (tokenShown ? token : masked(token))
+  node.classList.toggle('absent', token === null)
+  for (const id of ['show', 'copy', 'rotate']) el(id).disabled = token === null
+  el('show').textContent = tokenShown ? 'Hide' : 'Show'
+  el('rotate').textContent = rotateArmed ? 'Really rotate' : 'Rotate'
+  el('rotate').classList.toggle('armed', rotateArmed)
+}
+
+el('show').onclick = () => { tokenShown = !tokenShown; pairing(token) }
+el('copy').onclick = async () => {
+  if (token === null) return
+  try { await navigator.clipboard.writeText(token) } catch (_) {}
+}
+el('rotate').onclick = async () => {
+  if (!rotateArmed) {
+    rotateArmed = true
+    pairing(token)
+    clearTimeout(disarm)
+    disarm = setTimeout(() => { rotateArmed = false; pairing(token) }, 6000)
+    return
+  }
+  clearTimeout(disarm)
+  rotateArmed = false
+  el('rotate').disabled = true
+  try {
+    await fetch('/engine/token/rotate', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } })
+  } catch (_) {}
+  // The file is the truth; the next poll reads it back.
+  poll()
+}
+
+/* `41s`, `12m`, `1h 12m`, `2d 3h` — the two largest units that are not zero. */
+function uptime(seconds) {
+  const total = Math.floor(seconds)
+  const d = Math.floor(total / 86400), h = Math.floor(total % 86400 / 3600), m = Math.floor(total % 3600 / 60)
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m`
+  return `${total % 60}s`
+}
+
+function strip(up, s) {
+  el('strip').dataset.up = up ? 'yes' : 'no'
+  const upNode = el('strip-up')
+  upNode.textContent = up && typeof s?.uptime === 'number' ? 'up ' + uptime(s.uptime) : 'up ··'
+  upNode.classList.toggle('absent', !(up && typeof s?.uptime === 'number'))
+}
+
+/*
+ * The engine's version, from GET / — asked once each time the engine comes
+ * up rather than on every poll, since it cannot change while it is running.
+ */
+let version = null
+
+async function about() {
+  if (version !== null) return
+  try {
+    const r = await fetch('/engine/about')
+    if (!r.ok) return
+    version = (await r.json()).version ?? null
+  } catch (_) { return }
+  if (version !== null) el('strip-name').textContent = `sonocles ${version}`
+}
+
 /* Control is PHP's job, and it happens at human speed. */
 let listening = false
+
+function clients(n) {
+  const node = el('clients')
+  node.textContent = typeof n !== 'number' ? '·· clients' : n === 0 ? 'no clients' : n === 1 ? '1 client' : `${n} clients`
+  node.classList.toggle('absent', typeof n !== 'number')
+}
 
 async function poll() {
   try {
@@ -435,7 +595,11 @@ async function poll() {
       el('toggle').textContent = j.binary ? 'Waiting for engine' : 'Engine not bundled'
       el('toggle').className = ''
       el('engine').textContent = '··'
-      el('clients').textContent = '··'
+      clients(null)
+      pairing(null)
+      strip(false)
+      version = null
+      el('strip-name').textContent = 'sonocles ··'
       setSegmentsDisabled(true)
     } else if (!j.paired) {
       // Up, and refusing us. Not "starting": nothing is coming that will fix it
@@ -448,7 +612,9 @@ async function poll() {
       el('toggle').textContent = 'Not paired'
       el('toggle').className = ''
       el('engine').textContent = '··'
-      el('clients').textContent = '··'
+      clients(null)
+      pairing(j.token)
+      strip(false)
       setSegmentsDisabled(true)
     } else {
       listening = !!s.listening
@@ -457,7 +623,10 @@ async function poll() {
       el('toggle').textContent = listening ? 'Stop' : 'Start listening'
       el('toggle').className = listening ? 'stop' : 'go'
       el('engine').textContent = s.engine ?? '··'
-      el('clients').textContent = typeof s.clients === 'number' ? s.clients : '··'
+      clients(s.clients)
+      pairing(j.token)
+      strip(true, s)
+      about()
       await choices()
       if (typeof s.engineId === 'string') select(s.engineId)
       // Not while a switch or a start is in flight: the engine is between two
@@ -472,6 +641,8 @@ async function poll() {
     el('engine-word').textContent = 'Down'
     el('engine-pulse').hidden = true
     el('engine-note').textContent = 'The app could not reach its own server.'
+    clients(null)
+    strip(false)
   }
 }
 
