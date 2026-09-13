@@ -436,7 +436,7 @@ struct MenuBarView: View {
         .lineLimit(1)
     }
 
-        private var buttons: some View {
+    private var buttons: some View {
         HStack(spacing: 8) {
             // Start is the site's button; Stop is the family's record red.
             // Preparing greys it to script, the colour of a thing that is
