@@ -134,9 +134,35 @@ class Sidecar
         return static::answer($response);
     }
 
+    /**
+     * `GET /` — name, version, auth scheme, ports. The popover's strip shows
+     * the version.
+     */
+    public static function discover(): ?array
+    {
+        try {
+            $response = static::request(2)->get(static::url('/'));
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return static::answer($response);
+    }
+
     public static function start(): ?array
     {
         return static::post('/start');
+    }
+
+    /**
+     * `POST /token/rotate` — the engine writes a fresh token to its file and
+     * the old one is dead for every request after this. This app reads the
+     * file on every call, so it is paired again on its next poll; every other
+     * client has to read it again too, which is what rotation is for.
+     */
+    public static function rotateToken(): ?array
+    {
+        return static::post('/token/rotate');
     }
 
     public static function stop(): ?array

@@ -44,7 +44,7 @@ php artisan native:build mac arm64             # signs from the keychain identit
 | `app/Support/Token.php` | the bearer token, read from the file the engine writes |
 | `config/sonocles.php` | ports and token file; overridable to test beside a running Sonocles.app |
 | `app/Providers/NativeAppServiceProvider.php` | menu bar, and bringing the engine up |
-| `routes/web.php` | the popover, the control calls, the engine control, and the token for the socket |
+| `routes/web.php` | the popover, the control calls, the engine control, the token (for the socket and the Control API block), rotation, and `GET /` for the strip |
 | `resources/views/menubar.blade.php` | the popover itself; holds the WebSocket |
 | `nativephp/electron/build/entitlements.mac.plist` | **the microphone entitlement NativePHP does not scaffold** |
 | `extras/sonocles-cli` | the engine (build product, not committed) |

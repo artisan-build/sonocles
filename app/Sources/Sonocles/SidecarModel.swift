@@ -25,7 +25,14 @@ final class SidecarModel {
     var running = false
     var levelDb: Double = -120
     var heldDb: Double = -120
+    /// The current utterance — the partial being revised, until a final
+    /// settles it into `transcript`.
     var text = ""
+    /// Settled utterances, oldest first, kept to what the pane can show. The
+    /// protocol's `text` is the utterance and not the session, so a running
+    /// transcript is something a consumer accumulates — this popover is a
+    /// consumer like any other.
+    var transcript: [String] = []
     var lagMs: Int?
     var gapMs: Int?
     var status = "Idle"
@@ -38,19 +45,32 @@ final class SidecarModel {
     /// The bearer token every route is behind, for the popover to show and
     /// copy. Read from the service once the sockets are bound; nil until then.
     var token: String?
-    /// The Control API section open in the popover.
-    var pairingOpen = false
     /// The token shown in full, or masked to its ends.
     var tokenShown = false
     /// Rotate is two clicks: the first arms it, the second does it. A
     /// rotation cuts off every other paired client, so it is not one slip.
     var rotateArmed = false
 
+    /// What `/status` reports about the process itself: clients on both
+    /// sockets, and how long the sockets have been up. Read once a second
+    /// from the same `status()` the route answers, so the popover and a
+    /// client polling `/status` cannot disagree. Nil until the sockets bind.
+    var clients: Int?
+    var uptime: TimeInterval?
+    /// The version stamped into the bundle, or `dev` for a bare executable —
+    /// what `GET /` answers. A variable so a preview can be stamped.
+    var version = Service.version
+
     private var service: Service?
     private var lastArrival: UInt64?
     private var decayTimer: Timer?
+    private var statusTimer: Timer?
 
     var engineLabel: String { service?.engineName ?? engine.label }
+
+    /// The ports as configured, for the endpoints row.
+    var httpPort: UInt16 { (service?.config ?? Service.Config()).httpPort }
+    var wsPort: UInt16 { (service?.config ?? Service.Config()).wsPort }
 
     /// Bring the sockets up once, at launch. Capture stays off until asked —
     /// by the button, or by `POST /start`.
@@ -88,7 +108,17 @@ final class SidecarModel {
         service.onFrame = { [weak self] hypothesis, frame, nanos in
             Task { @MainActor in
                 guard let self else { return }
-                self.text = hypothesis.text
+                // A partial revises the live line; a final settles it, and
+                // the next partial opens a new one.
+                if hypothesis.isFinal {
+                    self.transcript.append(hypothesis.text)
+                    if self.transcript.count > Self.transcriptKept {
+                        self.transcript.removeFirst(self.transcript.count - Self.transcriptKept)
+                    }
+                    self.text = ""
+                } else {
+                    self.text = hypothesis.text
+                }
                 self.lagMs = frame.lagMs
                 if let last = self.lastArrival {
                     self.gapMs = Int((nanos &- last) / 1_000_000)
@@ -102,10 +132,15 @@ final class SidecarModel {
             self.service = service
             token = service.token
             status = "Idle — sockets up"
+            startStatus()
         } catch {
             status = "Could not bind: \(error.localizedDescription)"
         }
     }
+
+    /// Settled lines kept — more than the pane shows, since a settled line
+    /// can wrap. The pane is a window over the end of this, not all of it.
+    static let transcriptKept = 8
 
     func start() {
         bind()
@@ -118,8 +153,12 @@ final class SidecarModel {
     }
 
     func shutdown() {
+        statusTimer?.invalidate()
+        statusTimer = nil
         service?.shutdown()
         service = nil
+        clients = nil
+        uptime = nil
     }
 
     /// The same path as `POST /engine`. Switching engine restarts capture:
@@ -138,8 +177,10 @@ final class SidecarModel {
         }
     }
 
-    /// Where the token lives, so the popover can say so.
-    var tokenFile: String { TokenStore.standard.fileURL.path }
+    /// Where the token lives, so the popover can say so. The real path in
+    /// the app; a preview substitutes a neutral one, since the rendered
+    /// popover goes on the public site and the path carries a login.
+    var tokenFile = TokenStore.standard.fileURL.path
 
     /// The token, masked to its ends: enough to compare, not enough to use.
     var maskedToken: String? {
@@ -179,6 +220,7 @@ final class SidecarModel {
     private func clearLive() {
         preparation = nil
         text = ""
+        transcript = []
         lagMs = nil
         gapMs = nil
         lastArrival = nil
@@ -186,6 +228,23 @@ final class SidecarModel {
         heldDb = -120
         decayTimer?.invalidate()
         decayTimer = nil
+    }
+
+    /// Clients and uptime, once a second — the rate the NativePHP popover
+    /// polls `/status` at, and enough for numbers that move at human speed.
+    /// Counted by the service, not here, so this cannot drift from the route.
+    private func startStatus() {
+        let read = { [weak self] in
+            guard let self, let service = self.service else { return }
+            let status = service.status()
+            self.clients = status.clients
+            self.uptime = status.uptime
+        }
+        read()
+        statusTimer?.invalidate()
+        statusTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            Task { @MainActor in read() }
+        }
     }
 
     /// Rise instantly, fall at ~40 dB/sec — what every hardware meter does, and

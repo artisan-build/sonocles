@@ -65,4 +65,20 @@ class EngineTest extends TestCase
 
         $this->getJson('/engine/choices')->assertStatus(503)->assertJson(['error' => 'no engine']);
     }
+
+    public function test_about_is_the_engines_own_discovery_answer_verbatim(): void
+    {
+        $discovery = ['name' => 'Sonocles', 'version' => '0.1.3', 'auth' => 'bearer', 'ports' => ['http' => 7357, 'ws' => 7358]];
+        Http::fake([Sidecar::url('/') => Http::response($discovery)]);
+
+        // The strip shows this version; it is the engine's word, not this
+        // app's, and a missing engine is a 503 rather than a version made up here.
+        $this->getJson('/engine/about')->assertOk()->assertExactJson($discovery);
+        Http::assertSent(fn (Request $r) => $r->method() === 'GET'
+            && $r->url() === Sidecar::url('/')
+            && $r->hasHeader('Authorization', 'Bearer '.str_repeat('f', 64)));
+
+        Http::fake(fn () => throw new ConnectionException('refused'));
+        $this->getJson('/engine/about')->assertStatus(503)->assertJson(['error' => 'no engine']);
+    }
 }

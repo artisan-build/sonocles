@@ -1,6 +1,6 @@
 ---
 title: The menu bar app
-description: A mark that tells you whether it is listening, and a popover with a meter, the last few words, two numbers, an engine picker and the token. Nothing in it that the API cannot do.
+description: A mark that tells you whether it is listening, and a popover with a meter, the last four lines, two numbers, an engine picker, who is connected, the token, and a strip saying which build this is. Nothing in it that the API cannot do.
 ---
 import Callout from '../../components/Callout.astro';
 
@@ -29,10 +29,14 @@ room sits at the bottom of the bar but still moves the number, and that is
 the proof that the microphone is live when nobody is speaking. `––` means
 no reading at all.
 
-**The words.** The current utterance, up to three lines, head-truncated so
-the newest word is always visible. Height is reserved, so an arriving word
-never shoves the rest of the popover down — at five frames a second that
-would be a twitch, not an interface.
+**The words.** The last four lines of a running transcript, newest at the
+bottom. The live line — the utterance still being revised — is bright;
+what has settled sits dim above it, and what no longer fits fades off the
+top. The window is a fixed height, so an arriving word never shoves the
+rest of the popover down — at five frames a second that would be a twitch,
+not an interface. Before the first word it says so: *Words appear here as
+you say them.* The transcript is the popover's own accumulation, the way
+any consumer's is; the protocol's `text` is the utterance, not the session.
 
 **Two numbers.** `lag` is how far behind the live audio the last frame was;
 `every` is the gap since the frame before it. An unmeasured value shows as
@@ -47,20 +51,42 @@ with a click on it, and it follows the `engine` event, so a switch made
 over HTTP moves it too — [Engine selection](/docs/engine-selection).
 [Engines](/docs/engines) has the measurements that chose the default.
 
-**Endpoints.** `HTTP :7357` and `WS :7358`. Labels, not switches — the
-sockets bind at launch and stay up for the life of the app.
+Under the control, one line says when to choose the selected engine, and
+it changes with the selection:
 
-**Control API.** The token, masked to its ends, with Show, Copy and Rotate,
-and the path of the file it lives in. Rotate is two clicks: the first arms
-it for six seconds, the second does it. A rotation cuts off every other
-paired client until it re-reads the file, so it is not something to do on
-one slip.
+| engine | the line |
+|---|---|
+| 160 ms | About 180 ms behind you. The default — for cues and prompting. |
+| 320 ms | More context, fewer misheard words; half a second behind. |
+| 1280 ms | The most context, over a second behind — captions, not cues. |
+| Apple | Apple's on-device recogniser. Words arrive in bursts, ~4 s apart. |
+
+Every claim in it is a measured or documented one: the lags are
+[the measurement](/docs/engines), the accuracy is the library's own
+word-error figures for its chunk sizes, and the bursts are what Apple's
+engine does.
+
+**Endpoints.** `HTTP :7357 · WS :7358 · 2 clients`. The ports are labels,
+not switches — the sockets bind at launch and stay up for the life of the
+app. The count is `/status`'s `clients`, both transports together,
+refreshed every second: *no clients*, *1 client*, *2 clients*.
+
+**Control API.** Always open. The token, masked to its ends, with Show,
+Copy and Rotate, and the path of the file it lives in. Rotate is two
+clicks: the first arms it for six seconds, the second does it. A rotation
+cuts off every other paired client until it re-reads the file, so it is not
+something to do on one slip.
 
 **Start listening / Stop.** The same thing as `POST /start` and
 `POST /stop`. Disabled while the models are being prepared.
 
 **Quit.** Takes the sockets down with it. There is no daemon behind the
 app; the app is the process.
+
+**The strip.** A dark line under everything: `sonocles 0.1.3 · Parakeet
+160 ms · up 1h 12m` — the version `GET /` answers, the engine the app is
+set to, and `/status`'s `uptime`. A screenshot of the popover is a bug
+report.
 
 ## The first run
 

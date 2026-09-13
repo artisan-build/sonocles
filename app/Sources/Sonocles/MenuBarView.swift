@@ -29,6 +29,7 @@ struct MenuBarView: View {
             centre
             rule
             controls
+            strip
         }
         .frame(width: 344)
         .background(Brand.ground)
@@ -121,23 +122,14 @@ struct MenuBarView: View {
                 .font(Type.body(10))
                 .foregroundStyle(Brand.inkFaint)
         }
-        .frame(height: 92, alignment: .center)
+        .frame(height: Self.centreHeight, alignment: .center)
     }
 
     private var listening: some View {
         VStack(alignment: .leading, spacing: 11) {
             LevelMeter(db: model.heldDb, reading: model.levelDb)
 
-            // Height is reserved so an arriving word never shoves the rest of
-            // the popover down — at five frames a second that would be a twitch,
-            // not an interface.
-            Text(model.text.isEmpty ? "Listening…" : model.text)
-                .font(Type.mono(12))
-                .foregroundStyle(model.text.isEmpty ? Brand.script : Brand.Block.text)
-                .lineLimit(3, reservesSpace: true)
-                .truncationMode(.head)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .animation(nil, value: model.text)
+            transcript
 
             HStack(spacing: 16) {
                 stat("lag", model.lagMs.map { "\($0) ms" })
@@ -145,7 +137,54 @@ struct MenuBarView: View {
                 Spacer()
             }
         }
-        .frame(height: 92, alignment: .top)
+        .frame(height: Self.centreHeight, alignment: .top)
+    }
+
+    /// The centre panel's height, the same in every state, so switching
+    /// between them never moves the controls.
+    static let centreHeight: CGFloat = 112
+    /// Four lines of the transcript's mono at 12 pt.
+    private static let transcriptHeight: CGFloat = 64
+
+    /// The last few lines, newest at the bottom.
+    ///
+    /// A fixed window, so an arriving word never shoves the rest of the
+    /// popover down — at five frames a second that would be a twitch, not an
+    /// interface. Settled utterances sit dim above the live line, which is
+    /// the one being revised and the one to watch; what no longer fits
+    /// leaves off the top, faded rather than cut. Empty, it says what will
+    /// happen rather than looking broken.
+    private var transcript: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if model.transcript.isEmpty && model.text.isEmpty {
+                Text("Words appear here as you say them.")
+                    .font(Type.mono(12))
+                    .foregroundStyle(Brand.script)
+            } else {
+                ForEach(Array(model.transcript.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(Type.mono(12))
+                        .foregroundStyle(Brand.Block.dim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !model.text.isEmpty {
+                    Text(model.text)
+                        .font(Type.mono(12))
+                        .foregroundStyle(Brand.Block.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: Self.transcriptHeight, alignment: .bottomLeading)
+        .clipped()
+        .mask(
+            LinearGradient(
+                stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.14)],
+                startPoint: .top, endPoint: .bottom)
+        )
+        .animation(nil, value: model.text)
+        .animation(nil, value: model.transcript)
     }
 
     private var idle: some View {
@@ -161,7 +200,7 @@ struct MenuBarView: View {
             .foregroundStyle(Brand.inkFaint)
             .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(height: 92, alignment: .center)
+        .frame(height: Self.centreHeight, alignment: .center)
     }
 
     /// A missing measurement reads as "··", never as zero. Rendering absence as
@@ -202,23 +241,38 @@ struct MenuBarView: View {
                 Segmented(
                     options: EngineChoice.available.map { ($0, Self.short($0)) },
                     selection: Binding(get: { model.engine }, set: { model.use($0) }))
+
+                // When to choose it, in one line that follows the selection.
+                Text(Self.guidance(model.engine))
+                    .font(Type.body(10.5))
+                    .foregroundStyle(Brand.inkFaint)
+                    .lineLimit(1)
+                    .padding(.top, 1)
             }
 
             // Endpoints, not switches. The sockets bind at launch and stay up
             // for the life of the app, which is what lets POST /start work
-            // while this popover says "Idle".
-            HStack(spacing: 15) {
-                endpoint("HTTP", ":7357")
-                endpoint("WS", ":7358")
+            // while this popover says "Idle". Who is on them comes from the
+            // same count `/status` reports as `clients`.
+            HStack(spacing: 8) {
+                endpoint("HTTP", ":\(model.httpPort)")
+                dot
+                endpoint("WS", ":\(model.wsPort)")
+                dot
+                Text(Self.clients(model.clients))
+                    .font(Type.mono(10))
+                    .foregroundStyle(model.clients == nil ? Brand.script : Brand.inkFaint)
                 Spacer()
             }
 
-            DisclosureGroup(isExpanded: $model.pairingOpen) {
-                pairing
-            } label: {
+            // Always open. The token is the one thing a new client needs
+            // from this popover, and a disclosure hid it behind a click that
+            // nobody knew to make.
+            VStack(alignment: .leading, spacing: 7) {
                 Text("Control API")
                     .font(Type.body(11))
                     .foregroundStyle(Brand.inkFaint)
+                pairing
             }
 
             HStack(spacing: 8) {
@@ -246,14 +300,58 @@ struct MenuBarView: View {
         .padding(.vertical, 12)
     }
 
+    /// The process, in one dark line under everything: which build this
+    /// is, which engine it is set to, and how long the sockets have been up
+    /// — what `GET /` and `/status` would say, so a screenshot of the
+    /// popover is a bug report. The dot is lit while the sockets are bound.
+    private var strip: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(model.uptime == nil ? Brand.script : Brand.Block.terracotta)
+                .frame(width: 5, height: 5)
+            Text("sonocles \(model.version)")
+                .foregroundStyle(Brand.Block.text)
+            Text("·")
+            if let uptime = model.uptime {
+                Text(model.engine.label)
+                Text("·")
+                Text("up \(Self.uptime(uptime))")
+            } else {
+                // No uptime means no sockets: nothing to name an engine or
+                // a duration for, so say that rather than a row of ··.
+                Text("engine not running")
+                    .foregroundStyle(Brand.script)
+            }
+        }
+        .lineLimit(1)
+        .font(Type.mono(9.5))
+        .foregroundStyle(Brand.Block.dim)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(Brand.Block.panel)
+    }
+
+    /// `41s`, `12m`, `1h 12m`, `2d 3h`: the two largest units that are not
+    /// zero, the way a person says it.
+    static func uptime(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds.rounded(.down))
+        let days = total / 86400
+        let hours = total % 86400 / 3600
+        let minutes = total % 3600 / 60
+        if days > 0 { return "\(days)d \(hours)h" }
+        if hours > 0 { return "\(hours)h \(minutes)m" }
+        if minutes > 0 { return "\(minutes)m" }
+        return "\(total % 60)s"
+    }
+
     /// The bearer token, which every route on both sockets is behind. Shown
     /// masked; copied in full for a client that cannot read the file itself.
     private var pairing: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(
-                "Every route is behind a bearer token, the event stream included. "
-                    + "Apps running as you read it from the file and are paired; "
-                    + "a web page cannot. Rotating cuts off every paired client."
+                "Every route is behind this token, the event stream included. Apps "
+                    + "running as you read the file; rotating cuts every paired client off."
             )
             .font(Type.body(10))
             .foregroundStyle(Brand.inkFaint)
@@ -309,7 +407,21 @@ struct MenuBarView: View {
                 .disabled(model.token == nil)
             }
         }
-        .padding(.top, 7)
+    }
+
+    /// What each engine is for, from the numbers in docs/ENGINES.md and the
+    /// library's own notes on its chunk sizes: 160 ms arrives ~180 ms behind
+    /// live; 320 ms is ~540 ms behind with a longer chunk that hears more
+    /// context per pass (fewer misheard words, by the library's word-error
+    /// figures); 1280 ms is the longest chunk; Apple delivers in ~3.8 s
+    /// bursts. Nothing here that was not measured or documented.
+    static func guidance(_ choice: EngineChoice) -> String {
+        switch choice {
+        case .fluid160: "About 180 ms behind you. The default — for cues and prompting."
+        case .fluid320: "More context, fewer misheard words; half a second behind."
+        case .fluid1280: "The most context, over a second behind — captions, not cues."
+        case .apple: "Apple's on-device recogniser. Words arrive in bursts, ~4 s apart."
+        }
     }
 
     /// Segment labels: what distinguishes the engines, and nothing else.
@@ -320,6 +432,22 @@ struct MenuBarView: View {
         case .fluid1280: "1280 ms"
         case .apple: "Apple"
         }
+    }
+
+    /// Singular, plural, or none; `··` until the sockets are bound.
+    static func clients(_ count: Int?) -> String {
+        switch count {
+        case nil: "·· clients"
+        case 0: "no clients"
+        case 1: "1 client"
+        case let n?: "\(n) clients"
+        }
+    }
+
+    private var dot: some View {
+        Text("·")
+            .font(Type.mono(10))
+            .foregroundStyle(Brand.script)
     }
 
     private func endpoint(_ label: String, _ port: String) -> some View {

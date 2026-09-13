@@ -61,17 +61,46 @@ enum Preview {
         return true
     }
 
+    /// A token of the real shape, so the masked and the shown forms are
+    /// judged at their real widths.
+    private static let token =
+        "3f9a1c77e2b04d5f8a6c1e2d9b7f4a0c5d6e7f8091a2b3c4d5e6f70819a2b3c4"
+
     private static func states() -> [(String, AnyView)] {
         [
-            ("idle", AnyView(MenuBarView(model: configured { _ in }))),
+            (
+                "idle",
+                AnyView(
+                    MenuBarView(
+                        model: configured {
+                            $0.token = token
+                            $0.clients = 0
+                        }))
+            ),
+            (
+                "idle-1280",
+                AnyView(
+                    MenuBarView(
+                        model: configured {
+                            $0.engine = .fluid1280
+                            $0.token = token
+                            $0.clients = 1
+                        }))
+            ),
             (
                 "listening",
                 AnyView(
                     MenuBarView(
                         model: configured {
                             $0.running = true
+                            $0.token = token
+                            $0.clients = 2
                             $0.levelDb = -21.4
                             $0.heldDb = -21.4
+                            $0.transcript = [
+                                "welcome back everyone",
+                                "the agenda is short today",
+                            ]
                             $0.text =
                                 "and this week we are looking at the two proposals that landed"
                             $0.lagMs = 180
@@ -84,30 +113,24 @@ enum Preview {
                     MenuBarView(
                         model: configured {
                             $0.running = true
+                            $0.token = token
+                            $0.clients = 1
                             $0.levelDb = -54
                             $0.heldDb = -54
                         }))
             ),
-            (
-                "pairing",
-                AnyView(
-                    MenuBarView(
-                        model: configured {
-                            $0.pairingOpen = true
-                            $0.token =
-                                "3f9a1c77e2b04d5f8a6c1e2d9b7f4a0c5d6e7f8091a2b3c4d5e6f70819a2b3c4"
-                        }))
-            ),
+            // No token at all: the sockets did not bind. Every field reads
+            // in the colour of absence and the buttons are disabled.
+            ("unbound", AnyView(MenuBarView(model: configured { $0.uptime = nil }))),
             (
                 "pairing-rotate-armed",
                 AnyView(
                     MenuBarView(
                         model: configured {
-                            $0.pairingOpen = true
                             $0.tokenShown = true
                             $0.rotateArmed = true
-                            $0.token =
-                                "3f9a1c77e2b04d5f8a6c1e2d9b7f4a0c5d6e7f8091a2b3c4d5e6f70819a2b3c4"
+                            $0.token = token
+                            $0.clients = 3
                         }))
             ),
             (
@@ -152,10 +175,25 @@ enum Preview {
         )
     }
 
+    /// Every bound state has an uptime; the previews get a plausible one so
+    /// the strip is judged with a real value in it.
     private static func configured(_ change: (SidecarModel) -> Void) -> SidecarModel {
         let model = SidecarModel()
+        model.version = version
+        model.uptime = 4_335
+        // Never the real path: these PNGs go on the site and the social
+        // card, and the real one names whoever rendered them.
+        model.tokenFile = "~/Library/Application Support/Sonocles/token"
         change(model)
         return model
+    }
+
+    /// A bare executable has no Info.plist and reports `dev`, which is true
+    /// and useless on a site. SONOCLES_VERSION stamps the previews the way
+    /// VERSION stamps the bundle in Scripts/bundle.sh; the site's og.html
+    /// says how to set it.
+    private static var version: String {
+        ProcessInfo.processInfo.environment["SONOCLES_VERSION"] ?? Service.version
     }
 
     private static func write(_ view: some View, to url: URL) {
