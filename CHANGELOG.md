@@ -9,8 +9,9 @@ section from this file, and the release workflow refuses to run without one.
 
 ### Changed
 
-- The popover says more. The transcript pane shows the last four lines — settled utterances dim above the live one, newest at the bottom — and says *Words appear here as you say them* until there are any. One line under the engine picker says when to choose the selected engine. The Control API block, with the token, Copy and Rotate, is always open instead of behind a disclosure. The endpoints row says how many clients are connected, and a strip along the bottom carries the app's version, the engine it is set to, and how long it has been up.
-- The NativePHP popover matches: the same transcript window, guidance line and strip, the connected-client count, and a Control API block it did not have before — the token, Copy, and a two-click Rotate.
+- The popover says more, in plain words. The transcript pane shows the last four lines — settled utterances dim above the live one, newest at the bottom — and says *Words appear here as you say them* until there are any. The engine is chosen in two steps: the model (Parakeet, or Apple on macOS 26) with a line saying what it is, then for Parakeet a speed — 160, 320 or 1280 ms — each with what it costs and is for. **Connected apps** replaces the Control API disclosure: how many apps are connected, the key with Show, Copy and Rotate and a sentence saying what they do, and the two ports with what each is for. A strip along the bottom carries the version, the model and speed, and the connected count.
+- If the sockets cannot bind, the popover says **Down** and shows why, with a Relaunch button, instead of controls that would do nothing.
+- The NativePHP popover matches the Swift one row for row: the same transcript window, engine picker and speed rows, Connected apps section (which it did not have before — the key, Copy, and a two-click Rotate), strip, and the down panel with Relaunch when its engine is starting, refusing the key, or missing.
 
 ## [0.1.3] — 2026-09-13
 
