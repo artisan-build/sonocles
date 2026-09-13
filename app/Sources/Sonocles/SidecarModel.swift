@@ -36,7 +36,12 @@ final class SidecarModel {
     var lagMs: Int?
     var gapMs: Int?
     var status = "Idle"
-    var engine: EngineChoice = .fluid160
+    var engine: EngineChoice = .fluid160 {
+        didSet { if engine != .apple { chunk = engine } }
+    }
+    /// The Parakeet chunk last used, so choosing Parakeet after Apple goes
+    /// back to the speed that was set rather than to the default.
+    var chunk: EngineChoice = .fluid160
 
     /// Model download and compilation, before listening can begin. Nil once
     /// the models are resident, which is every launch after the first.

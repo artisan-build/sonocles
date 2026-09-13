@@ -59,14 +59,19 @@ public enum EngineChoice: String, Sendable, CaseIterable {
     /// wire: `GET /engine` answers it and `POST /engine` takes it.
     public var slug: String { rawValue }
 
-    /// The model behind the choice, named once — the popover's engine row
-    /// and its strip print this and nothing else calls the model anything.
-    public var model: String {
+    /// The model, as a person names it: the popover's model picker and its
+    /// strip say this and nothing else. `label` and the engine's own
+    /// `name` keep the full form for the wire and the logs.
+    public var family: String {
         switch self {
-        case .fluid160, .fluid320, .fluid1280: return "Parakeet EOU 120M"
-        case .apple: return "Apple SpeechAnalyzer"
+        case .fluid160, .fluid320, .fluid1280: return "Parakeet"
+        case .apple: return "Apple"
         }
     }
+
+    /// The Parakeet chunks, in the order the popover lists them — the
+    /// second level of the choice, under the model.
+    public static let parakeet: [EngineChoice] = [.fluid160, .fluid320, .fluid1280]
 
     /// The chunk a Parakeet choice runs with — what tells the three apart —
     /// or nil for Apple, which has no chunk to choose.

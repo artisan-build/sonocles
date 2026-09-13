@@ -234,93 +234,127 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
             engineSection
             rule
-            controlAPI
+            connectedApps
             rule
             buttons
         }
     }
 
-    /// The engine: the kicker names the model once; the picker chooses the
-    /// chunk; the rows beneath say what each choice trades, before the
-    /// click — a wrong guess costs a model download, not a flicker.
+    /// The engine, in the words of the person choosing it: first the model —
+    /// Parakeet on the Neural Engine, or Apple's recogniser — with one line
+    /// saying what it is; then, for Parakeet, the speed, three rows each
+    /// with what it costs and what it is for. The rows are the control, so
+    /// what a switch means is read before the click that costs a download.
     private var engineSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                kicker("Engine")
-                Spacer()
-                Text(Self.engineName(model.engine))
-                    .font(Type.mono(9.5))
-                    .foregroundStyle(Brand.script)
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            kicker("Engine")
+                .padding(.bottom, 2)
             Segmented(
-                options: EngineChoice.available.map { ($0, Self.short($0)) },
-                selection: Binding(get: { model.engine }, set: { model.use($0) }),
-                value: { Self.spoken($0) },
-                hovering: $hovered)
-            comparison
+                options: Self.models.map { ($0, $0.family) },
+                selection: Binding(
+                    get: { model.engine == .apple ? .apple : model.chunk },
+                    set: { model.use($0) }),
+                value: { Self.about($0) })
+            Text(Self.about(model.engine))
+                .font(Type.body(10))
+                .foregroundStyle(Brand.inkFaint)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if model.engine != .apple {
+                kicker("Speed", colour: Brand.script)
+                    .padding(.top, 4)
+                speeds
+            }
         }
         .padding(.horizontal, 14)
         .padding(.top, 11)
         .padding(.bottom, 12)
     }
 
-    /// Which segment the pointer is over, so its row reads in ink before
-    /// it is chosen.
+    /// The model picker's options: Parakeet stands for whichever chunk was
+    /// last used; Apple only where this Mac can run it.
+    private static var models: [EngineChoice] {
+        EngineChoice.apple.isAvailable ? [.fluid160, .apple] : [.fluid160]
+    }
+
+    /// Which speed row the pointer is over, so it reads in ink before it
+    /// is chosen.
     @State private var hovered: EngineChoice?
 
-    /// One row per engine this Mac can run: label · behind · every · for.
-    /// The selected row in ink behind a 3 pt accent bar, as Rheocles marks
-    /// an armed stream; the others in ink-faint until hovered.
-    private var comparison: some View {
-        Grid(alignment: .leading, horizontalSpacing: 9, verticalSpacing: 0) {
-            ForEach(EngineChoice.available, id: \.self) { choice in
+    /// The Parakeet chunks as rows: the speed, then one sentence. The
+    /// selected row in ink behind a 3 pt accent bar, as Rheocles marks an
+    /// armed stream; the others in ink-faint until hovered. Each row is a
+    /// button, and posts the same switch a segment used to.
+    private var speeds: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(EngineChoice.parakeet, id: \.self) { choice in
                 let on = choice == model.engine
                 let lit = on || choice == hovered
-                let row = Self.comparison(choice)
-                GridRow {
-                    // The bar sits on the popover's edge, as Rheocles' does
-                    // on an armed row; the label lands on the text margin.
+                Button {
+                    model.use(choice)
+                } label: {
                     HStack(spacing: 11) {
+                        // The bar sits on the popover's edge; the label
+                        // lands on the text margin.
                         Rectangle()
                             .fill(on ? Brand.terracotta : .clear)
                             .frame(width: 3, height: 11)
-                        Text(Self.short(choice))
-                            .font(Type.mono(9.5, on ? .medium : .regular))
+                        Text(choice.chunk ?? "")
+                            .font(Type.mono(10, on ? .medium : .regular))
+                            .frame(width: 44, alignment: .leading)
+                        Text(Self.tradeoff(choice))
+                            .font(Type.body(10))
+                        Spacer(minLength: 0)
                     }
-                    Text(row.behind)
-                        .font(Type.mono(9.5))
-                        .gridCellColumns(row.every.isEmpty ? 2 : 1)
-                    if !row.every.isEmpty {
-                        Text(row.every)
-                            .font(Type.mono(9.5))
-                    }
-                    Text(row.use)
-                        .font(Type.body(10))
+                    .foregroundStyle(lit ? Brand.ink : Brand.inkFaint)
+                    .frame(height: 15)
+                    .lineLimit(1)
+                    .contentShape(Rectangle())
                 }
-                .foregroundStyle(lit ? Brand.ink : Brand.inkFaint)
-                .frame(height: 15)
-                .lineLimit(1)
+                .buttonStyle(.plain)
+                .accessibilityLabel(Self.spokenChunk(choice))
+                .accessibilityHint(Self.tradeoff(choice))
+                .accessibilityAddTraits(on ? .isSelected : [])
+                .onHover { inside in
+                    if inside {
+                        hovered = choice
+                    } else if hovered == choice {
+                        hovered = nil
+                    }
+                }
             }
         }
         .padding(.leading, -14)
     }
 
-    /// The bearer token, which every route on both sockets is behind: one
-    /// row — masked, Show, Copy, Rotate — and one help line that carries
-    /// the ports and the file. Shown, the full token wraps below the row.
-    private var controlAPI: some View {
+    /// Who is connected, and how an app connects: the key, with what Copy
+    /// and Rotate do to it; the two ports, each with the one thing it is
+    /// for. Every word for someone who has never heard "bearer".
+    private var connectedApps: some View {
         VStack(alignment: .leading, spacing: 7) {
-            kicker("Control API")
+            HStack(alignment: .firstTextBaseline) {
+                kicker("Connected apps")
+                Spacer()
+                Text(Self.apps(model.clients))
+                    .font(Type.body(10))
+                    .foregroundStyle(model.clients == nil ? Brand.script : Brand.ink)
+            }
 
             HStack(spacing: 6) {
-                // A missing token — the sockets not yet bound — reads in
-                // the colour of absence.
+                Text("Key")
+                    .font(Type.body(10))
+                    .foregroundStyle(Brand.ink)
+                    .padding(.trailing, 2)
+
+                // A missing key — the sockets not yet bound — reads in the
+                // colour of absence. VoiceOver keeps the protocol's word.
                 Text(model.maskedToken ?? "··")
                     .font(Type.mono(11))
                     .foregroundStyle(model.token == nil ? Brand.script : Brand.ink)
                     .lineLimit(1)
                     .textSelection(.enabled)
                     .modifier(FieldChrome())
+                    .accessibilityLabel("bearer token")
 
                 PillButton(
                     model.tokenShown ? "Hide" : "Show",
@@ -342,7 +376,7 @@ struct MenuBarView: View {
                 Spacer(minLength: 0)
 
                 // Armed, it turns oxide and fills: the second click is the
-                // one that cuts every paired client off.
+                // one that disconnects everything.
                 PillButton(
                     model.rotateArmed ? "Really rotate" : "Rotate",
                     colour: model.token == nil
@@ -362,22 +396,47 @@ struct MenuBarView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                     .modifier(FieldChrome())
+                    .accessibilityLabel("bearer token")
             }
 
-            Text(
-                "Bearer for every route on :\(model.httpPort) and :\(model.wsPort), read from "
-                    + "\(model.tokenFileAbbreviated). Rotating cuts every paired client off."
+            (Text(
+                "The key an app needs to connect — Copy it into the app. Rotate makes a "
+                    + "new key and disconnects everything. Apps on this Mac can also read it from "
             )
             .font(Type.body(10))
-            .foregroundStyle(Brand.inkFaint)
-            .fixedSize(horizontal: false, vertical: true)
+                + Text(model.tokenFileAbbreviated).font(Type.mono(10))
+                + Text(".").font(Type.body(10)))
+                .foregroundStyle(Brand.inkFaint)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {
+                port("HTTP API", model.httpPort, "where apps ask Sonocles things")
+                port("WebSocket", model.wsPort, "the live word stream")
+            }
+            .padding(.top, 1)
         }
         .padding(.horizontal, 14)
         .padding(.top, 11)
         .padding(.bottom, 12)
     }
 
-    private var buttons: some View {
+    /// One port: what it is called, its number, and the one thing it is for.
+    private func port(_ label: String, _ number: UInt16, _ what: String) -> some View {
+        GridRow {
+            Text(label)
+                .font(Type.body(10))
+                .foregroundStyle(Brand.ink)
+            Text(":\(String(number))")
+                .font(Type.mono(10))
+                .foregroundStyle(Brand.ink)
+            Text(what)
+                .font(Type.body(10))
+                .foregroundStyle(Brand.inkFaint)
+        }
+        .lineLimit(1)
+    }
+
+        private var buttons: some View {
         HStack(spacing: 8) {
             // Start is the site's button; Stop is the family's record red.
             // Preparing greys it to script, the colour of a thing that is
@@ -440,11 +499,10 @@ struct MenuBarView: View {
     // MARK: - strip
 
     /// The process, in one dark line under everything: which build, which
-    /// chunk, and who is paired — what `GET /` and `/status` would say, so
-    /// a screenshot of the popover is a bug report. The model is named once,
-    /// on the engine row, so the strip carries only what distinguishes the
-    /// choice. The dot is olive while listening and script when nothing is
-    /// bound.
+    /// model at which speed, and how many apps — what `GET /` and `/status`
+    /// would say, in the sections' own words, so a screenshot of the
+    /// popover is a bug report. The dot is olive while listening and script
+    /// when nothing is bound.
     private var strip: some View {
         HStack(spacing: 6) {
             Circle()
@@ -460,9 +518,13 @@ struct MenuBarView: View {
                 Text("engine not running")
                     .foregroundStyle(Brand.script)
             } else {
-                Text(Self.short(model.engine))
+                Text(model.engine.family)
                 Text("·")
-                Text(Self.clients(model.clients))
+                if let chunk = model.engine.chunk {
+                    Text(chunk)
+                    Text("·")
+                }
+                Text(Self.apps(model.clients, short: true))
                     .foregroundStyle(model.clients == nil ? Brand.script : Brand.Block.dim)
             }
         }
@@ -477,57 +539,62 @@ struct MenuBarView: View {
 
     // MARK: - engine facts
 
-    /// The engine row's value: the model, and where it runs.
-    static func engineName(_ choice: EngineChoice) -> String {
+    /// What the selected model is, in one sentence — the line under the
+    /// picker. Parakeet streams as you speak; Apple's engine delivers in
+    /// bursts a few seconds apart (docs/ENGINES.md measures 3.7 s).
+    static func about(_ choice: EngineChoice) -> String {
         switch choice {
-        case .fluid160, .fluid320, .fluid1280: "\(choice.model) · Neural Engine"
-        case .apple: "\(choice.model) · on-device"
+        case .fluid160, .fluid320, .fluid1280:
+            "Runs on this Mac's Neural Engine. Words arrive as you speak."
+        case .apple:
+            "Apple's own recogniser. Words arrive in bursts, a few seconds apart."
         }
     }
 
-    /// What each choice trades, from docs/ENGINES.md and nothing else:
-    /// 160 ms arrives ~180 ms behind live every ~206 ms; 320 ms ~540 ms
-    /// behind every ~302 ms with a longer chunk the library measures as
-    /// fewer misheard words; 1280 ms is the longest chunk and over a second
-    /// behind; Apple delivers in ~3.8 s bursts and is kept as the control.
-    static func comparison(_ choice: EngineChoice) -> (behind: String, every: String, use: String) {
+    /// What each speed costs and is for, in one sentence and no other
+    /// numbers: 160 ms is the fastest (docs/ENGINES.md: ~180 ms behind
+    /// live), 320 ms trades a beat for steadier words (fewer revisions per
+    /// word, and the library's lower word-error rate at the longer chunk),
+    /// 1280 ms is the longest chunk and the most context per pass.
+    static func tradeoff(_ choice: EngineChoice) -> String {
         switch choice {
-        case .fluid160: ("180 ms behind", "every 0.2 s", "cues, prompting")
-        case .fluid320: ("540 ms behind", "every 0.3 s", "fewer misheard")
-        case .fluid1280: ("over 1 s", "longest chunk", "captions, not cues")
-        case .apple: ("bursts ~4 s apart", "", "the control")
+        case .fluid160: "Fastest. For prompters and cues."
+        case .fluid320: "Steadier words, a beat later."
+        case .fluid1280: "Most accurate. For captions and transcripts."
+        case .apple: ""
         }
     }
 
-    /// The row as one sentence, for a segment's accessibility value: what
-    /// VoiceOver reads before the user commits to a download.
-    static func spoken(_ choice: EngineChoice) -> String {
-        let row = comparison(choice)
-        return [row.behind, row.every, row.use].filter { !$0.isEmpty }.joined(separator: ", ")
+    /// The speed as VoiceOver should say it.
+    static func spokenChunk(_ choice: EngineChoice) -> String {
+        switch choice {
+        case .fluid160: "160 milliseconds"
+        case .fluid320: "320 milliseconds"
+        case .fluid1280: "1280 milliseconds"
+        case .apple: "Apple"
+        }
     }
 
-    /// Segment labels: what distinguishes the engines, and nothing else.
-    static func short(_ choice: EngineChoice) -> String {
-        choice.chunk ?? "Apple"
-    }
-
-    /// Singular, plural, or none; `··` until the sockets are bound.
-    static func clients(_ count: Int?) -> String {
+    /// How many apps are connected, in words: the section's value, or the
+    /// strip's shorter form; `··` until the sockets are bound.
+    static func apps(_ count: Int?, short: Bool = false) -> String {
+        let n: String
         switch count {
-        case nil: "·· clients"
-        case 0: "no clients"
-        case 1: "1 client"
-        case let n?: "\(n) clients"
+        case nil: n = "·· apps"
+        case 0: n = "no apps"
+        case 1: n = "1 app"
+        case let c?: n = "\(c) apps"
         }
+        return short || count == nil ? n : "\(n) connected"
     }
 
     /// A section label: mono, uppercase, letterspaced, in the accent —
     /// furniture, never competing with what sits beneath.
-    private func kicker(_ label: String) -> some View {
+    private func kicker(_ label: String, colour: Color = Brand.terracottaInk) -> some View {
         Text(label.uppercased())
             .font(Type.kicker())
             .kerning(1.1)
-            .foregroundStyle(Brand.terracottaInk)
+            .foregroundStyle(colour)
     }
 }
 
@@ -671,14 +738,12 @@ struct PillButton: View {
 
 /// A choice drawn from shapes: the site's pill, split into equal segments.
 ///
-/// Each segment reports what it is hovered, so a row beneath can light up
-/// before the click, and carries `value` as its accessibility value, so a
-/// VoiceOver user hears the trade-off the row shows.
+/// Each segment carries `value` as its accessibility value, so a VoiceOver
+/// user hears what the choice is before making it.
 struct Segmented<Value: Hashable>: View {
     let options: [(Value, String)]
     @Binding var selection: Value
     var value: (Value) -> String = { _ in "" }
-    var hovering: Binding<Value?> = .constant(nil)
 
     var body: some View {
         HStack(spacing: 0) {
@@ -697,13 +762,6 @@ struct Segmented<Value: Hashable>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityValue(self.value(value))
-                .onHover { inside in
-                    if inside {
-                        hovering.wrappedValue = value
-                    } else if hovering.wrappedValue == value {
-                        hovering.wrappedValue = nil
-                    }
-                }
             }
         }
         .clipShape(Capsule())

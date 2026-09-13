@@ -87,6 +87,17 @@ enum Preview {
                             $0.clients = 1
                         }))
             ),
+            // Apple: no speed rows, and the model line carries the cost.
+            (
+                "idle-apple",
+                AnyView(
+                    MenuBarView(
+                        model: configured {
+                            $0.engine = .apple
+                            $0.token = token
+                            $0.clients = 1
+                        }))
+            ),
             (
                 "listening",
                 AnyView(
