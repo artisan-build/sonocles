@@ -7,6 +7,7 @@ import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import Section from '../components/Section.astro';
 import Plate from '../components/Plate.astro';
+import BrewChip from '../components/BrewChip.astro';
 import hero from '../assets/plates/hero.png';
 import contention from '../assets/plates/contention.png';
 import theatre from '../assets/plates/theatre.png';
@@ -54,7 +55,7 @@ import { version, releaseUrl } from '../lib/version';
 				<span class="meta">{version && <><a href={releaseUrl}>v{version}</a> · </>}Apple Silicon · macOS 14 or later</span>
 			</div>
 
-			<p class="brew"><span>or</span> <code><span>brew install --cask</span> <span>artisan-build/tap/sonocles</span></code></p>
+			<p class="brew"><span>or</span> <BrewChip cmd="brew install --cask artisan-build/tap/sonocles" /></p>
 
 			<Plate
 				class="hero-plate"
@@ -296,11 +297,10 @@ make baseline</pre>
 		font-family: var(--mono);
 		text-decoration-color: color-mix(in oklab, var(--script) 40%, transparent);
 	}
-	/* The second install route. user-select:all makes one click take the whole
-	   command, which is the nearest thing to a copy button on a page that ships
-	   no JavaScript at all. The chip is a flex item and therefore blockified, so
-	   on a narrow screen it wraps at the space before the tap path rather than
-	   breaking mid-token or scrolling behind an edge. */
+	/* The second install route: BrewChip, a button that copies the command.
+	   The chip is a flex item and therefore blockified, so on a narrow screen
+	   it wraps at the space before the tap path rather than breaking mid-token
+	   or scrolling behind an edge. */
 	.brew {
 		display: flex;
 		align-items: center;
@@ -309,23 +309,6 @@ make baseline</pre>
 		margin: 16px 0 0;
 		font-size: 14px;
 		color: var(--ink-faint);
-	}
-	.brew code {
-		font-size: 13.5px;
-		color: var(--ink);
-		background: var(--stone-deep);
-		border: 1px solid var(--stone-line);
-		border-radius: 8px;
-		padding: 8px 12px;
-		user-select: all;
-		line-height: 1.55;
-	}
-	/* The two halves are nowrap so the only place the command can break is the
-	   space between them. Left to itself the browser breaks at the hyphen in
-	   artisan-build, and a command that looks like it contains a line break is
-	   worse than one that is simply too wide. */
-	.brew code span {
-		white-space: nowrap;
 	}
 	.hero h1 {
 		font-size: clamp(40px, 7.6vw, 80px);
