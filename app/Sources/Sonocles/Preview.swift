@@ -119,9 +119,20 @@ enum Preview {
                             $0.heldDb = -54
                         }))
             ),
-            // No token at all: the sockets did not bind. Every field reads
-            // in the colour of absence and the buttons are disabled.
-            ("unbound", AnyView(MenuBarView(model: configured { $0.uptime = nil }))),
+            // The sockets did not bind: the down panel in place of the
+            // controls, and a strip that says so.
+            (
+                "down",
+                AnyView(
+                    MenuBarView(
+                        model: configured {
+                            $0.uptime = nil
+                            $0.clients = nil
+                            $0.token = nil
+                            $0.downReason =
+                                "Could not bind the sockets: port 7357 is already in use."
+                        }))
+            ),
             (
                 "pairing-rotate-armed",
                 AnyView(
@@ -138,6 +149,7 @@ enum Preview {
                 AnyView(
                     MenuBarView(
                         model: configured {
+                            $0.token = token
                             $0.preparation = .downloading(fraction: 0.43, file: 11, of: 16)
                         }))
             ),
@@ -146,6 +158,7 @@ enum Preview {
                 AnyView(
                     MenuBarView(
                         model: configured {
+                            $0.token = token
                             $0.preparation = .compiling(model: "streaming_encoder")
                         }))
             ),
@@ -181,6 +194,9 @@ enum Preview {
         let model = SidecarModel()
         model.version = version
         model.uptime = 4_335
+        // Bound sockets always have a count; a state that shows `··` here
+        // is one the app cannot be in.
+        model.clients = 0
         // Never the real path: these PNGs go on the site and the social
         // card, and the real one names whoever rendered them.
         model.tokenFile = "~/Library/Application Support/Sonocles/token"

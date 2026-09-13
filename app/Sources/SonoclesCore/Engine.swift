@@ -59,6 +59,26 @@ public enum EngineChoice: String, Sendable, CaseIterable {
     /// wire: `GET /engine` answers it and `POST /engine` takes it.
     public var slug: String { rawValue }
 
+    /// The model behind the choice, named once — the popover's engine row
+    /// and its strip print this and nothing else calls the model anything.
+    public var model: String {
+        switch self {
+        case .fluid160, .fluid320, .fluid1280: return "Parakeet EOU 120M"
+        case .apple: return "Apple SpeechAnalyzer"
+        }
+    }
+
+    /// The chunk a Parakeet choice runs with — what tells the three apart —
+    /// or nil for Apple, which has no chunk to choose.
+    public var chunk: String? {
+        switch self {
+        case .fluid160: return "160 ms"
+        case .fluid320: return "320 ms"
+        case .fluid1280: return "1280 ms"
+        case .apple: return nil
+        }
+    }
+
     /// Whether this engine can run on a given OS.
     ///
     /// A pure function of the version, so it can be asserted without an
