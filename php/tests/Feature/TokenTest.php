@@ -35,6 +35,17 @@ class TokenTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_the_popover_prints_the_path_with_the_home_directory_as_a_tilde(): void
+    {
+        // The full path carries the login name; the popover, its screenshots
+        // and the site never show it.
+        config(['sonocles.token_file' => Token::home().'/Library/Application Support/Sonocles/token']);
+        $this->assertSame('~/Library/Application Support/Sonocles/token', Token::abbreviated());
+
+        config(['sonocles.token_file' => '/tmp/elsewhere/token']);
+        $this->assertSame('/tmp/elsewhere/token', Token::abbreviated());
+    }
+
     public function test_the_token_is_the_file_trimmed_and_an_empty_file_is_no_token(): void
     {
         file_put_contents($this->file, str_repeat('a', 64)."\n");

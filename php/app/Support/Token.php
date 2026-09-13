@@ -23,6 +23,18 @@ final class Token
             ?: self::home().'/Library/Application Support/Sonocles/token';
     }
 
+    /**
+     * The path with the home directory as `~` — the form the popover
+     * prints, since the full one carries a login name.
+     */
+    public static function abbreviated(): string
+    {
+        $path = self::path();
+        $home = rtrim(self::home(), '/');
+
+        return str_starts_with($path, $home.'/') ? '~'.substr($path, strlen($home)) : $path;
+    }
+
     /** The token, or null when the file is missing or empty. */
     public static function read(): ?string
     {

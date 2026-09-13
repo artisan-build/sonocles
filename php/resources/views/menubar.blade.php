@@ -113,46 +113,21 @@
   /* An absent measurement is rendered in the colour of absence, never as 0. */
   .stats b.absent { color:var(--script); }
 
-  /* controls */
-  footer { padding:12px 14px; display:flex; flex-direction:column; gap:11px; flex:none; }
-  .row { display:flex; align-items:center; gap:15px; }
-  .row .label { font:11px/1 var(--body); color:var(--ink-faint); }
-  .row .name { font:9.5px/1 var(--mono); color:var(--script); margin-left:auto; }
-  .row.ports { gap:8px; font:10px/1 var(--mono); color:var(--ink-faint); }
-  .row .port { display:flex; gap:4px; }
-  .row .port span:first-child { color:var(--script); }
-  .row .dot { color:var(--script); }
-  .row .clients.absent { color:var(--script); }
-  /* When to choose the selected engine — one muted line, follows the selection. */
-  .guidance { margin:0; font:10.5px/1.3 var(--body); color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-top:1px; }
-  /* The Control API block, always open: the token, masked, with Show, Copy
-     and Rotate, and the file it lives in. */
-  .pairing { display:flex; flex-direction:column; gap:7px; }
-  .pairing > .label { font:11px/1 var(--body); color:var(--ink-faint); }
-  .pairing p { margin:0; font:10px/1.35 var(--body); color:var(--ink-faint); }
-  .pairing .file { font:10px/1 var(--mono); color:var(--script); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .pairing .token {
-    align-self:flex-start; max-width:100%; font:11px/1.35 var(--mono); color:var(--ink); user-select:text;
-    padding:5px 9px; border:1px solid var(--stone-line); border-radius:6px; background:var(--stone);
-    overflow-wrap:anywhere;
-  }
-  .pairing .token.absent { color:var(--script); }
-  .pairing .row { gap:8px; }
-  button.compact { font-size:9.5px; padding:4px 8px; }
-  button.armed { background:var(--oxide); border-color:var(--oxide); color:#fff; }
-  /* The process, in one dark line under everything: which build, which
-     engine, how long the sockets have been up. */
-  .strip { display:flex; align-items:center; gap:6px; padding:9px 14px; background:var(--code-ground);
-    font:9.5px/1 var(--mono); color:var(--code-dim); white-space:nowrap; overflow:hidden; flex:none; }
-  .strip i { width:5px; height:5px; border-radius:50%; background:var(--script); flex:none; }
-  .strip[data-up="yes"] i { background:var(--terracotta-soft); }
-  .strip .name { color:var(--code-text); }
-  .strip .absent { color:var(--script); }
-  /* The engine control: the site's pill, split into equal segments, as the
-     Swift popover draws it. Built from what GET /engine lists as available,
-     so on a Mac that cannot run Apple's engine there is no Apple segment. */
-  .engine { display:flex; flex-direction:column; gap:6px; }
-  .segmented { display:flex; border:1.2px solid var(--terracotta-ink); border-radius:999px; overflow:hidden; }
+  /* controls — two sections and a button row, each under a kicker and
+     between hairline rules, as the Swift popover lays them out. The three
+     text styles are the kicker, the block's mono and the help body. */
+  footer { display:flex; flex-direction:column; flex:none; }
+  footer section { display:flex; flex-direction:column; gap:6px; padding:11px 14px 12px; }
+  .kicker { font:500 9px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--terracotta-ink); }
+  .kicker.sub { color:var(--script); padding-top:4px; }
+  .kicker-row { display:flex; align-items:baseline; justify-content:space-between; }
+  .kicker-row .value { font:10px/1 var(--body); color:var(--ink); }
+  .kicker-row .value.absent { color:var(--script); }
+  .about { margin:0; font:10px/1.35 var(--body); color:var(--ink-faint); }
+  /* The model picker: the site's pill, split into equal segments. Built from
+     what GET /engine lists as available, so on a Mac that cannot run Apple's
+     engine there is one segment. */
+  .segmented { display:flex; border:1.2px solid var(--terracotta-ink); border-radius:999px; overflow:hidden; margin-top:2px; }
   .segmented button {
     flex:1; border:0; border-radius:0; padding:5px 0; font:600 11px/1 var(--body);
     color:var(--terracotta-ink); background:transparent;
@@ -160,6 +135,55 @@
   .segmented button[aria-checked="true"] { background:var(--terracotta-deep); color:var(--stone); }
   .segmented button:disabled { opacity:.6; }
   .segmented:empty { border-color:var(--script); opacity:.6; min-height:23px; }
+  /* The speed rows are the control: the selected one in ink behind a 3 px
+     accent bar on the popover's edge, the rest in ink-faint until hovered. */
+  .speeds { display:flex; flex-direction:column; margin-left:-14px; }
+  .speeds button {
+    display:flex; align-items:center; gap:11px; height:15px; padding:0; border:0; border-radius:0;
+    background:transparent; font:10px/1 var(--body); color:var(--ink-faint); text-align:left; opacity:1;
+  }
+  .speeds button::before { content:''; width:3px; height:11px; background:transparent; flex:none; }
+  .speeds button[aria-checked="true"]::before { background:var(--terracotta); }
+  .speeds button[aria-checked="true"], .speeds button:hover:not(:disabled), .speeds button:focus-visible { color:var(--ink); }
+  .speeds button:disabled { color:var(--script); }
+  .speeds .ms { font:400 10px/1 var(--mono); width:44px; flex:none; }
+  .speeds button[aria-checked="true"] .ms { font-weight:500; }
+  /* Connected apps: the key row, its help, the two ports. */
+  .key-row { display:flex; align-items:center; gap:6px; margin-top:1px; }
+  .key-row .label { font:10px/1 var(--body); color:var(--ink); padding-right:2px; }
+  .token {
+    font:11px/1.35 var(--mono); color:var(--ink); user-select:text; white-space:nowrap;
+    padding:5px 9px; border:1px solid var(--stone-line); border-radius:6px; background:var(--stone);
+  }
+  .token.absent { color:var(--script); }
+  .token.full { white-space:normal; overflow-wrap:anywhere; align-self:flex-start; max-width:100%; }
+  .help { margin:0; font:10px/1.35 var(--body); color:var(--ink-faint); }
+  .help code { font:10px/1 var(--mono); }
+  .ports { border-collapse:collapse; margin-top:1px; }
+  .ports td { padding:0 8px 2px 0; font:10px/1.3 var(--body); color:var(--ink); white-space:nowrap; }
+  .ports td:nth-child(2) { font:10px/1.3 var(--mono); }
+  .ports td:last-child { color:var(--ink-faint); padding-right:0; }
+  .buttons { display:flex; align-items:center; gap:8px; padding:12px 14px; }
+  .spacer { flex:1; }
+  button.compact { font-size:9.5px; padding:4px 8px; }
+  button.armed { background:var(--oxide); border-color:var(--oxide); color:#fff; }
+  /* Down: the engine is not answering, so nothing the controls would say is
+     true. One panel — the state, the reason, the one action — in their place. */
+  .down { display:flex; flex-direction:column; gap:9px; padding:13px 14px; background:var(--stone-deep); }
+  .down .state { display:flex; align-items:baseline; gap:8px; }
+  .down .word { font:11px/1 var(--mono); color:var(--oxide); }
+  .down .word[data-s="starting"] { color:var(--terracotta-ink); }
+  .down p { margin:0; font:10.5px/1.4 var(--body); color:var(--ink-soft); }
+  .down .actions { display:flex; align-items:center; gap:8px; }
+  /* The process, in one dark line under everything: which build, which
+     model at which speed, how many apps. */
+  .strip { display:flex; align-items:center; gap:6px; padding:9px 14px; background:var(--code-ground);
+    font:9.5px/1 var(--mono); color:var(--code-dim); white-space:nowrap; overflow:hidden; flex:none; }
+  .strip i { width:5px; height:5px; border-radius:50%; background:var(--script); flex:none; }
+  .strip[data-up="yes"] i { background:var(--code-dim); }
+  .strip[data-up="yes"][data-s="listening"] i { background:var(--olive); }
+  .strip .name { color:var(--code-text); }
+  .strip .absent { color:var(--script); }
 
   /* The site's pill button. */
   button {
@@ -215,63 +239,70 @@
     <p>The stream stays open — anything can start it, including a POST to /start.</p>
   </div>
 
-  {{-- The engine itself is not answering: being spawned, or not bundled at all. --}}
-  <div class="panel" id="panel-engine" hidden>
-    <h2 id="engine-word">Starting the engine</h2>
-    <div class="pulse" id="engine-pulse"><i></i><i></i><i></i></div>
-    <p id="engine-note">Nothing answered on :{{ \App\Support\Sidecar::httpPort() }}, so the bundled sonocles-cli is being started.</p>
-  </div>
 </main>
-<div class="rule"></div>
+<div class="rule" id="rule-centre"></div>
+
+{{-- The engine is not answering — being spawned, refusing us, or not there — so nothing below would be true. The state, the reason, and the one action, in place of the centre and the controls. --}}
+<div class="down" id="down" hidden>
+  <div class="state"><span class="kicker">Engine</span><span class="word" id="engine-word">starting</span></div>
+  <div class="pulse" id="engine-pulse"><i></i><i></i><i></i></div>
+  <p id="engine-note">Nothing answered on :{{ \App\Support\Sidecar::httpPort() }}, so the bundled sonocles-cli is being started.</p>
+  <div class="actions">
+    <button class="go" id="relaunch" hidden>Relaunch</button>
+    <span class="spacer"></span>
+    <button id="quit-down">Quit</button>
+  </div>
+</div>
 
 <footer>
-  {{-- The engine: four short labels to choose from, the full name in script beside. Choosing posts to /engine/use; /status's engineId keeps it true and the engine event moves it when another client switches. --}}
-  <div class="engine">
-    <div class="row">
-      <span class="label">Engine</span>
-      <span class="name" id="engine">··</span>
+  {{-- The engine, in the words of the person choosing it: the model, one line on what it is, then for Parakeet the speed — three rows, each with what it costs and is for. The rows are the control; /status's engineId keeps them true and the engine event moves them when another client switches. --}}
+  <section>
+    <span class="kicker">Engine</span>
+    <div class="segmented" id="models" role="radiogroup" aria-label="Model"></div>
+    <p class="about" id="about">&nbsp;</p>
+    <div id="speed" hidden>
+      <span class="kicker sub">Speed</span>
+      <div class="speeds" id="speeds" role="radiogroup" aria-label="Speed"></div>
     </div>
-    <div class="segmented" id="segmented" role="radiogroup" aria-label="Engine"></div>
-    <p class="guidance" id="guidance">&nbsp;</p>
-  </div>
-  {{-- Endpoints, not switches. The sockets bind at launch and stay up. Who is on them is /status's `clients`. --}}
-  <div class="row ports">
-    <span class="port"><span>HTTP</span><span>:{{ \App\Support\Sidecar::httpPort() }}</span></span>
-    <span class="dot">·</span>
-    <span class="port"><span>WS</span><span>:{{ \App\Support\Sidecar::wsPort() }}</span></span>
-    <span class="dot">·</span>
-    <span class="clients absent" id="clients">·· clients</span>
-  </div>
-  {{-- The bearer token every route is behind, as the engine's file has it right now. Always open: it is the one thing a new client needs from here. --}}
-  <div class="pairing">
-    <span class="label">Control API</span>
-    <p>Every route is behind this token, the event stream included. Apps running as you read the file; rotating cuts every paired client off.</p>
-    {{-- Truncated in the middle, as the Swift popover does, so the file name survives. --}}
-    @php($file = \App\Support\Token::path())
-    <span class="file" title="{{ $file }}">{{ mb_strlen($file) > 50 ? mb_substr($file, 0, 22).'…'.mb_substr($file, -27) : $file }}</span>
-    <span class="token absent" id="token">··</span>
-    <div class="row">
+  </section>
+  <div class="rule"></div>
+  {{-- Who is connected, and how an app connects: the key with what Copy and Rotate do to it; the two ports, each with the one thing it is for. --}}
+  <section>
+    <div class="kicker-row">
+      <span class="kicker">Connected apps</span>
+      <span class="value absent" id="clients">·· apps</span>
+    </div>
+    <div class="key-row">
+      <span class="label">Key</span>
+      <span class="token absent" id="token" aria-label="bearer token">··</span>
       <button class="compact" id="show" disabled>Show</button>
       <button class="compact" id="copy" disabled>Copy</button>
       <span class="spacer"></span>
       <button class="compact" id="rotate" disabled>Rotate</button>
     </div>
-  </div>
-  <div class="row">
+    <span class="token full" id="token-full" aria-label="bearer token" hidden></span>
+    <p class="help">The key an app needs to connect — Copy it into the app. Rotate makes a new key and disconnects everything. Apps on this Mac can also read it from <code>{{ \App\Support\Token::abbreviated() }}</code>.</p>
+    <table class="ports">
+      <tr><td>HTTP API</td><td>:{{ \App\Support\Sidecar::httpPort() }}</td><td>where apps ask Sonocles things</td></tr>
+      <tr><td>WebSocket</td><td>:{{ \App\Support\Sidecar::wsPort() }}</td><td>the live word stream</td></tr>
+    </table>
+  </section>
+  <div class="rule"></div>
+  <div class="buttons">
     <button id="toggle" disabled>…</button>
     <span class="spacer"></span>
     <button id="quit">Quit</button>
   </div>
 </footer>
 
-{{-- What GET / and /status say about the process: the engine's version, the engine it is set to, and its uptime. --}}
-<div class="strip" id="strip" data-up="no">
+{{-- What GET / and /status say about the process, in the sections' own words: the version, the model at its speed, how many apps. --}}
+<div class="strip" id="strip" data-up="no" data-s="down">
   <i></i>
   <span class="name" id="strip-name">sonocles ··</span>
   <span>·</span>
   <span id="strip-engine" hidden>··</span>
   <span id="strip-dot" hidden>·</span>
-  <span class="absent" id="strip-up" hidden>up ··</span>
+  <span class="absent" id="strip-apps" hidden>·· apps</span>
   <span class="absent" id="strip-down">engine not running</span>
 </div>
 
@@ -294,6 +325,7 @@ for (let i = 0; i < 20; i++) el('cells').appendChild(document.createElement('i')
 const WS = @json($websocket)
 
 const HTTP_PORT = {{ \App\Support\Sidecar::httpPort() }}
+const TOKEN_FILE = @json(\App\Support\Token::abbreviated())
 
 let lastArrival = null
 
@@ -399,7 +431,7 @@ async function connect() {
     try { m = JSON.parse(e.data) } catch (_) { return }
     // The auth answer has a status; frames have a type; events have an event.
     if ('status' in m) { if (m.status !== 200) { refused = true; ws.close() } return }
-    if (m.event === 'engine') { select(m.engine); el('engine').textContent = m.label ?? el('engine').textContent; return }
+    if (m.event === 'engine') { select(m.engine); return }
     if (typeof m.type === 'string') render(m)
   }
   // A refusal is not a dropped socket: the file may not be the engine's yet,
@@ -424,65 +456,111 @@ function meter(db) {
   node.classList.toggle('absent', typeof db !== 'number')
 }
 
-/* One panel showing, and the header agreeing with it. */
+/*
+ * One panel showing, and the header agreeing with it. Down — the engine not
+ * answering — replaces the centre and the controls with the down panel, since
+ * nothing they would say is true.
+ */
 function state(s, label) {
   el('state').dataset.s = s
   el('state-label').textContent = label
   el('mark').dataset.s = s
   el('centre').dataset.s = s
+  const down = s === 'down'
+  el('centre').hidden = el('rule-centre').hidden = down
+  document.querySelector('footer').hidden = down
+  el('down').hidden = !down
   el('panel-live').hidden = !(s === 'listening' || s === 'starting')
   el('panel-idle').hidden = s !== 'idle'
-  el('panel-engine').hidden = s !== 'down'
+}
+
+/* The down panel: the state word, the reason, and whether Relaunch can help. */
+function down(word, note, { pulse = false, relaunch = false } = {}) {
+  el('engine-word').textContent = word
+  el('engine-word').dataset.s = word
+  el('engine-pulse').hidden = !pulse
+  el('engine-note').textContent = note
+  el('relaunch').hidden = !relaunch
 }
 
 /*
- * The engine control.
+ * The engine control, in two levels.
  *
- * Segments are built once from GET /engine's `available` — via /engine/choices
- * — and selected from /status's `engineId` on every poll, so the control shows
- * what the engine is running and not what was last clicked here. A click
- * selects at once and posts; if the engine refuses, the next poll puts the
- * selection back where the engine says it is. The `engine` event on the
- * socket does the same for a switch made from the Swift popover or curl.
+ * The model picker — Parakeet, and Apple where GET /engine's `available`
+ * lists it — and, under Parakeet, the speed rows. Both are built once from
+ * /engine/choices and selected from /status's `engineId` on every poll, so the
+ * control shows what the engine is running and not what was last clicked
+ * here. A click selects at once and posts; if the engine refuses, the next
+ * poll puts the selection back where the engine says it is. The `engine`
+ * event on the socket does the same for a switch made from the Swift popover
+ * or curl. The strings are the Swift popover's (MenuBarView.about/tradeoff),
+ * keyed off the engine id so both front ends print the same words.
  */
-const SHORT = { fluid160: '160 ms', fluid320: '320 ms', fluid1280: '1280 ms', apple: 'Apple' }
-const LABEL = { fluid160: 'Parakeet 160 ms', fluid320: 'Parakeet 320 ms', fluid1280: 'Parakeet 1280 ms', apple: 'Apple SpeechAnalyzer' }
-// When to choose it — the Swift popover's lines (MenuBarView.guidance),
-// which are the measured and documented numbers and nothing else.
-const GUIDANCE = {
-  fluid160: 'About 180 ms behind you. The default — for cues and prompting.',
-  fluid320: 'More context, fewer misheard words; half a second behind.',
-  fluid1280: 'The most context, over a second behind — captions, not cues.',
-  apple: "Apple's on-device recogniser. Words arrive in bursts, ~4 s apart.",
+const PARAKEET = ['fluid160', 'fluid320', 'fluid1280']
+const FAMILY = { fluid160: 'Parakeet', fluid320: 'Parakeet', fluid1280: 'Parakeet', apple: 'Apple' }
+const CHUNK = { fluid160: '160 ms', fluid320: '320 ms', fluid1280: '1280 ms' }
+const ABOUT = {
+  Parakeet: "Runs on this Mac's Neural Engine. Words arrive as you speak.",
+  Apple: "Apple's own recogniser. Words arrive in bursts, about every 4 seconds.",
+}
+const TRADEOFF = {
+  fluid160: 'Fastest. For prompters and cues.',
+  fluid320: 'Steadier words, a beat later.',
+  fluid1280: 'Most accurate. For captions and transcripts.',
 }
 let engineId = null
+// The Parakeet speed last used, so choosing Parakeet after Apple goes back to
+// the speed that was set rather than to the default.
+let chunk = 'fluid160'
 
 function select(id) {
   engineId = id
-  for (const b of el('segmented').children) b.setAttribute('aria-checked', b.dataset.engine === id)
-  el('guidance').textContent = GUIDANCE[id] ?? '\u00a0'
-  el('strip-engine').textContent = LABEL[id] ?? id ?? '··'
+  const family = FAMILY[id] ?? null
+  if (PARAKEET.includes(id)) chunk = id
+  for (const b of el('models').children) b.setAttribute('aria-checked', b.dataset.family === family)
+  for (const b of el('speeds').children) b.setAttribute('aria-checked', b.dataset.engine === id)
+  el('about').textContent = family ? ABOUT[family] : ' '
+  el('speed').hidden = family !== 'Parakeet'
+  el('strip-engine').textContent = family ? (CHUNK[id] ? `${family} · ${CHUNK[id]}` : family) : '··'
 }
 
 function setSegmentsDisabled(off) {
-  for (const b of el('segmented').children) b.disabled = off
+  for (const b of el('models').children) b.disabled = off
+  for (const b of el('speeds').children) b.disabled = off
 }
 
 async function choices() {
-  if (el('segmented').children.length) return
+  if (el('models').children.length) return
   let j
   try {
     const r = await fetch('/engine/choices')
     if (!r.ok) return
     j = await r.json()
   } catch (_) { return }
-  for (const id of j.available ?? []) {
+  const available = j.available ?? []
+  const speeds = PARAKEET.filter(id => available.includes(id))
+  const families = [...(speeds.length ? ['Parakeet'] : []), ...(available.includes('apple') ? ['Apple'] : [])]
+  for (const family of families) {
+    const b = document.createElement('button')
+    b.type = 'button'; b.setAttribute('role', 'radio')
+    b.dataset.family = family
+    b.textContent = family
+    b.title = ABOUT[family]
+    b.setAttribute('aria-description', ABOUT[family])
+    b.onclick = () => use(family === 'Apple' ? 'apple' : chunk)
+    el('models').appendChild(b)
+  }
+  for (const id of speeds) {
     const b = document.createElement('button')
     b.type = 'button'; b.setAttribute('role', 'radio')
     b.dataset.engine = id
-    b.textContent = SHORT[id] ?? id
+    b.setAttribute('aria-label', CHUNK[id].replace(' ms', ' milliseconds'))
+    b.setAttribute('aria-description', TRADEOFF[id])
+    const ms = document.createElement('span'); ms.className = 'ms'; ms.textContent = CHUNK[id]
+    const what = document.createElement('span'); what.textContent = TRADEOFF[id]
+    b.append(ms, what)
     b.onclick = () => use(id)
-    el('segmented').appendChild(b)
+    el('speeds').appendChild(b)
   }
   select(j.engine ?? engineId)
 }
@@ -521,8 +599,10 @@ function masked(t) {
 function pairing(t) {
   token = t ?? null
   const node = el('token')
-  node.textContent = token === null ? '··' : (tokenShown ? token : masked(token))
+  node.textContent = token === null ? '··' : masked(token)
   node.classList.toggle('absent', token === null)
+  el('token-full').hidden = !(tokenShown && token !== null)
+  el('token-full').textContent = token ?? ''
   for (const id of ['show', 'copy', 'rotate']) el(id).disabled = token === null
   el('show').textContent = tokenShown ? 'Hide' : 'Show'
   el('rotate').textContent = rotateArmed ? 'Really rotate' : 'Rotate'
@@ -552,26 +632,16 @@ el('rotate').onclick = async () => {
   poll()
 }
 
-/* `41s`, `12m`, `1h 12m`, `2d 3h` — the two largest units that are not zero. */
-function uptime(seconds) {
-  const total = Math.floor(seconds)
-  const d = Math.floor(total / 86400), h = Math.floor(total % 86400 / 3600), m = Math.floor(total % 3600 / 60)
-  if (d > 0) return `${d}d ${h}h`
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m`
-  return `${total % 60}s`
-}
-
 function strip(up, s) {
   el('strip').dataset.up = up ? 'yes' : 'no'
-  // Down: nothing to name an engine or a duration for, so say that rather
-  // than a row of ··. The version stays: the bundled engine's cannot change.
-  el('strip-engine').hidden = el('strip-dot').hidden = el('strip-up').hidden = !up
+  el('strip').dataset.s = up ? (s?.state ?? 'idle') : 'down'
+  // Down: nothing to name a model or a count for, so say that rather than a
+  // row of ··. The version stays: the bundled engine's cannot change.
+  el('strip-engine').hidden = el('strip-dot').hidden = el('strip-apps').hidden = !up
   el('strip-down').hidden = up
   if (!up) return
-  const upNode = el('strip-up')
-  upNode.textContent = typeof s?.uptime === 'number' ? 'up ' + uptime(s.uptime) : 'up ··'
-  upNode.classList.toggle('absent', typeof s?.uptime !== 'number')
+  el('strip-apps').textContent = apps(s?.clients, true)
+  el('strip-apps').classList.toggle('absent', typeof s?.clients !== 'number')
 }
 
 /*
@@ -593,9 +663,15 @@ async function about() {
 /* Control is PHP's job, and it happens at human speed. */
 let listening = false
 
+/* How many apps are connected, in words; `··` until /status answers. */
+function apps(n, short = false) {
+  const words = typeof n !== 'number' ? '·· apps' : n === 0 ? 'no apps' : n === 1 ? '1 app' : `${n} apps`
+  return short || typeof n !== 'number' ? words : `${words} connected`
+}
+
 function clients(n) {
   const node = el('clients')
-  node.textContent = typeof n !== 'number' ? '·· clients' : n === 0 ? 'no clients' : n === 1 ? '1 client' : `${n} clients`
+  node.textContent = apps(n)
   node.classList.toggle('absent', typeof n !== 'number')
 }
 
@@ -606,42 +682,29 @@ async function poll() {
     const s = j.engine
 
     if (!j.up) {
-      state('down', j.binary ? 'Starting' : 'No engine')
-      el('engine-word').textContent = j.binary ? 'Starting the engine' : 'No engine'
-      el('engine-pulse').hidden = !j.binary
-      el('engine-note').textContent = j.binary
-        ? `Nothing answered on :${HTTP_PORT}, so the bundled sonocles-cli is being started.`
-        : 'extras/sonocles-cli is missing — run bin/sync-sidecar.sh.'
-      el('toggle').disabled = true
-      el('toggle').textContent = j.binary ? 'Waiting for engine' : 'Engine not bundled'
-      el('toggle').className = ''
-      el('engine').textContent = '··'
+      state('down', j.binary ? 'Starting' : 'Down')
+      if (j.binary) {
+        down('starting', `Nothing answered on :${HTTP_PORT}, so the bundled sonocles-cli is being started.`, { pulse: true })
+      } else {
+        down('down', 'extras/sonocles-cli is missing — run bin/sync-sidecar.sh.', { relaunch: true })
+      }
       clients(null)
       pairing(null)
       strip(false)
-      setSegmentsDisabled(true)
     } else if (!j.paired) {
       // Up, and refusing us. Not "starting": nothing is coming that will fix it
       // except the file changing, which every poll re-reads.
       state('down', 'Not paired')
-      el('engine-word').textContent = 'Not paired'
-      el('engine-pulse').hidden = true
-      el('engine-note').textContent = `The engine on :${HTTP_PORT} refused the token in ~/Library/Application Support/Sonocles/token.`
-      el('toggle').disabled = true
-      el('toggle').textContent = 'Not paired'
-      el('toggle').className = ''
-      el('engine').textContent = '··'
+      down('not paired', `The engine on :${HTTP_PORT} refused the key in ${TOKEN_FILE}.`)
       clients(null)
       pairing(j.token)
       strip(false)
-      setSegmentsDisabled(true)
     } else {
       listening = !!s.listening
       state(s.state, { idle: 'Idle', starting: 'Starting', listening: 'Listening' }[s.state] ?? s.state)
       el('toggle').disabled = false
       el('toggle').textContent = listening ? 'Stop' : 'Start listening'
       el('toggle').className = listening ? 'stop' : 'go'
-      el('engine').textContent = s.engine ?? '··'
       clients(s.clients)
       pairing(j.token)
       strip(true, s)
@@ -657,9 +720,7 @@ async function poll() {
     }
   } catch (e) {
     state('down', 'Down')
-    el('engine-word').textContent = 'Down'
-    el('engine-pulse').hidden = true
-    el('engine-note').textContent = 'The app could not reach its own server.'
+    down('down', 'The app could not reach its own server.')
     clients(null)
     strip(false)
   }
@@ -674,7 +735,18 @@ el('toggle').onclick = async () => {
   poll()
 }
 
-el('quit').onclick = () => fetch('/app/quit', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } })
+const quit = () => fetch('/app/quit', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } })
+el('quit').onclick = quit
+el('quit-down').onclick = quit
+
+// Relaunch: ask PHP to bring the engine up again — spawn, or adopt one that
+// is already answering. The next poll shows whichever it was.
+el('relaunch').onclick = async () => {
+  el('relaunch').disabled = true
+  try { await fetch('/engine/relaunch', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf } }) } catch (_) {}
+  el('relaunch').disabled = false
+  poll()
+}
 
 poll()
 setInterval(poll, 1000)

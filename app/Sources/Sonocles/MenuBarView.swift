@@ -541,13 +541,13 @@ struct MenuBarView: View {
 
     /// What the selected model is, in one sentence — the line under the
     /// picker. Parakeet streams as you speak; Apple's engine delivers in
-    /// bursts a few seconds apart (docs/ENGINES.md measures 3.7 s).
+    /// bursts about every 4 s (docs/ENGINES.md measures 3.7–3.8 s).
     static func about(_ choice: EngineChoice) -> String {
         switch choice {
         case .fluid160, .fluid320, .fluid1280:
             "Runs on this Mac's Neural Engine. Words arrive as you speak."
         case .apple:
-            "Apple's own recogniser. Words arrive in bursts, a few seconds apart."
+            "Apple's own recogniser. Words arrive in bursts, about every 4 seconds."
         }
     }
 

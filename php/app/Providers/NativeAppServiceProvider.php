@@ -31,12 +31,12 @@ class NativeAppServiceProvider implements ProvidesPhpIni
             ->icon(resource_path('menubar/sonoclesTemplate.png'))
             ->tooltip('Sonocles')
             // The Swift popover's frame: 344 pt wide, and the blade's height
-            // with its centre panel at 112 pt, the engine control, the
-            // endpoints, the Control API block and the strip beneath. It is
-            // not resizable, so a taller state would clip — every centre
-            // state is 112 pt on purpose.
+            // with its centre panel at 112 pt, the engine and connected-apps
+            // sections, the buttons and the strip beneath. It is not
+            // resizable, so a taller state would clip — every centre state is
+            // 112 pt on purpose, and the speed rows are the tallest engine.
             ->width(344)
-            ->height(489)
+            ->height(578)
             ->resizable(false)
             ->url(url('/'));
     }
