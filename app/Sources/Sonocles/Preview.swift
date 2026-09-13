@@ -72,6 +72,10 @@ enum Preview {
                             $0.running = true
                             $0.levelDb = -21.4
                             $0.heldDb = -21.4
+                            $0.transcript = [
+                                "welcome back everyone",
+                                "the agenda is short today",
+                            ]
                             $0.text =
                                 "and this week we are looking at the two proposals that landed"
                             $0.lagMs = 180

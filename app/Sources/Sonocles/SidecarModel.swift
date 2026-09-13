@@ -25,7 +25,14 @@ final class SidecarModel {
     var running = false
     var levelDb: Double = -120
     var heldDb: Double = -120
+    /// The current utterance — the partial being revised, until a final
+    /// settles it into `transcript`.
     var text = ""
+    /// Settled utterances, oldest first, kept to what the pane can show. The
+    /// protocol's `text` is the utterance and not the session, so a running
+    /// transcript is something a consumer accumulates — this popover is a
+    /// consumer like any other.
+    var transcript: [String] = []
     var lagMs: Int?
     var gapMs: Int?
     var status = "Idle"
@@ -88,7 +95,17 @@ final class SidecarModel {
         service.onFrame = { [weak self] hypothesis, frame, nanos in
             Task { @MainActor in
                 guard let self else { return }
-                self.text = hypothesis.text
+                // A partial revises the live line; a final settles it, and
+                // the next partial opens a new one.
+                if hypothesis.isFinal {
+                    self.transcript.append(hypothesis.text)
+                    if self.transcript.count > Self.transcriptKept {
+                        self.transcript.removeFirst(self.transcript.count - Self.transcriptKept)
+                    }
+                    self.text = ""
+                } else {
+                    self.text = hypothesis.text
+                }
                 self.lagMs = frame.lagMs
                 if let last = self.lastArrival {
                     self.gapMs = Int((nanos &- last) / 1_000_000)
@@ -106,6 +123,10 @@ final class SidecarModel {
             status = "Could not bind: \(error.localizedDescription)"
         }
     }
+
+    /// Settled lines kept — more than the pane shows, since a settled line
+    /// can wrap. The pane is a window over the end of this, not all of it.
+    static let transcriptKept = 8
 
     func start() {
         bind()
@@ -179,6 +200,7 @@ final class SidecarModel {
     private func clearLive() {
         preparation = nil
         text = ""
+        transcript = []
         lagMs = nil
         gapMs = nil
         lastArrival = nil

@@ -121,23 +121,14 @@ struct MenuBarView: View {
                 .font(Type.body(10))
                 .foregroundStyle(Brand.inkFaint)
         }
-        .frame(height: 92, alignment: .center)
+        .frame(height: Self.centreHeight, alignment: .center)
     }
 
     private var listening: some View {
         VStack(alignment: .leading, spacing: 11) {
             LevelMeter(db: model.heldDb, reading: model.levelDb)
 
-            // Height is reserved so an arriving word never shoves the rest of
-            // the popover down — at five frames a second that would be a twitch,
-            // not an interface.
-            Text(model.text.isEmpty ? "Listening…" : model.text)
-                .font(Type.mono(12))
-                .foregroundStyle(model.text.isEmpty ? Brand.script : Brand.Block.text)
-                .lineLimit(3, reservesSpace: true)
-                .truncationMode(.head)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .animation(nil, value: model.text)
+            transcript
 
             HStack(spacing: 16) {
                 stat("lag", model.lagMs.map { "\($0) ms" })
@@ -145,7 +136,54 @@ struct MenuBarView: View {
                 Spacer()
             }
         }
-        .frame(height: 92, alignment: .top)
+        .frame(height: Self.centreHeight, alignment: .top)
+    }
+
+    /// The centre panel's height, the same in every state, so switching
+    /// between them never moves the controls.
+    static let centreHeight: CGFloat = 112
+    /// Four lines of the transcript's mono at 12 pt.
+    private static let transcriptHeight: CGFloat = 64
+
+    /// The last few lines, newest at the bottom.
+    ///
+    /// A fixed window, so an arriving word never shoves the rest of the
+    /// popover down — at five frames a second that would be a twitch, not an
+    /// interface. Settled utterances sit dim above the live line, which is
+    /// the one being revised and the one to watch; what no longer fits
+    /// leaves off the top, faded rather than cut. Empty, it says what will
+    /// happen rather than looking broken.
+    private var transcript: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if model.transcript.isEmpty && model.text.isEmpty {
+                Text("Words appear here as you say them.")
+                    .font(Type.mono(12))
+                    .foregroundStyle(Brand.script)
+            } else {
+                ForEach(Array(model.transcript.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(Type.mono(12))
+                        .foregroundStyle(Brand.Block.dim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !model.text.isEmpty {
+                    Text(model.text)
+                        .font(Type.mono(12))
+                        .foregroundStyle(Brand.Block.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: Self.transcriptHeight, alignment: .bottomLeading)
+        .clipped()
+        .mask(
+            LinearGradient(
+                stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.14)],
+                startPoint: .top, endPoint: .bottom)
+        )
+        .animation(nil, value: model.text)
+        .animation(nil, value: model.transcript)
     }
 
     private var idle: some View {
@@ -161,7 +199,7 @@ struct MenuBarView: View {
             .foregroundStyle(Brand.inkFaint)
             .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(height: 92, alignment: .center)
+        .frame(height: Self.centreHeight, alignment: .center)
     }
 
     /// A missing measurement reads as "··", never as zero. Rendering absence as
