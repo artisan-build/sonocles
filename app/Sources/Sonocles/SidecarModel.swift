@@ -51,11 +51,23 @@ final class SidecarModel {
     /// rotation cuts off every other paired client, so it is not one slip.
     var rotateArmed = false
 
+    /// What `/status` reports about the process itself: clients on both
+    /// sockets, and how long the sockets have been up. Read once a second
+    /// from the same `status()` the route answers, so the popover and a
+    /// client polling `/status` cannot disagree. Nil until the sockets bind.
+    var clients: Int?
+    var uptime: TimeInterval?
+
     private var service: Service?
     private var lastArrival: UInt64?
     private var decayTimer: Timer?
+    private var statusTimer: Timer?
 
     var engineLabel: String { service?.engineName ?? engine.label }
+
+    /// The ports as configured, for the endpoints row.
+    var httpPort: UInt16 { (service?.config ?? Service.Config()).httpPort }
+    var wsPort: UInt16 { (service?.config ?? Service.Config()).wsPort }
 
     /// Bring the sockets up once, at launch. Capture stays off until asked —
     /// by the button, or by `POST /start`.
@@ -117,6 +129,7 @@ final class SidecarModel {
             self.service = service
             token = service.token
             status = "Idle — sockets up"
+            startStatus()
         } catch {
             status = "Could not bind: \(error.localizedDescription)"
         }
@@ -137,8 +150,12 @@ final class SidecarModel {
     }
 
     func shutdown() {
+        statusTimer?.invalidate()
+        statusTimer = nil
         service?.shutdown()
         service = nil
+        clients = nil
+        uptime = nil
     }
 
     /// The same path as `POST /engine`. Switching engine restarts capture:
@@ -206,6 +223,23 @@ final class SidecarModel {
         heldDb = -120
         decayTimer?.invalidate()
         decayTimer = nil
+    }
+
+    /// Clients and uptime, once a second — the rate the NativePHP popover
+    /// polls `/status` at, and enough for numbers that move at human speed.
+    /// Counted by the service, not here, so this cannot drift from the route.
+    private func startStatus() {
+        let read = { [weak self] in
+            guard let self, let service = self.service else { return }
+            let status = service.status()
+            self.clients = status.clients
+            self.uptime = status.uptime
+        }
+        read()
+        statusTimer?.invalidate()
+        statusTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            Task { @MainActor in read() }
+        }
     }
 
     /// Rise instantly, fall at ~40 dB/sec — what every hardware meter does, and

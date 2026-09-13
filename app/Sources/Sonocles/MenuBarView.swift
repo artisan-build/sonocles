@@ -251,10 +251,16 @@ struct MenuBarView: View {
 
             // Endpoints, not switches. The sockets bind at launch and stay up
             // for the life of the app, which is what lets POST /start work
-            // while this popover says "Idle".
-            HStack(spacing: 15) {
-                endpoint("HTTP", ":7357")
-                endpoint("WS", ":7358")
+            // while this popover says "Idle". Who is on them comes from the
+            // same count `/status` reports as `clients`.
+            HStack(spacing: 8) {
+                endpoint("HTTP", ":\(model.httpPort)")
+                dot
+                endpoint("WS", ":\(model.wsPort)")
+                dot
+                Text(Self.clients(model.clients))
+                    .font(Type.mono(10))
+                    .foregroundStyle(model.clients == nil ? Brand.script : Brand.inkFaint)
                 Spacer()
             }
 
@@ -380,6 +386,22 @@ struct MenuBarView: View {
         case .fluid1280: "1280 ms"
         case .apple: "Apple"
         }
+    }
+
+    /// Singular, plural, or none; `··` until the sockets are bound.
+    static func clients(_ count: Int?) -> String {
+        switch count {
+        case nil: "·· clients"
+        case 0: "no clients"
+        case 1: "1 client"
+        case let n?: "\(n) clients"
+        }
+    }
+
+    private var dot: some View {
+        Text("·")
+            .font(Type.mono(10))
+            .foregroundStyle(Brand.script)
     }
 
     private func endpoint(_ label: String, _ port: String) -> some View {

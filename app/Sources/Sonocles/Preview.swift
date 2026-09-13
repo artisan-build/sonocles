@@ -68,7 +68,15 @@ enum Preview {
 
     private static func states() -> [(String, AnyView)] {
         [
-            ("idle", AnyView(MenuBarView(model: configured { $0.token = token }))),
+            (
+                "idle",
+                AnyView(
+                    MenuBarView(
+                        model: configured {
+                            $0.token = token
+                            $0.clients = 0
+                        }))
+            ),
             (
                 "idle-1280",
                 AnyView(
@@ -76,6 +84,7 @@ enum Preview {
                         model: configured {
                             $0.engine = .fluid1280
                             $0.token = token
+                            $0.clients = 1
                         }))
             ),
             (
@@ -85,6 +94,7 @@ enum Preview {
                         model: configured {
                             $0.running = true
                             $0.token = token
+                            $0.clients = 2
                             $0.levelDb = -21.4
                             $0.heldDb = -21.4
                             $0.transcript = [
@@ -104,6 +114,7 @@ enum Preview {
                         model: configured {
                             $0.running = true
                             $0.token = token
+                            $0.clients = 1
                             $0.levelDb = -54
                             $0.heldDb = -54
                         }))
@@ -119,6 +130,7 @@ enum Preview {
                             $0.tokenShown = true
                             $0.rotateArmed = true
                             $0.token = token
+                            $0.clients = 3
                         }))
             ),
             (
