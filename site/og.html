@@ -7,12 +7,11 @@
   The hero illustration is 3:2 and social cards are 1.91:1, so scaling it to fit
   would either letterbox or cut the scribe out of frame, and the scribe is the
   half that makes the joke. This lays out the same elements at the right shape
-  instead. Regenerate by screenshotting this at exactly 1200x630:
+  instead. Regenerate with the renderer (Playwright's Chromium, a throwaway
+  profile and a mock keychain — never the installed Chrome, which opens the
+  real profile and asks the keychain for Safe Storage):
 
-      cd site && "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-        --headless --disable-gpu --hide-scrollbars \
-        --screenshot="$PWD/public/img/og.png" --window-size=1200,630 \
-        --virtual-time-budget=4000 "file://$PWD/og.html"
+      cd site && node art/og.mjs og.html public/img/og.png
 
   Three things here are load-bearing and were each a defect once:
 
