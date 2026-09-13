@@ -1,5 +1,6 @@
 ---
 import Colonnade from './Colonnade.astro';
+import { version, releaseUrl } from '../lib/version';
 const path = Astro.url.pathname;
 const inDocs = path === '/docs' || path.startsWith('/docs/');
 ---
@@ -9,7 +10,7 @@ const inDocs = path === '/docs' || path.startsWith('/docs/');
 		{/* Inside the column, as it always was: the head colonnade runs the
 		    full width of the page, the foot one is the width of the text. */}
 		<Colonnade foot />
-		<p><span class="name">Sonocles</span> — live speech-to-text for the Mac. Apple Silicon, macOS 14 or later.</p>
+		<p><span class="name">Sonocles</span>{version && <> <a class="version" href={releaseUrl}>{version}</a></>} — live speech-to-text for the Mac. Apple Silicon, macOS 14 or later.</p>
 		<p>Free and open source under the MIT licence. <a href="https://github.com/artisan-build/sonocles">Source on GitHub</a>.</p>
 		<p class="made">Built for <a href="https://pteroprompter.com">Pteroprompter</a> by <b>ProjektGopher Multimedia</b>, an <b>Artisan Build</b> property. Useful on its own, mind you.</p>
 	</div>
@@ -31,6 +32,14 @@ const inDocs = path === '/docs' || path.startsWith('/docs/');
 		font-family: var(--display);
 		font-weight: 700;
 		color: var(--ink);
+	}
+	/* The version is a fact, not a badge: mono, the line's own colour, a
+	   link to that tag's release page. */
+	.version {
+		font-family: var(--mono);
+		font-size: 0.9em;
+		color: inherit;
+		text-decoration-color: color-mix(in oklab, var(--ink-faint) 40%, transparent);
 	}
 	.footer .made {
 		margin-top: 18px;

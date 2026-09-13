@@ -11,6 +11,7 @@ import contention from '../assets/plates/contention.png';
 import theatre from '../assets/plates/theatre.png';
 import listener from '../assets/plates/listener.png';
 import mic from '../assets/plates/mic.png';
+import { version, releaseUrl } from '../lib/version';
 ---
 
 <Base
@@ -35,8 +36,9 @@ import mic from '../assets/plates/mic.png';
 
 			<div class="cta">
 				<a class="btn btn-primary" href="https://github.com/artisan-build/sonocles/releases/latest/download/Sonocles.dmg">Download for Mac</a>
+				<a class="btn btn-ghost" href="/docs">Read the docs</a>
 				<a class="btn btn-ghost" href="https://github.com/artisan-build/sonocles">Source on GitHub</a>
-				<span class="meta">Apple Silicon · macOS 14 or later</span>
+				<span class="meta">{version && <><a href={releaseUrl}>v{version}</a> · </>}Apple Silicon · macOS 14 or later</span>
 			</div>
 
 			<p class="brew"><span>or</span> <code><span>brew install --cask</span> <span>artisan-build/tap/sonocles</span></code></p>
@@ -215,6 +217,13 @@ make baseline</pre>
 	.cta .meta {
 		color: var(--script);
 		font-size: 13.5px;
+	}
+	/* The version, read at build time (src/lib/version.ts): a fact, not a
+	   badge — mono, the line's own colour, linked to that tag's release. */
+	.cta .meta a {
+		color: inherit;
+		font-family: var(--mono);
+		text-decoration-color: color-mix(in oklab, var(--script) 40%, transparent);
 	}
 	/* The second install route. user-select:all makes one click take the whole
 	   command, which is the nearest thing to a copy button on a page that ships
