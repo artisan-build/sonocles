@@ -233,18 +233,24 @@ final class SidecarModel {
     /// Clients and uptime, once a second — the rate the NativePHP popover
     /// polls `/status` at, and enough for numbers that move at human speed.
     /// Counted by the service, not here, so this cannot drift from the route.
+    ///
+    /// The timer's callback is `@Sendable`, so nothing main-actor-isolated
+    /// can be captured into it — only a weak `self`, with the hop to the
+    /// actor made before anything is touched, the shape `startDecay` has.
     private func startStatus() {
-        let read = { [weak self] in
-            guard let self, let service = self.service else { return }
-            let status = service.status()
-            self.clients = status.clients
-            self.uptime = status.uptime
-        }
-        read()
+        readStatus()
         statusTimer?.invalidate()
-        statusTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            Task { @MainActor in read() }
+        statusTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) {
+            [weak self] _ in
+            Task { @MainActor in self?.readStatus() }
         }
+    }
+
+    private func readStatus() {
+        guard let service else { return }
+        let status = service.status()
+        clients = status.clients
+        uptime = status.uptime
     }
 
     /// Rise instantly, fall at ~40 dB/sec — what every hardware meter does, and
