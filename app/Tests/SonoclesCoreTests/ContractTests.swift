@@ -138,10 +138,11 @@ struct ContractTests {
 
     // MARK: The server under test
 
+    private let scratch = Scratch()
+
     /// A directory of our own, so nothing here touches the real token file.
     private func temporaryDirectory() -> URL {
-        FileManager.default.temporaryDirectory
-            .appendingPathComponent("sonocles-contract-\(UUID().uuidString)", isDirectory: true)
+        scratch.directory()
     }
 
     /// Both transports up on random spare ports, retried: something else on

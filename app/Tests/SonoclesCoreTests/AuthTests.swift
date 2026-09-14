@@ -7,10 +7,10 @@ import Testing
 /// whole reason a hostile page cannot.
 @Suite("Token store")
 struct TokenStoreTests {
+    private let scratch = Scratch()
+
     private func temporaryStore() -> TokenStore {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sonocles-tests-\(UUID().uuidString)", isDirectory: true)
-        return TokenStore(fileURL: dir.appendingPathComponent("Sonocles/token"))
+        TokenStore(fileURL: scratch.directory().appendingPathComponent("Sonocles/token"))
     }
 
     @Test("First bind creates a 64-hex token with mode 0600 in a fresh directory")

@@ -19,12 +19,20 @@ use Tests\TestCase;
  */
 class EngineTest extends TestCase
 {
+    private string $file;
+
     protected function setUp(): void
     {
         parent::setUp();
-        $file = tempnam(sys_get_temp_dir(), 'sonocles-token-');
-        file_put_contents($file, str_repeat('f', 64));
-        config(['sonocles.token_file' => $file]);
+        $this->file = tempnam(sys_get_temp_dir(), 'sonocles-token-');
+        file_put_contents($this->file, str_repeat('f', 64));
+        config(['sonocles.token_file' => $this->file]);
+    }
+
+    protected function tearDown(): void
+    {
+        @unlink($this->file);
+        parent::tearDown();
     }
 
     private const SHAPE = ['engine' => 'fluid320', 'label' => 'Parakeet 320 ms',
