@@ -24,7 +24,8 @@ struct EnginePickerTests {
 
     @Test("Apple is a segment only where this Mac can run it")
     func appleOnlyWhereAvailable() {
-        #expect(MenuBarView.models(chunk: .fluid320, available: [.fluid160, .fluid320, .fluid1280]) == [.fluid320])
+        #expect(
+            MenuBarView.models(chunk: .fluid320, available: EngineChoice.parakeet) == [.fluid320])
         #expect(MenuBarView.models(chunk: .fluid320, available: all) == [.fluid320, .apple])
         // A chunk that is not a chunk falls back to the default rather than
         // offering Apple twice.
