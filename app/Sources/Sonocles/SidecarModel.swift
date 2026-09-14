@@ -36,7 +36,12 @@ final class SidecarModel {
     var lagMs: Int?
     var gapMs: Int?
     var status = "Idle"
-    var engine: EngineChoice = .fluid160
+    var engine: EngineChoice = .fluid160 {
+        didSet { if engine != .apple { chunk = engine } }
+    }
+    /// The Parakeet chunk last used, so choosing Parakeet after Apple goes
+    /// back to the speed that was set rather than to the default.
+    var chunk: EngineChoice = .fluid160
 
     /// Model download and compilation, before listening can begin. Nil once
     /// the models are resident, which is every launch after the first.
@@ -57,6 +62,9 @@ final class SidecarModel {
     /// client polling `/status` cannot disagree. Nil until the sockets bind.
     var clients: Int?
     var uptime: TimeInterval?
+    /// Why the sockets are not up, when they are not: the bind error, for
+    /// the down panel. Nil once `bind` has succeeded.
+    var downReason: String?
     /// The version stamped into the bundle, or `dev` for a bare executable —
     /// what `GET /` answers. A variable so a preview can be stamped.
     var version = Service.version
@@ -66,9 +74,7 @@ final class SidecarModel {
     private var decayTimer: Timer?
     private var statusTimer: Timer?
 
-    var engineLabel: String { service?.engineName ?? engine.label }
-
-    /// The ports as configured, for the endpoints row.
+    /// The ports as configured, for the Control API help line.
     var httpPort: UInt16 { (service?.config ?? Service.Config()).httpPort }
     var wsPort: UInt16 { (service?.config ?? Service.Config()).wsPort }
 
@@ -132,10 +138,19 @@ final class SidecarModel {
             self.service = service
             token = service.token
             status = "Idle — sockets up"
+            downReason = nil
             startStatus()
         } catch {
             status = "Could not bind: \(error.localizedDescription)"
+            downReason = "Could not bind the sockets: \(error.localizedDescription)"
         }
+    }
+
+    /// The down panel's Relaunch: try the sockets again. There is no
+    /// process to relaunch — the engine is this app — so what relaunching
+    /// the app would do is done in place.
+    func relaunch() {
+        bind()
     }
 
     /// Settled lines kept — more than the pane shows, since a settled line
@@ -181,6 +196,14 @@ final class SidecarModel {
     /// the app; a preview substitutes a neutral one, since the rendered
     /// popover goes on the public site and the path carries a login.
     var tokenFile = TokenStore.standard.fileURL.path
+
+    /// The token file with the home directory as `~`, for the help line —
+    /// the path without the login in it.
+    var tokenFileAbbreviated: String {
+        let home = NSHomeDirectory()
+        guard tokenFile.hasPrefix(home + "/") else { return tokenFile }
+        return "~" + tokenFile.dropFirst(home.count)
+    }
 
     /// The token, masked to its ends: enough to compare, not enough to use.
     var maskedToken: String? {

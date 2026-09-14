@@ -26,9 +26,13 @@ struct MenuBarView: View {
             Rectangle().fill(Brand.terracotta).frame(height: 4)
             header
             rule
-            centre
-            rule
-            controls
+            if model.uptime == nil {
+                down
+            } else {
+                centre
+                rule
+                controls
+            }
             strip
         }
         .frame(width: 344)
@@ -66,11 +70,13 @@ struct MenuBarView: View {
     }
 
     private var stateLabel: String {
+        if model.uptime == nil { return "Down" }
         if model.preparation != nil { return "Preparing" }
         return model.running ? "Listening" : "Idle"
     }
 
     private var stateColour: Color {
+        if model.uptime == nil { return Brand.oxide }
         if model.preparation != nil { return Brand.terracottaInk }
         return model.running ? Brand.olive : Brand.script
     }
@@ -219,162 +225,142 @@ struct MenuBarView: View {
 
     // MARK: - controls
 
+    /// The lower half: two sections and a button row, each under a kicker
+    /// and between hairline rules — the way Rheocles' settings are set,
+    /// and what docs/BRAND.md calls furniture. Nothing here is a bare sans
+    /// label; the three text styles are the kicker, the block's mono and
+    /// the help body, all of which the popover already used.
     private var controls: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            // The engine, as a segmented control drawn from shapes. A menu
-            // `Picker` is AppKit-backed and `ImageRenderer` cannot rasterise
-            // it, so every design review of this popover had a yellow box
-            // where the picker was. The full name sits beside the label
-            // because four full names do not fit in 316 pt. Only the engines
-            // this Mac can run are offered — the same list `GET /engine`
-            // answers as `available` — so Apple is not a segment on macOS 15.
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Engine")
-                        .font(Type.body(11))
-                        .foregroundStyle(Brand.inkFaint)
-                    Spacer()
-                    Text(model.engineLabel)
-                        .font(Type.mono(9.5))
-                        .foregroundStyle(Brand.script)
-                }
-                Segmented(
-                    options: EngineChoice.available.map { ($0, Self.short($0)) },
-                    selection: Binding(get: { model.engine }, set: { model.use($0) }))
-
-                // When to choose it, in one line that follows the selection.
-                Text(Self.guidance(model.engine))
-                    .font(Type.body(10.5))
-                    .foregroundStyle(Brand.inkFaint)
-                    .lineLimit(1)
-                    .padding(.top, 1)
-            }
-
-            // Endpoints, not switches. The sockets bind at launch and stay up
-            // for the life of the app, which is what lets POST /start work
-            // while this popover says "Idle". Who is on them comes from the
-            // same count `/status` reports as `clients`.
-            HStack(spacing: 8) {
-                endpoint("HTTP", ":\(model.httpPort)")
-                dot
-                endpoint("WS", ":\(model.wsPort)")
-                dot
-                Text(Self.clients(model.clients))
-                    .font(Type.mono(10))
-                    .foregroundStyle(model.clients == nil ? Brand.script : Brand.inkFaint)
-                Spacer()
-            }
-
-            // Always open. The token is the one thing a new client needs
-            // from this popover, and a disclosure hid it behind a click that
-            // nobody knew to make.
-            VStack(alignment: .leading, spacing: 7) {
-                Text("Control API")
-                    .font(Type.body(11))
-                    .foregroundStyle(Brand.inkFaint)
-                pairing
-            }
-
-            HStack(spacing: 8) {
-                // Start is the site's button; Stop is the family's record red.
-                // Preparing greys it to script, the colour of a thing that is
-                // not there yet, and disables it.
-                PillButton(
-                    model.running ? "Stop" : "Start listening",
-                    colour: model.preparation != nil
-                        ? Brand.script : model.running ? Brand.oxide : Brand.terracottaDeep,
-                    filled: true
-                ) {
-                    model.running ? model.stop() : model.start()
-                }
-                .disabled(model.preparation != nil)
-
-                Spacer()
-
-                PillButton("Quit", colour: Brand.terracottaInk, filled: false) {
-                    NSApplication.shared.terminate(nil)
-                }
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            engineSection
+            rule
+            connectedApps
+            rule
+            buttons
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
     }
 
-    /// The process, in one dark line under everything: which build this
-    /// is, which engine it is set to, and how long the sockets have been up
-    /// — what `GET /` and `/status` would say, so a screenshot of the
-    /// popover is a bug report. The dot is lit while the sockets are bound.
-    private var strip: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(model.uptime == nil ? Brand.script : Brand.Block.terracotta)
-                .frame(width: 5, height: 5)
-            Text("sonocles \(model.version)")
-                .foregroundStyle(Brand.Block.text)
-            Text("·")
-            if let uptime = model.uptime {
-                Text(model.engine.label)
-                Text("·")
-                Text("up \(Self.uptime(uptime))")
-            } else {
-                // No uptime means no sockets: nothing to name an engine or
-                // a duration for, so say that rather than a row of ··.
-                Text("engine not running")
-                    .foregroundStyle(Brand.script)
-            }
-        }
-        .lineLimit(1)
-        .font(Type.mono(9.5))
-        .foregroundStyle(Brand.Block.dim)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
-        .background(Brand.Block.panel)
-    }
-
-    /// `41s`, `12m`, `1h 12m`, `2d 3h`: the two largest units that are not
-    /// zero, the way a person says it.
-    static func uptime(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds.rounded(.down))
-        let days = total / 86400
-        let hours = total % 86400 / 3600
-        let minutes = total % 3600 / 60
-        if days > 0 { return "\(days)d \(hours)h" }
-        if hours > 0 { return "\(hours)h \(minutes)m" }
-        if minutes > 0 { return "\(minutes)m" }
-        return "\(total % 60)s"
-    }
-
-    /// The bearer token, which every route on both sockets is behind. Shown
-    /// masked; copied in full for a client that cannot read the file itself.
-    private var pairing: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text(
-                "Every route is behind this token, the event stream included. Apps "
-                    + "running as you read the file; rotating cuts every paired client off."
-            )
-            .font(Type.body(10))
-            .foregroundStyle(Brand.inkFaint)
-            .fixedSize(horizontal: false, vertical: true)
-
-            Text(model.tokenFile)
-                .font(Type.mono(10))
-                .foregroundStyle(Brand.script)
-                .lineLimit(1)
-                .truncationMode(.middle)
-
-            // The full token does not fit on one line at this width, so it
-            // wraps when shown; masked, it is one short line. A missing token
-            // — the sockets not yet bound — reads in the colour of absence.
-            Text((model.tokenShown ? model.token : model.maskedToken) ?? "··")
-                .font(Type.mono(11))
-                .foregroundStyle(model.token == nil ? Brand.script : Brand.ink)
-                .lineLimit(model.tokenShown ? 2 : 1)
+    /// The engine, in the words of the person choosing it: first the model —
+    /// Parakeet on the Neural Engine, or Apple's recogniser — with one line
+    /// saying what it is; then, for Parakeet, the speed, three rows each
+    /// with what it costs and what it is for. The rows are the control, so
+    /// what a switch means is read before the click that costs a download.
+    private var engineSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            kicker("Engine")
+                .padding(.bottom, 2)
+            Segmented(
+                options: Self.models(chunk: model.chunk).map { ($0, $0.family) },
+                selection: Binding(
+                    get: { model.engine == .apple ? .apple : model.chunk },
+                    set: { model.use($0) }),
+                value: { Self.about($0) })
+            Text(Self.about(model.engine))
+                .font(Type.body(10))
+                .foregroundStyle(Brand.inkFaint)
                 .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-                .modifier(FieldChrome())
 
-            HStack(spacing: 8) {
+            if model.engine != .apple {
+                kicker("Speed", colour: Brand.script)
+                    .padding(.top, 4)
+                speeds
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 11)
+        .padding(.bottom, 12)
+    }
+
+    /// The model picker's options: the Parakeet segment *is* the chunk last
+    /// used, so it reads as selected at any speed and choosing it after
+    /// Apple posts that speed rather than the default; Apple only where
+    /// this Mac can run it.
+    static func models(
+        chunk: EngineChoice, available: [EngineChoice] = EngineChoice.available
+    ) -> [EngineChoice] {
+        let parakeet = chunk == .apple ? .fluid160 : chunk
+        return available.contains(.apple) ? [parakeet, .apple] : [parakeet]
+    }
+
+    /// Which speed row the pointer is over, so it reads in ink before it
+    /// is chosen.
+    @State private var hovered: EngineChoice?
+
+    /// The Parakeet chunks as rows: the speed, then one sentence. The
+    /// selected row in ink behind a 3 pt accent bar, as Rheocles marks an
+    /// armed stream; the others in ink-faint until hovered. Each row is a
+    /// button, and posts the same switch a segment used to.
+    private var speeds: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(EngineChoice.parakeet, id: \.self) { choice in
+                let on = choice == model.engine
+                let lit = on || choice == hovered
+                Button {
+                    model.use(choice)
+                } label: {
+                    HStack(spacing: 11) {
+                        // The bar sits on the popover's edge; the label
+                        // lands on the text margin.
+                        Rectangle()
+                            .fill(on ? Brand.terracotta : .clear)
+                            .frame(width: 3, height: 11)
+                        Text(choice.chunk ?? "")
+                            .font(Type.mono(10, on ? .medium : .regular))
+                            .frame(width: 44, alignment: .leading)
+                        Text(Self.tradeoff(choice))
+                            .font(Type.body(10))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(lit ? Brand.ink : Brand.inkFaint)
+                    .frame(height: 15)
+                    .lineLimit(1)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Self.spokenChunk(choice))
+                .accessibilityHint(Self.tradeoff(choice))
+                .accessibilityAddTraits(on ? .isSelected : [])
+                .onHover { inside in
+                    if inside {
+                        hovered = choice
+                    } else if hovered == choice {
+                        hovered = nil
+                    }
+                }
+            }
+        }
+        .padding(.leading, -14)
+    }
+
+    /// Who is connected, and how an app connects: the key, with what Copy
+    /// and Rotate do to it; the two ports, each with the one thing it is
+    /// for. Every word for someone who has never heard "bearer".
+    private var connectedApps: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline) {
+                kicker("Connected apps")
+                Spacer()
+                Text(Self.apps(model.clients))
+                    .font(Type.body(10))
+                    .foregroundStyle(model.clients == nil ? Brand.script : Brand.ink)
+            }
+
+            HStack(spacing: 6) {
+                Text("Key")
+                    .font(Type.body(10))
+                    .foregroundStyle(Brand.ink)
+                    .padding(.trailing, 2)
+
+                // A missing key — the sockets not yet bound — reads in the
+                // colour of absence. VoiceOver keeps the protocol's word.
+                Text(model.maskedToken ?? "··")
+                    .font(Type.mono(11))
+                    .foregroundStyle(model.token == nil ? Brand.script : Brand.ink)
+                    .lineLimit(1)
+                    .textSelection(.enabled)
+                    .modifier(FieldChrome())
+                    .accessibilityLabel("bearer token")
+
                 PillButton(
                     model.tokenShown ? "Hide" : "Show",
                     colour: model.token == nil ? Brand.script : Brand.terracottaInk,
@@ -392,10 +378,10 @@ struct MenuBarView: View {
                 }
                 .disabled(model.token == nil)
 
-                Spacer()
+                Spacer(minLength: 0)
 
                 // Armed, it turns oxide and fills: the second click is the
-                // one that cuts every paired client off.
+                // one that disconnects everything.
                 PillButton(
                     model.rotateArmed ? "Really rotate" : "Rotate",
                     colour: model.token == nil
@@ -406,59 +392,214 @@ struct MenuBarView: View {
                 }
                 .disabled(model.token == nil)
             }
+
+            if model.tokenShown, let token = model.token {
+                Text(token)
+                    .font(Type.mono(11))
+                    .foregroundStyle(Brand.ink)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .modifier(FieldChrome())
+                    .accessibilityLabel("bearer token")
+            }
+
+            (Text(
+                "The key an app needs to connect — Copy it into the app. Rotate makes a "
+                    + "new key and disconnects everything. Apps on this Mac can also read it from "
+            )
+            .font(Type.body(10))
+                + Text(model.tokenFileAbbreviated).font(Type.mono(10))
+                + Text(".").font(Type.body(10)))
+                .foregroundStyle(Brand.inkFaint)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {
+                port("HTTP API", model.httpPort, "where apps ask Sonocles things")
+                port("WebSocket", model.wsPort, "the live word stream")
+            }
+            .padding(.top, 1)
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 11)
+        .padding(.bottom, 12)
+    }
+
+    /// One port: what it is called, its number, and the one thing it is for.
+    private func port(_ label: String, _ number: UInt16, _ what: String) -> some View {
+        GridRow {
+            Text(label)
+                .font(Type.body(10))
+                .foregroundStyle(Brand.ink)
+            Text(":\(String(number))")
+                .font(Type.mono(10))
+                .foregroundStyle(Brand.ink)
+            Text(what)
+                .font(Type.body(10))
+                .foregroundStyle(Brand.inkFaint)
+        }
+        .lineLimit(1)
+    }
+
+    private var buttons: some View {
+        HStack(spacing: 8) {
+            // Start is the site's button; Stop is the family's record red.
+            // Preparing greys it to script, the colour of a thing that is
+            // not there yet, and disables it.
+            PillButton(
+                model.running ? "Stop" : "Start listening",
+                colour: model.preparation != nil
+                    ? Brand.script : model.running ? Brand.oxide : Brand.terracottaDeep,
+                filled: true
+            ) {
+                model.running ? model.stop() : model.start()
+            }
+            .disabled(model.preparation != nil)
+
+            Spacer()
+
+            PillButton("Quit", colour: Brand.terracottaInk, filled: false) {
+                NSApplication.shared.terminate(nil)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - down
+
+    /// The sockets are not up, so nothing below the header is true: no
+    /// port is listening, no POST can start anything, the token is not
+    /// there. One panel says so — the reason, and the one action there is
+    /// — in place of everything the controls would otherwise promise.
+    private var down: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                kicker("Engine")
+                Text("down")
+                    .font(Type.mono(11))
+                    .foregroundStyle(Brand.oxide)
+            }
+            Text(model.downReason ?? "The sockets are not up.")
+                .font(Type.body(10.5))
+                .foregroundStyle(Brand.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(3)
+            HStack {
+                PillButton("Relaunch", colour: Brand.terracottaDeep, filled: true) {
+                    model.relaunch()
+                }
+                Spacer()
+                PillButton("Quit", colour: Brand.terracottaInk, filled: false) {
+                    NSApplication.shared.terminate(nil)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .background(Brand.inset)
+    }
+
+    // MARK: - strip
+
+    /// The process, in one dark line under everything: which build, which
+    /// model at which speed, and how many apps — what `GET /` and `/status`
+    /// would say, in the sections' own words, so a screenshot of the
+    /// popover is a bug report. The dot is olive while listening and script
+    /// when nothing is bound.
+    private var strip: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(
+                    model.uptime == nil
+                        ? Brand.script : model.running ? Brand.olive : Brand.Block.dim
+                )
+                .frame(width: 5, height: 5)
+            Text("sonocles \(model.version)")
+                .foregroundStyle(Brand.Block.text)
+            Text("·")
+            if model.uptime == nil {
+                Text("engine not running")
+                    .foregroundStyle(Brand.script)
+            } else {
+                Text(model.engine.family)
+                Text("·")
+                if let chunk = model.engine.chunk {
+                    Text(chunk)
+                    Text("·")
+                }
+                Text(Self.apps(model.clients, short: true))
+                    .foregroundStyle(model.clients == nil ? Brand.script : Brand.Block.dim)
+            }
+        }
+        .lineLimit(1)
+        .font(Type.mono(9.5))
+        .foregroundStyle(Brand.Block.dim)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(Brand.Block.panel)
+    }
+
+    // MARK: - engine facts
+
+    /// What the selected model is, in one sentence — the line under the
+    /// picker. Parakeet streams as you speak; Apple's engine delivers in
+    /// bursts about every 4 s (docs/ENGINES.md measures 3.7–3.8 s).
+    static func about(_ choice: EngineChoice) -> String {
+        switch choice {
+        case .fluid160, .fluid320, .fluid1280:
+            "Runs on this Mac's Neural Engine. Words arrive as you speak."
+        case .apple:
+            "Apple's own recogniser. Words arrive in bursts, about every 4 seconds."
         }
     }
 
-    /// What each engine is for, from the numbers in docs/ENGINES.md and the
-    /// library's own notes on its chunk sizes: 160 ms arrives ~180 ms behind
-    /// live; 320 ms is ~540 ms behind with a longer chunk that hears more
-    /// context per pass (fewer misheard words, by the library's word-error
-    /// figures); 1280 ms is the longest chunk; Apple delivers in ~3.8 s
-    /// bursts. Nothing here that was not measured or documented.
-    static func guidance(_ choice: EngineChoice) -> String {
+    /// What each speed costs and is for, in one sentence and no other
+    /// numbers: 160 ms is the fastest (docs/ENGINES.md: ~180 ms behind
+    /// live), 320 ms trades a beat for steadier words (fewer revisions per
+    /// word, and the library's lower word-error rate at the longer chunk),
+    /// 1280 ms is the longest chunk and the most context per pass.
+    static func tradeoff(_ choice: EngineChoice) -> String {
         switch choice {
-        case .fluid160: "About 180 ms behind you. The default — for cues and prompting."
-        case .fluid320: "More context, fewer misheard words; half a second behind."
-        case .fluid1280: "The most context, over a second behind — captions, not cues."
-        case .apple: "Apple's on-device recogniser. Words arrive in bursts, ~4 s apart."
+        case .fluid160: "Fastest. For prompters and cues."
+        case .fluid320: "Steadier words, a beat later."
+        case .fluid1280: "Most accurate. For captions and transcripts."
+        case .apple: ""
         }
     }
 
-    /// Segment labels: what distinguishes the engines, and nothing else.
-    private static func short(_ choice: EngineChoice) -> String {
+    /// The speed as VoiceOver should say it.
+    static func spokenChunk(_ choice: EngineChoice) -> String {
         switch choice {
-        case .fluid160: "160 ms"
-        case .fluid320: "320 ms"
-        case .fluid1280: "1280 ms"
+        case .fluid160: "160 milliseconds"
+        case .fluid320: "320 milliseconds"
+        case .fluid1280: "1280 milliseconds"
         case .apple: "Apple"
         }
     }
 
-    /// Singular, plural, or none; `··` until the sockets are bound.
-    static func clients(_ count: Int?) -> String {
+    /// How many apps are connected, in words: the section's value, or the
+    /// strip's shorter form; `··` until the sockets are bound.
+    static func apps(_ count: Int?, short: Bool = false) -> String {
+        let n: String
         switch count {
-        case nil: "·· clients"
-        case 0: "no clients"
-        case 1: "1 client"
-        case let n?: "\(n) clients"
+        case nil: n = "·· apps"
+        case 0: n = "no apps"
+        case 1: n = "1 app"
+        case let c?: n = "\(c) apps"
         }
+        return short || count == nil ? n : "\(n) connected"
     }
 
-    private var dot: some View {
-        Text("·")
-            .font(Type.mono(10))
-            .foregroundStyle(Brand.script)
-    }
-
-    private func endpoint(_ label: String, _ port: String) -> some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .font(Type.mono(10))
-                .foregroundStyle(Brand.script)
-            Text(port)
-                .font(Type.mono(10))
-                .foregroundStyle(Brand.inkFaint)
-        }
+    /// A section label: mono, uppercase, letterspaced, in the accent —
+    /// furniture, never competing with what sits beneath.
+    private func kicker(_ label: String, colour: Color = Brand.terracottaInk) -> some View {
+        Text(label.uppercased())
+            .font(Type.kicker())
+            .kerning(1.1)
+            .foregroundStyle(colour)
     }
 }
 
@@ -601,9 +742,13 @@ struct PillButton: View {
 }
 
 /// A choice drawn from shapes: the site's pill, split into equal segments.
+///
+/// Each segment carries `value` as its accessibility value, so a VoiceOver
+/// user hears what the choice is before making it.
 struct Segmented<Value: Hashable>: View {
     let options: [(Value, String)]
     @Binding var selection: Value
+    var value: (Value) -> String = { _ in "" }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -618,8 +763,10 @@ struct Segmented<Value: Hashable>: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
                         .background(on ? Brand.terracottaDeep : .clear)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityValue(self.value(value))
             }
         }
         .clipShape(Capsule())

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Support\Sidecar;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /**
@@ -39,6 +40,16 @@ class SidecarTest extends TestCase
         // failure mode this project keeps having to relearn.
         $this->assertSame('http://127.0.0.1:7357/status', Sidecar::url('/status'));
         $this->assertSame('ws://127.0.0.1:7358', Sidecar::websocket());
+    }
+
+    public function test_relaunch_adopts_an_engine_that_is_already_answering(): void
+    {
+        // The down panel's Relaunch. An engine already holding the port is
+        // adopted, never spawned beside — spawning against a bound port is
+        // the respawn loop Sidecar exists to prevent.
+        Http::fake([Sidecar::url('/*') => Http::response(['state' => 'idle'])]);
+
+        $this->postJson('/engine/relaunch')->assertOk()->assertJson(['engine' => 'adopted']);
     }
 
     public function test_an_unreachable_engine_is_absent_not_idle(): void

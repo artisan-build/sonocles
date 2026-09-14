@@ -94,6 +94,10 @@ Route::post('/engine/token/rotate', fn () => $forward(Sidecar::rotateToken(...))
 Route::get('/engine/choices', fn () => $forward(Sidecar::engine(...)));
 Route::post('/engine/use', fn () => $forward(fn () => Sidecar::use((string) request()->input('engine'))));
 
+// The down panel's Relaunch: bring the engine up again — spawn the bundled
+// binary, or adopt one already answering on the port — and say which.
+Route::post('/engine/relaunch', fn () => response()->json(['engine' => Sidecar::ensureRunning()]));
+
 // The popover's Quit, which the Swift app gets from NSApplication for free.
 Route::post('/app/quit', function () {
     App::quit();
