@@ -7,6 +7,8 @@ section from this file, and the release workflow refuses to run without one.
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-09-13
+
 ### Changed
 
 - The popover says more, in plain words. The transcript pane shows the last four lines — settled utterances dim above the live one, newest at the bottom — and says *Words appear here as you say them* until there are any. The engine is chosen in two steps: the model (Parakeet, or Apple on macOS 26) with a line saying what it is, then for Parakeet a speed — 160, 320 or 1280 ms — each with what it costs and is for. **Connected apps** replaces the Control API disclosure: how many apps are connected, the key with Show, Copy and Rotate and a sentence saying what they do, and the two ports with what each is for. A strip along the bottom carries the version, the model and speed, and the connected count.
@@ -52,7 +54,8 @@ section from this file, and the release workflow refuses to run without one.
 - Model download and compilation progress shown in the popover and reported in `/status`, so first run explains its wait.
 - A signed DMG on every release, with a download link that always points at the latest one.
 
-[Unreleased]: https://github.com/artisan-build/sonocles/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/artisan-build/sonocles/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/artisan-build/sonocles/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/artisan-build/sonocles/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/artisan-build/sonocles/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/artisan-build/sonocles/compare/v0.1.0...v0.1.1
