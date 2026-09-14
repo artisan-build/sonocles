@@ -9,10 +9,11 @@ import os
 /// microphone.
 @Suite("Server", .serialized)
 struct ServerTests {
+    private let scratch = Scratch()
+
     /// A directory of our own, so nothing here touches the real token file.
     private func temporaryDirectory() -> URL {
-        FileManager.default.temporaryDirectory
-            .appendingPathComponent("sonocles-tests-\(UUID().uuidString)", isDirectory: true)
+        scratch.directory()
     }
 
     /// Both transports up on random spare ports, retried: something else on

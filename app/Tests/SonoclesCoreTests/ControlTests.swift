@@ -152,9 +152,10 @@ struct EngineAvailabilityTests {
 /// microphone.
 @Suite("Engine route", .serialized)
 struct EngineRouteTests {
+    private let scratch = Scratch()
+
     private func temporaryDirectory() -> URL {
-        FileManager.default.temporaryDirectory
-            .appendingPathComponent("sonocles-engine-\(UUID().uuidString)", isDirectory: true)
+        scratch.directory()
     }
 
     /// Both transports up on random spare ports, retried. `sessions` counts
