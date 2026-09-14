@@ -250,7 +250,7 @@ struct MenuBarView: View {
             kicker("Engine")
                 .padding(.bottom, 2)
             Segmented(
-                options: Self.models.map { ($0, $0.family) },
+                options: Self.models(chunk: model.chunk).map { ($0, $0.family) },
                 selection: Binding(
                     get: { model.engine == .apple ? .apple : model.chunk },
                     set: { model.use($0) }),
@@ -271,10 +271,15 @@ struct MenuBarView: View {
         .padding(.bottom, 12)
     }
 
-    /// The model picker's options: Parakeet stands for whichever chunk was
-    /// last used; Apple only where this Mac can run it.
-    private static var models: [EngineChoice] {
-        EngineChoice.apple.isAvailable ? [.fluid160, .apple] : [.fluid160]
+    /// The model picker's options: the Parakeet segment *is* the chunk last
+    /// used, so it reads as selected at any speed and choosing it after
+    /// Apple posts that speed rather than the default; Apple only where
+    /// this Mac can run it.
+    static func models(
+        chunk: EngineChoice, available: [EngineChoice] = EngineChoice.available
+    ) -> [EngineChoice] {
+        let parakeet = chunk == .apple ? .fluid160 : chunk
+        return available.contains(.apple) ? [parakeet, .apple] : [parakeet]
     }
 
     /// Which speed row the pointer is over, so it reads in ink before it

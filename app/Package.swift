@@ -36,5 +36,8 @@ let package = Package(
         // it into Contents/Resources and Brand.swift registers it at launch.
         .executableTarget(name: "Sonocles", dependencies: ["SonoclesCore"], exclude: ["Fonts"]),
         .testTarget(name: "SonoclesCoreTests", dependencies: ["SonoclesCore"]),
+        // The app's own logic that is not a view: what the popover's
+        // controls resolve to. No window, no capture.
+        .testTarget(name: "SonoclesTests", dependencies: ["Sonocles"]),
     ]
 )
